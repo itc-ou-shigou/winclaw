@@ -1,0 +1,16 @@
+# Installer artifacts (not needed in npm package)
+dist/WinClawSetup-*.exe
+dist/cache/
+dist/win-staging/
+releases/
+
+# Build/dev files
+scripts/
+*.ps1
+*.iss
+.github/
+.vscode/
+tests/
+vitest.config.*
+tsconfig*.json
+tsdown.config.*

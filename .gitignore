@@ -81,3 +81,5 @@ USER.md
 .agent/*.json
 !.agent/workflows/
 local/
+releases/WinClawSetup-2026.2.9.exe
+nul

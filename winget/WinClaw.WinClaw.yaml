@@ -1,0 +1,16 @@
+PackageIdentifier: WinClaw.WinClaw
+PackageVersion: "2026.2.9"
+PackageName: WinClaw
+Publisher: WinClaw
+License: MIT
+ShortDescription: AI Agent CLI with skill orchestration
+InstallerType: inno
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/itc-ou-shigou/winclaw/releases/download/v2026.2.9/WinClawSetup-2026.2.9.exe
+    InstallerSha256: # TODO: compute after build
+    InstallerSwitches:
+      Silent: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+      SilentWithProgress: /SILENT /SUPPRESSMSGBOXES /NORESTART
+ManifestType: singleton
+ManifestVersion: 1.6.0

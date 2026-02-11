@@ -172,6 +172,23 @@ async function resolveCliProgramArguments(params: {
   runtime?: GatewayRuntimePreference;
   nodePath?: string;
 }): Promise<GatewayProgramArgs> {
+  // EXE installer mode: use embedded Node.js from WINCLAW_HOME
+  const winclawHome = process.env.WINCLAW_HOME;
+  if (process.platform === "win32" && winclawHome && !params.dev) {
+    const embeddedNode = path.join(winclawHome, "node", "node.exe");
+    const appEntry = path.join(winclawHome, "app", "openclaw.mjs");
+    try {
+      await fs.access(embeddedNode);
+      await fs.access(appEntry);
+      return {
+        programArguments: [embeddedNode, appEntry, ...params.args],
+        workingDirectory: winclawHome,
+      };
+    } catch {
+      // Embedded runtime not found, fall through to standard resolution
+    }
+  }
+
   const execPath = process.execPath;
   const runtime = params.runtime ?? "auto";
 

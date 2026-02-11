@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell:*)",
+      "Bash(tasklist:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(handle \"WinClawSetup-2026.2.9.exe\")",
+      "Bash(cmd /c \"del /f /q \"\"C:\\\\work\\\\winclaw\\\\releases\\\\WinClawSetup-2026.2.9.exe\"\"\")",
+      "Bash(timeout /t 5 /nobreak)"
+    ]
+  }
+}

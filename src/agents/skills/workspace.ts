@@ -24,6 +24,11 @@ import {
 } from "./frontmatter.js";
 import { resolvePluginSkillDirs } from "./plugin-skills.js";
 import { serializeByKey } from "./serialize.js";
+import {
+  resolveSkillFilterFromPrompt,
+  type DynamicFilterConfig,
+  type DynamicFilterResult,
+} from "./dynamic-filter.js";
 
 const fsp = fs.promises;
 const skillsLogger = createSubsystemLogger("skills");
@@ -437,4 +442,35 @@ export function buildWorkspaceSkillCommandSpecs(
     });
   }
   return specs;
+}
+
+/**
+ * Resolves a dynamic skill filter based on user prompt keywords.
+ * Returns `undefined` when filtering is disabled or unnecessary,
+ * allowing the caller to fall through to the original full-prompt path.
+ */
+export function resolveDynamicSkillFilter(params: {
+  prompt: string;
+  entries: SkillEntry[];
+  config?: OpenClawConfig;
+  snapshotVersion?: number;
+}): DynamicFilterResult | undefined {
+  const filterConfig: DynamicFilterConfig | undefined =
+    params.config?.skills?.dynamicFilter as DynamicFilterConfig | undefined;
+  const mode = filterConfig?.mode ?? "off";
+
+  if (mode === "off") return undefined;
+  if (mode === "auto" && params.entries.length <= 100) return undefined;
+
+  try {
+    return resolveSkillFilterFromPrompt(
+      params.prompt,
+      params.entries,
+      filterConfig!,
+      params.snapshotVersion,
+    );
+  } catch (err) {
+    console.warn(`[skills] Dynamic filter error, falling back: ${err}`);
+    return undefined;
+  }
 }

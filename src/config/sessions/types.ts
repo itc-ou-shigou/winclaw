@@ -150,6 +150,11 @@ export type SessionSystemPromptReport = {
   skills: {
     promptChars: number;
     entries: Array<{ name: string; blockChars: number }>;
+    dynamicFilter?: {
+      enabled: boolean;
+      matchedCount: number;
+      truncated: boolean;
+    };
   };
   tools: {
     listChars: number;
