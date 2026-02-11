@@ -17,7 +17,11 @@
       "Bash(gh auth status:*)",
       "Bash(git remote set-url:*)",
       "Bash(git reset:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(taskkill:*)",
+      "Bash(wmic process where \"name=''node.exe''\" get ProcessId,CommandLine)",
+      "Bash(npm run build:*)",
+      "Bash(schtasks /Query /TN \"OpenClaw Gateway\" /XML ONE)"
     ]
   }
 }
