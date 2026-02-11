@@ -10,7 +10,14 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(handle \"WinClawSetup-2026.2.9.exe\")",
       "Bash(cmd /c \"del /f /q \"\"C:\\\\work\\\\winclaw\\\\releases\\\\WinClawSetup-2026.2.9.exe\"\"\")",
-      "Bash(timeout /t 5 /nobreak)"
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(git status:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(gh auth status:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
