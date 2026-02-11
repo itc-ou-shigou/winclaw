@@ -73,8 +73,6 @@ Name: "{autodesktop}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"
 Name: "addtopath"; Description: "Add WinClaw to system PATH"; GroupDescription: "Additional options:"; \
   Flags: checkedonce
-Name: "installdaemon"; Description: "Install WinClaw Gateway as a Scheduled Task (auto-start)"; \
-  GroupDescription: "Additional options:"; Flags: checkedonce
 
 [Registry]
 ; Add to PATH (user-level, non-admin safe)
@@ -87,9 +85,9 @@ Filename: "{app}\winclaw.cmd"; Parameters: "onboard --flow quickstart"; \
   StatusMsg: "Starting WinClaw setup wizard..."; \
   Description: "Run WinClaw Setup Wizard (recommended)"; \
   Flags: postinstall waituntilterminated skipifsilent
-; Post-install: install daemon (if selected)
+; Post-install: always install daemon for auto-start on Windows reboot
 Filename: "{app}\winclaw.cmd"; Parameters: "daemon install"; \
-  StatusMsg: "Installing Gateway daemon..."; Tasks: installdaemon; \
+  StatusMsg: "Installing Gateway daemon..."; \
   Flags: runhidden waituntilterminated
 
 [UninstallRun]
