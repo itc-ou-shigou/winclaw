@@ -2,7 +2,8 @@ import type { Skill } from "@mariozechner/pi-coding-agent";
 
 export type SkillInstallSpec = {
   id?: string;
-  kind: "brew" | "node" | "go" | "uv" | "download";
+  kind: "brew" | "node" | "go" | "uv" | "download"
+    | "winget" | "scoop" | "choco" | "pip";
   label?: string;
   bins?: string[];
   os?: string[];
@@ -14,6 +15,12 @@ export type SkillInstallSpec = {
   extract?: boolean;
   stripComponents?: number;
   targetDir?: string;
+  /** winget --id parameter (e.g. "GitHub.cli") */
+  wingetId?: string;
+  /** scoop bucket name (optional, for non-main bucket packages) */
+  scoopBucket?: string;
+  /** scoop package name */
+  scoopPackage?: string;
 };
 
 export type OpenClawSkillMetadata = {

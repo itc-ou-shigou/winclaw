@@ -53,7 +53,9 @@ import { detectRuntimeShell } from "../../shell-utils.js";
 import {
   applySkillEnvOverrides,
   applySkillEnvOverridesFromSnapshot,
+  buildWorkspaceSkillsPrompt,
   loadWorkspaceSkillEntries,
+  resolveDynamicSkillFilter,
   resolveSkillsPromptForRun,
 } from "../../skills.js";
 import { buildSystemPromptParams } from "../../system-prompt-params.js";
@@ -180,12 +182,26 @@ export async function runEmbeddedAttempt(
           config: params.config,
         });
 
-    const skillsPrompt = resolveSkillsPromptForRun({
-      skillsSnapshot: params.skillsSnapshot,
-      entries: shouldLoadSkillEntries ? skillEntries : undefined,
+    // Dynamic skill filter: keyword-based pre-filter to prevent context overflow
+    const dynamicFilterResult = resolveDynamicSkillFilter({
+      prompt: params.prompt,
+      entries: skillEntries,
       config: params.config,
-      workspaceDir: effectiveWorkspace,
+      snapshotVersion: params.skillsSnapshot?.version,
     });
+
+    const skillsPrompt = dynamicFilterResult
+      ? buildWorkspaceSkillsPrompt(effectiveWorkspace, {
+          entries: skillEntries,
+          config: params.config,
+          skillFilter: dynamicFilterResult.skillNames,
+        })
+      : resolveSkillsPromptForRun({
+          skillsSnapshot: params.skillsSnapshot,
+          entries: shouldLoadSkillEntries ? skillEntries : undefined,
+          config: params.config,
+          workspaceDir: effectiveWorkspace,
+        });
 
     const sessionLabel = params.sessionKey ?? params.sessionId;
     const { bootstrapFiles: hookAdjustedBootstrapFiles, contextFiles } =
@@ -396,6 +412,13 @@ export async function runEmbeddedAttempt(
       injectedFiles: contextFiles,
       skillsPrompt,
       tools,
+      dynamicFilter: dynamicFilterResult
+        ? {
+            enabled: true,
+            matchedCount: dynamicFilterResult.matchedCount,
+            truncated: dynamicFilterResult.truncated,
+          }
+        : undefined,
     });
     const systemPromptOverride = createSystemPromptOverride(appendPrompt);
     const systemPromptText = systemPromptOverride();

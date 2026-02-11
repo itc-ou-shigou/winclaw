@@ -191,6 +191,27 @@ function buildInstallCommand(
       }
       return { argv: ["uv", "tool", "install", spec.package] };
     }
+    case "winget": {
+      const id = spec.wingetId?.trim();
+      if (!id) return { argv: null, error: "missing winget id" };
+      return { argv: ["winget", "install", "--id", id, "-e", "--accept-source-agreements"] };
+    }
+    case "scoop": {
+      const pkg = spec.scoopPackage?.trim();
+      if (!pkg) return { argv: null, error: "missing scoop package" };
+      return { argv: ["scoop", "install", pkg] };
+    }
+    case "choco": {
+      const pkg = spec.package?.trim();
+      if (!pkg) return { argv: null, error: "missing choco package" };
+      return { argv: ["choco", "install", pkg, "-y", "--no-progress"] };
+    }
+    case "pip": {
+      const pkg = spec.package?.trim();
+      if (!pkg) return { argv: null, error: "missing pip package" };
+      const pipBin = hasBinary("pip") ? "pip" : "pip3";
+      return { argv: [pipBin, "install", pkg] };
+    }
     case "download": {
       return { argv: null, error: "download install handled separately" };
     }
@@ -260,7 +281,17 @@ async function extractArchive(params: {
   timeoutMs: number;
 }): Promise<{ stdout: string; stderr: string; code: number | null }> {
   const { archivePath, archiveType, targetDir, stripComponents, timeoutMs } = params;
+  const isWindows = process.platform === "win32";
+
   if (archiveType === "zip") {
+    if (isWindows) {
+      // PowerShell Expand-Archive (no unzip needed)
+      const argv = [
+        "powershell", "-NoProfile", "-Command",
+        `Expand-Archive -Path '${archivePath}' -DestinationPath '${targetDir}' -Force`,
+      ];
+      return await runCommandWithTimeout(argv, { timeoutMs });
+    }
     if (!hasBinary("unzip")) {
       return { stdout: "", stderr: "unzip not found on PATH", code: null };
     }
@@ -268,6 +299,7 @@ async function extractArchive(params: {
     return await runCommandWithTimeout(argv, { timeoutMs });
   }
 
+  // tar-based archives
   if (!hasBinary("tar")) {
     return { stdout: "", stderr: "tar not found on PATH", code: null };
   }
@@ -275,7 +307,27 @@ async function extractArchive(params: {
   if (typeof stripComponents === "number" && Number.isFinite(stripComponents)) {
     argv.push("--strip-components", String(Math.max(0, Math.floor(stripComponents))));
   }
-  return await runCommandWithTimeout(argv, { timeoutMs });
+  const result = await runCommandWithTimeout(argv, { timeoutMs });
+
+  // Windows fallback: native tar may fail with bz2, try 7z or explicit bzip2 flag
+  if (isWindows && archiveType === "tar.bz2" && result.code !== 0) {
+    if (hasBinary("7z")) {
+      // 7-Zip handles tar.bz2 natively via two-stage extraction
+      const extract7z = await runCommandWithTimeout(
+        ["7z", "x", archivePath, `-o${targetDir}`, "-y"],
+        { timeoutMs },
+      );
+      if (extract7z.code === 0) return extract7z;
+    }
+    // Fallback: retry tar with explicit bzip2 flag
+    const retryArgv = ["tar", "xjf", archivePath, "-C", targetDir];
+    if (typeof stripComponents === "number" && Number.isFinite(stripComponents)) {
+      retryArgv.push("--strip-components", String(Math.max(0, Math.floor(stripComponents))));
+    }
+    return await runCommandWithTimeout(retryArgv, { timeoutMs });
+  }
+
+  return result;
 }
 
 async function installDownloadSpec(params: {
@@ -425,6 +477,64 @@ export async function installSkill(params: SkillInstallRequest): Promise<SkillIn
   if (spec.kind === "download") {
     const downloadResult = await installDownloadSpec({ entry, spec, timeoutMs });
     return withWarnings(downloadResult, warnings);
+  }
+
+  // Windows package manager pre-checks
+  if (spec.kind === "winget" && !hasBinary("winget")) {
+    return withWarnings(
+      {
+        ok: false,
+        message: "winget not available (requires Windows 10 1709+)",
+        stdout: "",
+        stderr: "",
+        code: null,
+      },
+      warnings,
+    );
+  }
+  if (spec.kind === "scoop") {
+    if (!hasBinary("scoop")) {
+      return withWarnings(
+        {
+          ok: false,
+          message: "scoop not installed (see https://scoop.sh)",
+          stdout: "",
+          stderr: "",
+          code: null,
+        },
+        warnings,
+      );
+    }
+    // Add scoop bucket if specified
+    if (spec.scoopBucket) {
+      await runCommandWithTimeout(["scoop", "bucket", "add", spec.scoopBucket], {
+        timeoutMs: Math.min(timeoutMs, 30_000),
+      });
+    }
+  }
+  if (spec.kind === "choco" && !hasBinary("choco")) {
+    return withWarnings(
+      {
+        ok: false,
+        message: "choco not installed (see https://chocolatey.org)",
+        stdout: "",
+        stderr: "",
+        code: null,
+      },
+      warnings,
+    );
+  }
+  if (spec.kind === "pip" && !hasBinary("pip") && !hasBinary("pip3")) {
+    return withWarnings(
+      {
+        ok: false,
+        message: "pip not installed",
+        stdout: "",
+        stderr: "",
+        code: null,
+      },
+      warnings,
+    );
   }
 
   const prefs = resolveSkillsInstallPreferences(params.config);

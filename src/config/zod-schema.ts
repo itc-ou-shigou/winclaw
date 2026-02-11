@@ -530,6 +530,21 @@ export const OpenClawSchema = z
             nodeManager: z
               .union([z.literal("npm"), z.literal("pnpm"), z.literal("yarn"), z.literal("bun")])
               .optional(),
+            windowsPackageManager: z
+              .union([z.literal("winget"), z.literal("scoop"), z.literal("choco")])
+              .optional(),
+          })
+          .strict()
+          .optional(),
+        dynamicFilter: z
+          .object({
+            mode: z
+              .union([z.literal("auto"), z.literal("on"), z.literal("off")])
+              .optional(),
+            maxSkillsPromptChars: z.number().int().positive().optional(),
+            maxSkills: z.number().int().positive().optional(),
+            minScore: z.number().min(0).optional(),
+            alwaysInclude: z.array(z.string()).optional(),
           })
           .strict()
           .optional(),

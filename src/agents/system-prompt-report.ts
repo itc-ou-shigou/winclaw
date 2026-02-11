@@ -113,6 +113,11 @@ export function buildSystemPromptReport(params: {
   injectedFiles: EmbeddedContextFile[];
   skillsPrompt: string;
   tools: AgentTool[];
+  dynamicFilter?: {
+    enabled: boolean;
+    matchedCount: number;
+    truncated: boolean;
+  };
 }): SessionSystemPromptReport {
   const systemPrompt = params.systemPrompt.trim();
   const projectContext = extractBetween(
@@ -150,6 +155,7 @@ export function buildSystemPromptReport(params: {
     skills: {
       promptChars: params.skillsPrompt.length,
       entries: skillsEntries,
+      ...(params.dynamicFilter ? { dynamicFilter: params.dynamicFilter } : {}),
     },
     tools: {
       listChars: toolListChars,
