@@ -8,7 +8,7 @@
 
 ## Overview
 
-**WinClaw** (npm: `openclaw`) is a personal AI assistant and multi-channel AI gateway
+**WinClaw** is a personal AI assistant and multi-channel AI gateway
 you run on your own devices. It answers you on the channels you already use --
 WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, Microsoft Teams,
 Matrix, Zalo, and WebChat -- while keeping your data local. The gateway is the
@@ -125,7 +125,7 @@ winclaw models auth add
 ```
 
 Auth profiles are stored in
-`%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json`.
+`%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json`.
 You can also edit this file directly to add or update tokens.
 
 ### Method 2: PowerShell One-liner
@@ -140,7 +140,7 @@ if needed, installs WinClaw globally via npm, and launches the onboarding wizard
 ### Method 3: npm (if Node.js 22+ is already installed)
 
 ```bash
-npm install -g openclaw@latest
+npm install -g winclaw@latest
 winclaw onboard --install-daemon
 ```
 
@@ -156,13 +156,13 @@ winget install WinClaw.WinClaw
 
 ```bash
 # npm
-npm install -g openclaw@latest
+npm install -g winclaw@latest
 
 # pnpm
-pnpm add -g openclaw@latest
+pnpm add -g winclaw@latest
 
 # Then run the onboarding wizard
-openclaw onboard --install-daemon
+winclaw onboard --install-daemon
 ```
 
 The wizard installs the gateway daemon as a launchd user service (macOS) or
@@ -172,8 +172,8 @@ systemd user service (Linux) so it stays running across reboots.
 
 | Method | Command / Link |
 |---|---|
-| Nix | [nix-openclaw](https://github.com/openclaw/nix-openclaw) |
-| Docker | `docker pull openclaw/openclaw:latest` |
+| Nix | [nix-winclaw](https://github.com/winclaw/nix-winclaw) |
+| Docker | `docker pull winclaw/winclaw:latest` |
 | From source | See [Development](#development-from-source) below |
 
 ## Quick Start
@@ -207,25 +207,25 @@ winclaw doctor
 
 ```bash
 # 1. Run the onboarding wizard (sets up config, auth, channels, daemon)
-openclaw onboard --install-daemon
+winclaw onboard --install-daemon
 
 # 2. Start the gateway manually (if daemon not installed)
-openclaw gateway --port 18789 --verbose
+winclaw gateway --port 18789 --verbose
 
 # 3. Open the Control UI Dashboard
-openclaw dashboard
+winclaw dashboard
 
 # 4. Talk to the assistant
-openclaw agent --message "Hello" --thinking high
+winclaw agent --message "Hello" --thinking high
 
 # 5. Send a message to a connected channel
-openclaw message send --to +1234567890 --message "Hello from WinClaw"
+winclaw message send --to +1234567890 --message "Hello from WinClaw"
 
 # 6. Launch the terminal UI
-openclaw tui
+winclaw tui
 ```
 
-Run `winclaw doctor` (Windows) or `openclaw doctor` (macOS/Linux) at any time
+Run `winclaw doctor` at any time
 to verify your installation and diagnose issues.
 
 ## Configuration
@@ -234,19 +234,19 @@ to verify your installation and diagnose issues.
 
 | Platform | Default path |
 |---|---|
-| Windows (all methods) | `%USERPROFILE%\.openclaw\openclaw.json` |
-| macOS / Linux | `~/.openclaw/openclaw.json` |
+| Windows (all methods) | `%USERPROFILE%\.winclaw\winclaw.json` |
+| macOS / Linux | `~/.winclaw/winclaw.json` |
 
-The path can be overridden with `OPENCLAW_CONFIG_PATH` or `OPENCLAW_STATE_DIR`.
+The path can be overridden with `WINCLAW_CONFIG_PATH` or `WINCLAW_STATE_DIR`.
 
 Additional configuration files on Windows:
 
 | File | Path | Purpose |
 |---|---|---|
-| Main config | `%USERPROFILE%\.openclaw\openclaw.json` | Gateway, channels, skills, agent settings |
-| Auth profiles | `%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json` | AI provider tokens (Anthropic, OpenAI, etc.) |
-| Credentials | `%USERPROFILE%\.openclaw\credentials\` | Channel credentials (WhatsApp session, etc.) |
-| Sessions | `%USERPROFILE%\.openclaw\agents\main\sessions\` | Conversation session history |
+| Main config | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway, channels, skills, agent settings |
+| Auth profiles | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI provider tokens (Anthropic, OpenAI, etc.) |
+| Credentials | `%USERPROFILE%\.winclaw\credentials\` | Channel credentials (WhatsApp session, etc.) |
+| Sessions | `%USERPROFILE%\.winclaw\agents\main\sessions\` | Conversation session history |
 
 ### Minimal config example
 
@@ -430,17 +430,17 @@ or add them to your config manually.
 
 | Channel | Auth method | Docs |
 |---|---|---|
-| WhatsApp | QR code pairing | [Guide](https://docs.openclaw.ai/channels/whatsapp) |
-| Telegram | Bot token | [Guide](https://docs.openclaw.ai/channels/telegram) |
-| Slack | OAuth / Bot token | [Guide](https://docs.openclaw.ai/channels/slack) |
-| Discord | Bot token | [Guide](https://docs.openclaw.ai/channels/discord) |
-| Google Chat | Service account | [Guide](https://docs.openclaw.ai/channels/google-chat) |
-| Signal | Signal CLI / linked device | [Guide](https://docs.openclaw.ai/channels/signal) |
-| iMessage | macOS only (AppleScript) | [Guide](https://docs.openclaw.ai/channels/imessage) |
-| Microsoft Teams | Bot Framework | [Guide](https://docs.openclaw.ai/channels/msteams) |
-| Matrix | Access token | [Guide](https://docs.openclaw.ai/channels/matrix) |
-| Zalo | Zalo OA token | [Guide](https://docs.openclaw.ai/channels/zalo) |
-| WebChat | Built-in (HTTP) | [Guide](https://docs.openclaw.ai/channels/webchat) |
+| WhatsApp | QR code pairing | [Guide](https://docs.winclaw.ai/channels/whatsapp) |
+| Telegram | Bot token | [Guide](https://docs.winclaw.ai/channels/telegram) |
+| Slack | OAuth / Bot token | [Guide](https://docs.winclaw.ai/channels/slack) |
+| Discord | Bot token | [Guide](https://docs.winclaw.ai/channels/discord) |
+| Google Chat | Service account | [Guide](https://docs.winclaw.ai/channels/google-chat) |
+| Signal | Signal CLI / linked device | [Guide](https://docs.winclaw.ai/channels/signal) |
+| iMessage | macOS only (AppleScript) | [Guide](https://docs.winclaw.ai/channels/imessage) |
+| Microsoft Teams | Bot Framework | [Guide](https://docs.winclaw.ai/channels/msteams) |
+| Matrix | Access token | [Guide](https://docs.winclaw.ai/channels/matrix) |
+| Zalo | Zalo OA token | [Guide](https://docs.winclaw.ai/channels/zalo) |
+| WebChat | Built-in (HTTP) | [Guide](https://docs.winclaw.ai/channels/webchat) |
 
 ## Skills System
 
@@ -482,7 +482,7 @@ git clone https://github.com/itc-ou-shigou/winclaw.git
 cd winclaw
 pnpm install
 pnpm build
-pnpm openclaw onboard
+pnpm winclaw onboard
 ```
 
 **Requirements:** Node.js 22+, pnpm 10+
@@ -574,7 +574,7 @@ WinClaw is designed as a **single-user, local-first** application.
 
 For the full threat model, hardening guide, and vulnerability reporting
 instructions, see [SECURITY.md](SECURITY.md) and the
-[security documentation](https://docs.openclaw.ai/gateway/security).
+[security documentation](https://docs.winclaw.ai/gateway/security).
 
 ## License
 
