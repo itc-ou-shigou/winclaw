@@ -3,7 +3,7 @@
 [![CI](https://github.com/itc-ou-shigou/winclaw/actions/workflows/ci.yml/badge.svg)](https://github.com/itc-ou-shigou/winclaw/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/itc-ou-shigou/winclaw)](https://github.com/itc-ou-shigou/winclaw/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/itc-ou-shigou/winclaw/blob/main/LICENSE)
-[![npm](https://img.shields.io/npm/v/openclaw)](https://www.npmjs.com/package/openclaw)
+[![npm](https://img.shields.io/npm/v/winclaw)](https://www.npmjs.com/package/winclaw)
 
 [English](./README.md) | **简体中文**
 
@@ -106,7 +106,7 @@ winclaw models auth login --provider anthropic
 winclaw models auth add
 ```
 
-认证配置文件位于 `%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json`，也可直接编辑此文件。
+认证配置文件位于 `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json`，也可直接编辑此文件。
 
 ### 方法二：PowerShell 一键安装
 
@@ -119,7 +119,7 @@ irm https://raw.githubusercontent.com/itc-ou-shigou/winclaw/main/install.ps1 | i
 ### 方法三：npm 安装（已安装 Node.js 的情况）
 
 ```bash
-npm install -g openclaw@latest
+npm install -g winclaw@latest
 winclaw onboard --install-daemon
 ```
 
@@ -135,12 +135,12 @@ winclaw onboard --install-daemon
 ## macOS / Linux 安装
 
 ```bash
-npm install -g openclaw@latest
-openclaw onboard --install-daemon
+npm install -g winclaw@latest
+winclaw onboard --install-daemon
 ```
 
-- **macOS**：守护进程通过 launchd 注册为 `ai.openclaw.gateway`
-- **Linux**：守护进程通过 systemd 注册为 `openclaw-gateway.service`
+- **macOS**：守护进程通过 launchd 注册为 `ai.winclaw.gateway`
+- **Linux**：守护进程通过 systemd 注册为 `winclaw-gateway.service`
 
 > 系统要求：Node.js 22+。建议使用 [nvm](https://github.com/nvm-sh/nvm) 或 [fnm](https://github.com/Schniz/fnm) 管理版本。
 
@@ -174,19 +174,19 @@ winclaw doctor
 
 ```bash
 # 1. 引导设置（选择模型、配置密钥、选择渠道）
-openclaw onboard --install-daemon
+winclaw onboard --install-daemon
 
 # 2. 启动网关
-openclaw gateway --port 18789 --verbose
+winclaw gateway --port 18789 --verbose
 
 # 3. 打开控制面板
-openclaw dashboard
+winclaw dashboard
 
 # 4. 发送测试消息
-openclaw agent --message "你好" --thinking high
+winclaw agent --message "你好" --thinking high
 
 # 5. 启动终端交互界面
-openclaw tui
+winclaw tui
 ```
 
 ### 主要 CLI 命令
@@ -212,19 +212,19 @@ openclaw tui
 
 | 平台 | 路径 |
 |------|------|
-| Windows（所有安装方式） | `%USERPROFILE%\.openclaw\openclaw.json` |
-| macOS / Linux | `~/.openclaw/openclaw.json` |
+| Windows（所有安装方式） | `%USERPROFILE%\.winclaw\winclaw.json` |
+| macOS / Linux | `~/.winclaw/winclaw.json` |
 
-可通过 `OPENCLAW_CONFIG_PATH` 或 `OPENCLAW_STATE_DIR` 环境变量覆盖。
+可通过 `WINCLAW_CONFIG_PATH` 或 `WINCLAW_STATE_DIR` 环境变量覆盖。
 
 Windows 下的主要配置文件：
 
 | 文件 | 路径 | 用途 |
 |------|------|------|
-| 主配置 | `%USERPROFILE%\.openclaw\openclaw.json` | Gateway、渠道、技能、代理设置 |
-| 认证配置 | `%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json` | AI 提供商令牌（Anthropic、OpenAI 等） |
-| 渠道凭据 | `%USERPROFILE%\.openclaw\credentials\` | WhatsApp 会话等渠道认证数据 |
-| 会话记录 | `%USERPROFILE%\.openclaw\agents\main\sessions\` | 对话会话历史 |
+| 主配置 | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway、渠道、技能、代理设置 |
+| 认证配置 | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI 提供商令牌（Anthropic、OpenAI 等） |
+| 渠道凭据 | `%USERPROFILE%\.winclaw\credentials\` | WhatsApp 会话等渠道认证数据 |
+| 会话记录 | `%USERPROFILE%\.winclaw\agents\main\sessions\` | 对话会话历史 |
 
 ### 最小配置示例
 
@@ -305,7 +305,7 @@ Windows 下的主要配置文件：
 
 ### Gateway 守护进程 (schtasks)
 
-- 任务名称：`OpenClaw Gateway`，用户登录时自动启动
+- 任务名称：`WinClaw Gateway`，用户登录时自动启动
 - 以当前用户身份运行，无需管理员权限
 - 管理：`winclaw daemon install | uninstall | status`
 
@@ -417,8 +417,8 @@ Get-Process -Name node | Where-Object { $_.Path -like '*WinClaw*' } | Stop-Proce
 | 类型 | 位置 | 说明 |
 |------|------|------|
 | 内置技能 | `skills/` (安装目录) | 随 WinClaw 发布，开箱即用 |
-| 托管技能 | `~/.openclaw/skills/` | 用户安装或社区获取 |
-| 工作区技能 | 项目目录下 `.openclaw/skills/` | 项目级，跟随项目分发 |
+| 托管技能 | `~/.winclaw/skills/` | 用户安装或社区获取 |
+| 工作区技能 | 项目目录下 `.winclaw/skills/` | 项目级，跟随项目分发 |
 
 内置 50+ 技能，涵盖：**生产力** (github, notion, obsidian, trello)、**编码** (coding-agent, canvas)、**多媒体** (openai-image-gen, video-frames, whisper-api)、**通信** (himalaya, discord, voice-call)、**系统** (windows-office/system/explorer/outlook)、**智能家居** (openhue, sonoscli)。
 
@@ -547,5 +547,3 @@ Inno Setup 编译大约需要 30 分钟（因 node_modules 文件数量庞大）
 ## 许可证
 
 [MIT License](https://github.com/itc-ou-shigou/winclaw/blob/main/LICENSE) -- Copyright (c) WinClaw Contributors
-
-> WinClaw 的 npm 包名为 `openclaw`，这是历史名称，功能完全一致。

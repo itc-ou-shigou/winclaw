@@ -1,12 +1,13 @@
 {
-  "name": "openclaw",
+  "name": "winclaw",
   "version": "2026.2.11",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
   "license": "MIT",
   "author": "",
   "bin": {
-    "openclaw": "openclaw.mjs"
+    "winclaw": "winclaw.mjs",
+    "openclaw": "winclaw.mjs"
   },
   "files": [
     "assets/",
@@ -15,7 +16,7 @@
     "docs/",
     "extensions/",
     "LICENSE",
-    "openclaw.mjs",
+    "winclaw.mjs",
     "README-header.png",
     "README.md",
     "skills/"
@@ -25,7 +26,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./plugin-sdk": "./dist/plugin-sdk/index.js",
-    "./cli-entry": "./openclaw.mjs"
+    "./cli-entry": "./winclaw.mjs"
   },
   "scripts": {
     "android:assemble": "cd apps/android && ./gradlew :app:assembleDebug",
@@ -66,8 +67,8 @@
     "mac:package": "bash scripts/package-mac-app.sh",
     "mac:restart": "bash scripts/restart-mac.sh",
     "moltbot:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
-    "openclaw": "node scripts/run-node.mjs",
-    "openclaw:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
+    "winclaw": "node scripts/run-node.mjs",
+    "winclaw:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "plugins:sync": "node --import tsx scripts/sync-plugin-versions.ts",
     "prepack": "pnpm build && pnpm ui:build",
     "prepare": "command -v git >/dev/null 2>&1 && git config core.hooksPath git-hooks || exit 0",

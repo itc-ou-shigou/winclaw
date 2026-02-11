@@ -105,7 +105,7 @@ winclaw models auth login --provider anthropic
 winclaw models auth add
 ```
 
-認証プロファイルは `%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json` に保存されます。このファイルを直接編集してトークンを追加・更新することもできます。
+認証プロファイルは `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` に保存されます。このファイルを直接編集してトークンを追加・更新することもできます。
 
 ### 方法 2: PowerShell ワンライナー
 
@@ -119,11 +119,9 @@ Windows 10 1803 以降（Build 17134+）が必要です。
 ### 方法 3: npm（Node.js インストール済みの場合）
 
 ```bash
-npm install -g openclaw@latest
+npm install -g winclaw@latest
 winclaw onboard --install-daemon
 ```
-
-> npm パッケージ名は `openclaw` のままです。CLI コマンドは `winclaw` および `openclaw` の両方が使用可能です。
 
 ### 方法 4: winget
 
@@ -142,10 +140,10 @@ winget install WinClaw.WinClaw --silent
 ランタイム要件: **Node.js 22 以上**
 
 ```bash
-npm install -g openclaw@latest
-# または: pnpm add -g openclaw@latest
+npm install -g winclaw@latest
+# または: pnpm add -g winclaw@latest
 
-openclaw onboard --install-daemon
+winclaw onboard --install-daemon
 ```
 
 ウィザードが Gateway デーモンをインストールします:
@@ -184,19 +182,19 @@ winclaw doctor
 
 ```bash
 # 1. セットアップウィザード（初回のみ）
-openclaw onboard --install-daemon
+winclaw onboard --install-daemon
 
 # 2. Gateway を手動起動（デーモン未使用の場合）
-openclaw gateway --port 18789 --verbose
+winclaw gateway --port 18789 --verbose
 
 # 3. コントロール UI Dashboard を開く
-openclaw dashboard
+winclaw dashboard
 
 # 4. AI アシスタントと対話
-openclaw agent --message "こんにちは" --thinking high
+winclaw agent --message "こんにちは" --thinking high
 
 # 5. ターミナル UI を起動
-openclaw tui
+winclaw tui
 ```
 
 ### 主要 CLI コマンド
@@ -221,19 +219,19 @@ openclaw tui
 
 | プラットフォーム | パス |
 |---|---|
-| Windows（全インストール方法共通） | `%USERPROFILE%\.openclaw\openclaw.json` |
-| macOS / Linux | `~/.openclaw/openclaw.json` |
+| Windows（全インストール方法共通） | `%USERPROFILE%\.winclaw\winclaw.json` |
+| macOS / Linux | `~/.winclaw/winclaw.json` |
 
-環境変数 `OPENCLAW_CONFIG_PATH` または `OPENCLAW_STATE_DIR` で任意のパスに上書き可能です。
+環境変数 `WINCLAW_CONFIG_PATH` または `WINCLAW_STATE_DIR` で任意のパスに上書き可能です。
 
 Windows 上の主要な設定ファイル:
 
 | ファイル | パス | 用途 |
 |---|---|---|
-| メイン設定 | `%USERPROFILE%\.openclaw\openclaw.json` | Gateway、チャネル、スキル、エージェント設定 |
-| 認証プロファイル | `%USERPROFILE%\.openclaw\agents\main\agent\auth-profiles.json` | AI プロバイダートークン（Anthropic、OpenAI 等） |
-| チャネル認証情報 | `%USERPROFILE%\.openclaw\credentials\` | WhatsApp セッション等のチャネル認証データ |
-| セッション履歴 | `%USERPROFILE%\.openclaw\agents\main\sessions\` | 会話セッション履歴 |
+| メイン設定 | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway、チャネル、スキル、エージェント設定 |
+| 認証プロファイル | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI プロバイダートークン（Anthropic、OpenAI 等） |
+| チャネル認証情報 | `%USERPROFILE%\.winclaw\credentials\` | WhatsApp セッション等のチャネル認証データ |
+| セッション履歴 | `%USERPROFILE%\.winclaw\agents\main\sessions\` | 会話セッション履歴 |
 
 ### 最小設定例
 
@@ -313,7 +311,7 @@ WinClaw の exec ツールは PowerShell スクリプトをネイティブに実
 ### Windows タスクスケジューラによるデーモン
 
 Gateway はタスクスケジューラに `ONLOGON` トリガーで登録され、ログオン時に自動起動します。
-タスク名は `OPENCLAW_WINDOWS_TASK_NAME` 環境変数で上書き可能です。
+タスク名は `WINCLAW_WINDOWS_TASK_NAME` 環境変数で上書き可能です。
 
 ```powershell
 winclaw daemon install     # インストール
@@ -423,7 +421,7 @@ WinClaw のスキルは 3 つのカテゴリに分類されます:
 | カテゴリ | 説明 | 場所 |
 |---|---|---|
 | 内蔵 (Bundled) | npm パッケージに同梱 | `skills/` ディレクトリ |
-| マネージド (Managed) | ClawHub から取得 | `~/.openclaw/managed-skills/` |
+| マネージド (Managed) | ClawHub から取得 | `~/.winclaw/managed-skills/` |
 | ワークスペース (Workspace) | ユーザー定義 | `skills.load.extraDirs` で指定 |
 
 スキルは `SKILL.md` ファイルで定義されます。各スキルにはメタデータ（名前、説明、OS 制限、依存関係）とツール使用例が含まれます。
@@ -458,7 +456,7 @@ pnpm ui:build
 pnpm build
 
 # 開発実行
-pnpm openclaw onboard --install-daemon
+pnpm winclaw onboard --install-daemon
 
 # Gateway 開発モード（ファイル変更時自動リロード）
 pnpm gateway:watch

@@ -6,7 +6,7 @@ rem Starts Gateway (if not running) and opens Control UI in browser
 
 set "WINCLAW_DIR=%~dp0"
 set "WINCLAW_NODE=%WINCLAW_DIR%node\node.exe"
-set "WINCLAW_APP=%WINCLAW_DIR%app\openclaw.mjs"
+set "WINCLAW_APP=%WINCLAW_DIR%app\winclaw.mjs"
 set "GATEWAY_PORT=18789"
 set "GATEWAY_URL=http://127.0.0.1:%GATEWAY_PORT%/"
 

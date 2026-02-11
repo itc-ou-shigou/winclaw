@@ -202,7 +202,7 @@ Copy-Item "$ROOT\assets\logo.png" "$STAGING\assets\" -Force
 @echo off
 setlocal
 set "WINCLAW_NODE=%~dp0node\node.exe"
-set "WINCLAW_APP=%~dp0app\openclaw.mjs"
+set "WINCLAW_APP=%~dp0app\winclaw.mjs"
 "%WINCLAW_NODE%" "%WINCLAW_APP%" %*
 "@ | Set-Content "$STAGING\winclaw.cmd" -Encoding ASCII
 
