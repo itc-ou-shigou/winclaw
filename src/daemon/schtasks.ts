@@ -298,6 +298,28 @@ export async function installScheduledTask({
     throw new Error(`schtasks create failed: ${detail}${hint}`.trim());
   }
 
+  // Fix scheduled task settings: battery, execution time limit, restart on failure
+  const psScript = [
+    `$t = Get-ScheduledTask -TaskName '${taskName.replace(/'/g, "''")}' -ErrorAction SilentlyContinue`,
+    `if ($t) {`,
+    `  $t.Settings.DisallowStartIfOnBatteries = $false`,
+    `  $t.Settings.StopIfGoingOnBatteries = $false`,
+    `  $t.Settings.ExecutionTimeLimit = 'PT0S'`,
+    `  $t.Settings.RestartCount = 3`,
+    `  $t.Settings.RestartInterval = 'PT1M'`,
+    `  $t.Settings.StartWhenAvailable = $true`,
+    `  Set-ScheduledTask $t | Out-Null`,
+    `}`,
+  ].join("; ");
+  try {
+    await execFileAsync("powershell", ["-NoProfile", "-NonInteractive", "-Command", psScript], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+  } catch {
+    // Non-fatal: task still works, just with default settings
+  }
+
   await execSchtasks(["/Run", "/TN", taskName]);
   // Ensure we don't end up writing to a clack spinner line (wizards show progress without a newline).
   stdout.write("\n");
