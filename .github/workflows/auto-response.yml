@@ -1,10 +1,11 @@
 name: Auto response
 
 on:
-  issues:
-    types: [opened, edited, labeled]
-  pull_request_target:
-    types: [labeled]
+  workflow_dispatch: # disabled: requires GH_APP_PRIVATE_KEY from upstream
+  # issues:
+  #   types: [opened, edited, labeled]
+  # pull_request_target:
+  #   types: [labeled]
 
 permissions: {}
 

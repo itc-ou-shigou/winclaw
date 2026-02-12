@@ -1,9 +1,9 @@
 name: Stale
 
 on:
-  schedule:
-    - cron: "17 3 * * *"
-  workflow_dispatch:
+  workflow_dispatch: # disabled: requires GH_APP_PRIVATE_KEY from upstream
+  # schedule:
+  #   - cron: "17 3 * * *"
 
 permissions: {}
 
