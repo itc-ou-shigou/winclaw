@@ -538,9 +538,7 @@ export const OpenClawSchema = z
           .optional(),
         dynamicFilter: z
           .object({
-            mode: z
-              .union([z.literal("auto"), z.literal("on"), z.literal("off")])
-              .optional(),
+            mode: z.union([z.literal("auto"), z.literal("on"), z.literal("off")]).optional(),
             maxSkillsPromptChars: z.number().int().positive().optional(),
             maxSkills: z.number().int().positive().optional(),
             minScore: z.number().min(0).optional(),

@@ -3,19 +3,21 @@ name: windows-outlook
 description: Send and read emails via Microsoft Outlook COM Automation. Requires Outlook installed.
 metadata:
   {
-    "openclaw": {
-      "emoji": "📧",
-      "os": ["win32"],
-      "requires": { "bins": ["python3"] },
-      "install": [
-        {
-          "id": "pip-pywin32",
-          "kind": "pip",
-          "package": "pywin32",
-          "label": "Install pywin32 for COM Automation"
-        }
-      ]
-    }
+    "openclaw":
+      {
+        "emoji": "📧",
+        "os": ["win32"],
+        "requires": { "bins": ["python3"] },
+        "install":
+          [
+            {
+              "id": "pip-pywin32",
+              "kind": "pip",
+              "package": "pywin32",
+              "label": "Install pywin32 for COM Automation",
+            },
+          ],
+      },
   }
 ---
 
@@ -67,6 +69,7 @@ for msg in results:
 ```
 
 ## Notes
+
 - Requires Microsoft Outlook installed and configured
 - `mail.Display()` opens draft for review; `mail.Send()` sends immediately
 - Always confirm with user before calling `mail.Send()`

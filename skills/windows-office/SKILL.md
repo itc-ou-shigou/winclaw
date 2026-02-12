@@ -3,19 +3,21 @@ name: windows-office
 description: Create and edit Microsoft Office documents (Word, Excel, PowerPoint) via python-docx, openpyxl, python-pptx, and optional COM Automation.
 metadata:
   {
-    "openclaw": {
-      "emoji": "📄",
-      "os": ["win32"],
-      "requires": { "bins": ["python3"] },
-      "install": [
-        {
-          "id": "pip-office",
-          "kind": "pip",
-          "package": "python-docx openpyxl python-pptx",
-          "label": "Install Office Python libraries"
-        }
-      ]
-    }
+    "openclaw":
+      {
+        "emoji": "📄",
+        "os": ["win32"],
+        "requires": { "bins": ["python3"] },
+        "install":
+          [
+            {
+              "id": "pip-office",
+              "kind": "pip",
+              "package": "python-docx openpyxl python-pptx",
+              "label": "Install Office Python libraries",
+            },
+          ],
+      },
   }
 ---
 
@@ -23,17 +25,20 @@ metadata:
 
 Create, edit, and convert Microsoft Office documents.
 Supports two modes:
+
 - **Python libraries** (python-docx, openpyxl, python-pptx): No Office installation required
 - **COM Automation** (pywin32): Requires Office installed, supports full feature set including PDF export
 
 ## Setup
 
 Install Python libraries:
+
 ```powershell
 pip install python-docx openpyxl python-pptx
 ```
 
 For COM Automation (optional, requires Office installed):
+
 ```powershell
 pip install pywin32
 ```
@@ -41,6 +46,7 @@ pip install pywin32
 ## Word Documents
 
 ### Create a document
+
 ```powershell
 python3 -c "
 from docx import Document
@@ -55,6 +61,7 @@ print('Created: output.docx')
 ```
 
 ### Read document content
+
 ```powershell
 python3 -c "
 from docx import Document
@@ -67,6 +74,7 @@ for para in doc.paragraphs:
 ## Excel Spreadsheets
 
 ### Create a spreadsheet
+
 ```powershell
 python3 -c "
 from openpyxl import Workbook
@@ -81,6 +89,7 @@ print('Created: report.xlsx')
 ```
 
 ### Read Excel data
+
 ```powershell
 python3 -c "
 from openpyxl import load_workbook
@@ -94,6 +103,7 @@ for row in ws.iter_rows(values_only=True):
 ## PowerPoint Presentations
 
 ### Create a presentation
+
 ```powershell
 python3 -c "
 from pptx import Presentation
@@ -110,6 +120,7 @@ print('Created: presentation.pptx')
 ## COM Automation (Advanced, requires Office)
 
 ### Convert Word to PDF
+
 ```powershell
 python3 -c "
 import win32com.client, os

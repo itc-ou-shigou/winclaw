@@ -6,8 +6,8 @@
   "license": "MIT",
   "author": "",
   "bin": {
-    "winclaw": "winclaw.mjs",
-    "openclaw": "winclaw.mjs"
+    "openclaw": "winclaw.mjs",
+    "winclaw": "winclaw.mjs"
   },
   "files": [
     "assets/",
@@ -67,8 +67,6 @@
     "mac:package": "bash scripts/package-mac-app.sh",
     "mac:restart": "bash scripts/restart-mac.sh",
     "moltbot:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
-    "winclaw": "node scripts/run-node.mjs",
-    "winclaw:rpc": "node scripts/run-node.mjs agent --mode rpc --json",
     "plugins:sync": "node --import tsx scripts/sync-plugin-versions.ts",
     "prepack": "pnpm build && pnpm ui:build",
     "prepare": "command -v git >/dev/null 2>&1 && git config core.hooksPath git-hooks || exit 0",
@@ -103,7 +101,9 @@
     "tui:dev": "OPENCLAW_PROFILE=dev CLAWDBOT_PROFILE=dev node scripts/run-node.mjs --dev tui",
     "ui:build": "node scripts/ui.js build",
     "ui:dev": "node scripts/ui.js dev",
-    "ui:install": "node scripts/ui.js install"
+    "ui:install": "node scripts/ui.js install",
+    "winclaw": "node scripts/run-node.mjs",
+    "winclaw:rpc": "node scripts/run-node.mjs agent --mode rpc --json"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "0.14.1",

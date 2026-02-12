@@ -32,11 +32,55 @@ export type DynamicFilterResult = {
 // ---------------------------------------------------------------------------
 
 const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-  "of", "with", "by", "from", "is", "it", "as", "be", "was", "are",
-  "this", "that", "not", "can", "will", "do", "if", "so", "no", "up",
-  "out", "all", "your", "you", "we", "he", "she", "its", "my", "our",
-  "has", "have", "had", "been", "about", "into", "over", "after",
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "by",
+  "from",
+  "is",
+  "it",
+  "as",
+  "be",
+  "was",
+  "are",
+  "this",
+  "that",
+  "not",
+  "can",
+  "will",
+  "do",
+  "if",
+  "so",
+  "no",
+  "up",
+  "out",
+  "all",
+  "your",
+  "you",
+  "we",
+  "he",
+  "she",
+  "its",
+  "my",
+  "our",
+  "has",
+  "have",
+  "had",
+  "been",
+  "about",
+  "into",
+  "over",
+  "after",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -72,7 +116,11 @@ type SkillIndex = {
 let cachedIndex: SkillIndex | undefined;
 
 function buildSkillIndex(entries: SkillEntry[], version: number | undefined): SkillIndex {
-  if (cachedIndex && cachedIndex.version === version && cachedIndex.totalSkills === entries.length) {
+  if (
+    cachedIndex &&
+    cachedIndex.version === version &&
+    cachedIndex.totalSkills === entries.length
+  ) {
     return cachedIndex;
   }
 
@@ -181,9 +229,7 @@ export function resolveSkillFilterFromPrompt(
 
   // If query is empty, return alphabetical fallback limited by budget
   if (queryTokens.length === 0) {
-    const sorted = entries
-      .map((e) => e.skill.name)
-      .sort();
+    const sorted = entries.map((e) => e.skill.name).sort();
     const budgetLimit = Math.min(maxSkills, Math.floor(maxChars / AVG_SKILL_CHARS));
     const names = sorted.slice(0, budgetLimit);
     // Ensure alwaysInclude skills are present

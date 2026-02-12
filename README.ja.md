@@ -28,11 +28,11 @@ Windows ユーザーに最も推奨される方法です。Node.js 22 ランタ�
 2. インストーラーを実行（管理者権限不要 -- ユーザープロファイルにインストールされます）
 3. インストール時のオプションを選択:
 
-| オプション | 説明 | デフォルト |
-|---|---|---|
-| デスクトップショートカット | デスクトップに WinClaw アイコンを作成 | オフ |
-| PATH に追加 | ユーザー PATH に `{app}` ディレクトリを追加 | オン |
-| デーモンインストール | Gateway をタスクスケジューラに登録（ログオン時自動起動） | オン |
+| オプション                 | 説明                                                     | デフォルト |
+| -------------------------- | -------------------------------------------------------- | ---------- |
+| デスクトップショートカット | デスクトップに WinClaw アイコンを作成                    | オフ       |
+| PATH に追加                | ユーザー PATH に `{app}` ディレクトリを追加              | オン       |
+| デーモンインストール       | Gateway をタスクスケジューラに登録（ログオン時自動起動） | オン       |
 
 インストーラーが自動的に行うこと:
 
@@ -148,11 +148,11 @@ winclaw onboard --install-daemon
 
 ウィザードが Gateway デーモンをインストールします:
 
-| プラットフォーム | デーモン方式 | 管理コマンド |
-|---|---|---|
-| macOS | launchd ユーザーサービス | `launchctl` |
-| Linux | systemd ユーザーサービス | `systemctl --user` |
-| Windows | schtasks（タスクスケジューラ） | `schtasks` |
+| プラットフォーム | デーモン方式                   | 管理コマンド       |
+| ---------------- | ------------------------------ | ------------------ |
+| macOS            | launchd ユーザーサービス       | `launchctl`        |
+| Linux            | systemd ユーザーサービス       | `systemctl --user` |
+| Windows          | schtasks（タスクスケジューラ） | `schtasks`         |
 
 ## クイックスタート
 
@@ -199,39 +199,39 @@ winclaw tui
 
 ### 主要 CLI コマンド
 
-| コマンド | 説明 |
-|---|---|
-| `winclaw onboard` | セットアップウィザード |
-| `winclaw gateway` | Gateway 起動 |
-| `winclaw dashboard` | コントロール UI を開く（トークン付き） |
-| `winclaw agent` | AI エージェント対話 |
-| `winclaw doctor` | ヘルスチェック・診断 |
-| `winclaw daemon install / status / restart` | デーモン管理 |
-| `winclaw tui` | ターミナル UI |
-| `winclaw models auth login` | AI モデル認証トークンの更新 |
-| `winclaw config get <key>` | 設定値の取得 |
-| `winclaw config set <key> <value>` | 設定値の変更 |
-| `winclaw update` | アップデート |
+| コマンド                                    | 説明                                   |
+| ------------------------------------------- | -------------------------------------- |
+| `winclaw onboard`                           | セットアップウィザード                 |
+| `winclaw gateway`                           | Gateway 起動                           |
+| `winclaw dashboard`                         | コントロール UI を開く（トークン付き） |
+| `winclaw agent`                             | AI エージェント対話                    |
+| `winclaw doctor`                            | ヘルスチェック・診断                   |
+| `winclaw daemon install / status / restart` | デーモン管理                           |
+| `winclaw tui`                               | ターミナル UI                          |
+| `winclaw models auth login`                 | AI モデル認証トークンの更新            |
+| `winclaw config get <key>`                  | 設定値の取得                           |
+| `winclaw config set <key> <value>`          | 設定値の変更                           |
+| `winclaw update`                            | アップデート                           |
 
 ## 設定
 
 ### 設定ファイルパス
 
-| プラットフォーム | パス |
-|---|---|
+| プラットフォーム                  | パス                                  |
+| --------------------------------- | ------------------------------------- |
 | Windows（全インストール方法共通） | `%USERPROFILE%\.winclaw\winclaw.json` |
-| macOS / Linux | `~/.winclaw/winclaw.json` |
+| macOS / Linux                     | `~/.winclaw/winclaw.json`             |
 
 環境変数 `WINCLAW_CONFIG_PATH` または `WINCLAW_STATE_DIR` で任意のパスに上書き可能です。
 
 Windows 上の主要な設定ファイル:
 
-| ファイル | パス | 用途 |
-|---|---|---|
-| メイン設定 | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway、チャネル、スキル、エージェント設定 |
+| ファイル         | パス                                                          | 用途                                            |
+| ---------------- | ------------------------------------------------------------- | ----------------------------------------------- |
+| メイン設定       | `%USERPROFILE%\.winclaw\winclaw.json`                         | Gateway、チャネル、スキル、エージェント設定     |
 | 認証プロファイル | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI プロバイダートークン（Anthropic、OpenAI 等） |
-| チャネル認証情報 | `%USERPROFILE%\.winclaw\credentials\` | WhatsApp セッション等のチャネル認証データ |
-| セッション履歴 | `%USERPROFILE%\.winclaw\agents\main\sessions\` | 会話セッション履歴 |
+| チャネル認証情報 | `%USERPROFILE%\.winclaw\credentials\`                         | WhatsApp セッション等のチャネル認証データ       |
+| セッション履歴   | `%USERPROFILE%\.winclaw\agents\main\sessions\`                | 会話セッション履歴                              |
 
 ### 最小設定例
 
@@ -255,18 +255,18 @@ Windows 上の主要な設定ファイル:
 
 ### 主要設定項目
 
-| セクション | 説明 |
-|---|---|
-| `auth` | モデルプロバイダー認証（OAuth / API キー） |
-| `models` | モデル選択、エイリアス、フェイルオーバー |
-| `agents` | エージェント設定（ワークスペース、ツール、プロンプト） |
-| `channels` | チャネル接続設定（WhatsApp, Telegram, Slack 等） |
-| `gateway` | Gateway ポート、バインド、認証、Tailscale |
-| `skills` | スキルの有効化、読み込み、インストール設定 |
-| `tools` | ブラウザ制御、ノード、Cron 等のツール設定 |
-| `session` | セッションプルーニング、コンパクション |
-| `memory` | ベクトルメモリ設定 |
-| `hooks` | メッセージフック（トランスクリプション等） |
+| セクション | 説明                                                   |
+| ---------- | ------------------------------------------------------ |
+| `auth`     | モデルプロバイダー認証（OAuth / API キー）             |
+| `models`   | モデル選択、エイリアス、フェイルオーバー               |
+| `agents`   | エージェント設定（ワークスペース、ツール、プロンプト） |
+| `channels` | チャネル接続設定（WhatsApp, Telegram, Slack 等）       |
+| `gateway`  | Gateway ポート、バインド、認証、Tailscale              |
+| `skills`   | スキルの有効化、読み込み、インストール設定             |
+| `tools`    | ブラウザ制御、ノード、Cron 等のツール設定              |
+| `session`  | セッションプルーニング、コンパクション                 |
+| `memory`   | ベクトルメモリ設定                                     |
+| `hooks`    | メッセージフック（トランスクリプション等）             |
 
 ### ダイナミックスキルフィルタリング
 
@@ -292,12 +292,12 @@ Windows 上の主要な設定ファイル:
 
 Windows 専用の組み込みスキルが用意されています:
 
-| スキル | 説明 | 前提条件 |
-|---|---|---|
-| `windows-office` | Word, Excel, PowerPoint の作成・編集（python-docx, openpyxl, python-pptx）。COM 経由で PDF エクスポートも可能 | Python 3, pip |
-| `windows-system` | サービス、プロセス、レジストリ、イベントログ、タスクスケジューラの管理 | PowerShell |
-| `windows-explorer` | ファイル検索、一括リネーム、圧縮、クリップボード操作 | PowerShell |
-| `windows-outlook` | Outlook COM 経由でメール送受信・検索 | Python 3, Outlook |
+| スキル             | 説明                                                                                                          | 前提条件          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `windows-office`   | Word, Excel, PowerPoint の作成・編集（python-docx, openpyxl, python-pptx）。COM 経由で PDF エクスポートも可能 | Python 3, pip     |
+| `windows-system`   | サービス、プロセス、レジストリ、イベントログ、タスクスケジューラの管理                                        | PowerShell        |
+| `windows-explorer` | ファイル検索、一括リネーム、圧縮、クリップボード操作                                                          | PowerShell        |
+| `windows-outlook`  | Outlook COM 経由でメール送受信・検索                                                                          | Python 3, Outlook |
 
 ### PowerShell スクリプトサポート
 
@@ -397,19 +397,19 @@ Get-Process -Name node | Where-Object { $_.Path -like '*WinClaw*' } | Stop-Proce
 
 対応チャネルの概要:
 
-| チャネル | プロトコル | 設定キー |
-|---|---|---|
-| WhatsApp | Baileys (Web API) | `channels.whatsapp` |
-| Telegram | grammY | `channels.telegram` |
-| Slack | Bolt for JS | `channels.slack` |
-| Discord | discord.js | `channels.discord` |
-| Google Chat | Chat API | `channels.googlechat` |
-| Signal | signal-cli | `channels.signal` |
-| iMessage | BlueBubbles（推奨） | `channels.bluebubbles` |
-| Microsoft Teams | Extension | `channels.msteams` |
-| Matrix | Extension | `channels.matrix` |
-| Zalo | Extension | `channels.zalo` |
-| WebChat | 組み込み | `web.webchat` |
+| チャネル        | プロトコル          | 設定キー               |
+| --------------- | ------------------- | ---------------------- |
+| WhatsApp        | Baileys (Web API)   | `channels.whatsapp`    |
+| Telegram        | grammY              | `channels.telegram`    |
+| Slack           | Bolt for JS         | `channels.slack`       |
+| Discord         | discord.js          | `channels.discord`     |
+| Google Chat     | Chat API            | `channels.googlechat`  |
+| Signal          | signal-cli          | `channels.signal`      |
+| iMessage        | BlueBubbles（推奨） | `channels.bluebubbles` |
+| Microsoft Teams | Extension           | `channels.msteams`     |
+| Matrix          | Extension           | `channels.matrix`      |
+| Zalo            | Extension           | `channels.zalo`        |
+| WebChat         | 組み込み            | `web.webchat`          |
 
 各チャネルは `enabled: true` と必要な認証情報を設定することで有効化されます。
 DM ポリシーはデフォルトで `pairing`（ペアリングコード方式）に設定されており、未知の送信者からのメッセージは自動処理されません。
@@ -418,11 +418,11 @@ DM ポリシーはデフォルトで `pairing`（ペアリングコード方式�
 
 WinClaw のスキルは 3 つのカテゴリに分類されます:
 
-| カテゴリ | 説明 | 場所 |
-|---|---|---|
-| 内蔵 (Bundled) | npm パッケージに同梱 | `skills/` ディレクトリ |
-| マネージド (Managed) | ClawHub から取得 | `~/.winclaw/managed-skills/` |
-| ワークスペース (Workspace) | ユーザー定義 | `skills.load.extraDirs` で指定 |
+| カテゴリ                   | 説明                 | 場所                           |
+| -------------------------- | -------------------- | ------------------------------ |
+| 内蔵 (Bundled)             | npm パッケージに同梱 | `skills/` ディレクトリ         |
+| マネージド (Managed)       | ClawHub から取得     | `~/.winclaw/managed-skills/`   |
+| ワークスペース (Workspace) | ユーザー定義         | `skills.load.extraDirs` で指定 |
 
 スキルは `SKILL.md` ファイルで定義されます。各スキルにはメタデータ（名前、説明、OS 制限、依存関係）とツール使用例が含まれます。
 
@@ -464,15 +464,15 @@ pnpm gateway:watch
 
 主要な開発コマンド:
 
-| コマンド | 説明 |
-|---|---|
-| `pnpm build` | tsdown でプロダクションビルド |
-| `pnpm test` | ユニットテスト（並列実行） |
-| `pnpm test:e2e` | E2E テスト |
-| `pnpm test:live` | ライブモデルテスト |
-| `pnpm lint` | oxlint による静的解析 |
-| `pnpm format` | oxfmt によるフォーマット |
-| `pnpm check` | lint + format + 型チェック |
+| コマンド         | 説明                          |
+| ---------------- | ----------------------------- |
+| `pnpm build`     | tsdown でプロダクションビルド |
+| `pnpm test`      | ユニットテスト（並列実行）    |
+| `pnpm test:e2e`  | E2E テスト                    |
+| `pnpm test:live` | ライブモデルテスト            |
+| `pnpm lint`      | oxlint による静的解析         |
+| `pnpm format`    | oxfmt によるフォーマット      |
+| `pnpm check`     | lint + format + 型チェック    |
 
 技術スタック: ESM-only, Node.js 22+, TypeScript, pnpm monorepo, tsdown バンドラー, vitest テストフレームワーク
 
@@ -547,10 +547,10 @@ WinClaw は実際のメッセージングプラットフォームに接続する
 
 ### DM ポリシー
 
-| ポリシー | 動作 |
-|---|---|
+| ポリシー                | 動作                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
 | `pairing`（デフォルト） | 未知の送信者にペアリングコードを送信。`winclaw pairing approve` で承認後にメッセージ処理開始 |
-| `open` | 全ての DM を処理（`allowFrom: ["*"]` と併用） |
+| `open`                  | 全ての DM を処理（`allowFrom: ["*"]` と併用）                                                |
 
 ### Web インターフェース
 
