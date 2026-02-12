@@ -287,7 +287,9 @@ async function extractArchive(params: {
     if (isWindows) {
       // PowerShell Expand-Archive (no unzip needed)
       const argv = [
-        "powershell", "-NoProfile", "-Command",
+        "powershell",
+        "-NoProfile",
+        "-Command",
         `Expand-Archive -Path '${archivePath}' -DestinationPath '${targetDir}' -Force`,
       ];
       return await runCommandWithTimeout(argv, { timeoutMs });

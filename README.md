@@ -34,14 +34,14 @@ Download **WinClawSetup-{version}.exe** from
 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases) and run it.
 The installer is also available locally in the [`releases/`](releases/) directory.
 
-| Feature | Detail |
-|---|---|
-| Admin required | No -- installs to user profile by default (`{autopf}\WinClaw`) |
-| Bundled runtime | Node.js 22 LTS (portable), no prerequisites needed |
-| Installer tasks | Desktop shortcut, add to PATH, install gateway daemon |
-| Languages | English, Japanese, Korean |
-| Min OS | Windows 10 1803+ (Build 17134) or Windows 11 |
-| Architecture | x64 |
+| Feature         | Detail                                                         |
+| --------------- | -------------------------------------------------------------- |
+| Admin required  | No -- installs to user profile by default (`{autopf}\WinClaw`) |
+| Bundled runtime | Node.js 22 LTS (portable), no prerequisites needed             |
+| Installer tasks | Desktop shortcut, add to PATH, install gateway daemon          |
+| Languages       | English, Japanese, Korean                                      |
+| Min OS          | Windows 10 1803+ (Build 17134) or Windows 11                   |
+| Architecture    | x64                                                            |
 
 The installer automatically:
 
@@ -170,11 +170,11 @@ systemd user service (Linux) so it stays running across reboots.
 
 **Alternative methods:**
 
-| Method | Command / Link |
-|---|---|
-| Nix | [nix-winclaw](https://github.com/winclaw/nix-winclaw) |
-| Docker | `docker pull winclaw/winclaw:latest` |
-| From source | See [Development](#development-from-source) below |
+| Method      | Command / Link                                        |
+| ----------- | ----------------------------------------------------- |
+| Nix         | [nix-winclaw](https://github.com/winclaw/nix-winclaw) |
+| Docker      | `docker pull winclaw/winclaw:latest`                  |
+| From source | See [Development](#development-from-source) below     |
 
 ## Quick Start
 
@@ -232,21 +232,21 @@ to verify your installation and diagnose issues.
 
 ### Config file locations
 
-| Platform | Default path |
-|---|---|
+| Platform              | Default path                          |
+| --------------------- | ------------------------------------- |
 | Windows (all methods) | `%USERPROFILE%\.winclaw\winclaw.json` |
-| macOS / Linux | `~/.winclaw/winclaw.json` |
+| macOS / Linux         | `~/.winclaw/winclaw.json`             |
 
 The path can be overridden with `WINCLAW_CONFIG_PATH` or `WINCLAW_STATE_DIR`.
 
 Additional configuration files on Windows:
 
-| File | Path | Purpose |
-|---|---|---|
-| Main config | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway, channels, skills, agent settings |
+| File          | Path                                                          | Purpose                                      |
+| ------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| Main config   | `%USERPROFILE%\.winclaw\winclaw.json`                         | Gateway, channels, skills, agent settings    |
 | Auth profiles | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI provider tokens (Anthropic, OpenAI, etc.) |
-| Credentials | `%USERPROFILE%\.winclaw\credentials\` | Channel credentials (WhatsApp session, etc.) |
-| Sessions | `%USERPROFILE%\.winclaw\agents\main\sessions\` | Conversation session history |
+| Credentials   | `%USERPROFILE%\.winclaw\credentials\`                         | Channel credentials (WhatsApp session, etc.) |
+| Sessions      | `%USERPROFILE%\.winclaw\agents\main\sessions\`                | Conversation session history                 |
 
 ### Minimal config example
 
@@ -271,15 +271,15 @@ Additional configuration files on Windows:
 
 ### Key configuration sections
 
-| Section | Purpose |
-|---|---|
-| `agent` | Model selection, thinking mode, concurrency, context limits |
-| `channels` | WhatsApp, Telegram, Slack, Discord, Signal, Teams, etc. |
-| `gateway` | Port, remote transport, TLS, authentication |
-| `skills` | Skill loading directories, dynamic filter, install preferences |
-| `auth` | OAuth profiles, API key fallbacks, model failover |
-| `hooks` | Pre/post message hooks, cron schedules |
-| `memory` | Conversation memory and session pruning |
+| Section    | Purpose                                                        |
+| ---------- | -------------------------------------------------------------- |
+| `agent`    | Model selection, thinking mode, concurrency, context limits    |
+| `channels` | WhatsApp, Telegram, Slack, Discord, Signal, Teams, etc.        |
+| `gateway`  | Port, remote transport, TLS, authentication                    |
+| `skills`   | Skill loading directories, dynamic filter, install preferences |
+| `auth`     | OAuth profiles, API key fallbacks, model failover              |
+| `hooks`    | Pre/post message hooks, cron schedules                         |
+| `memory`   | Conversation memory and session pruning                        |
 
 ### Dynamic skill loading
 
@@ -306,12 +306,12 @@ Modes: `"off"` (default), `"auto"` (activates when >100 skills), `"on"` (always 
 
 WinClaw ships with four Windows-only skills that use PowerShell and COM Automation:
 
-| Skill | Description |
-|---|---|
-| `windows-system` | Service, process, registry, event log, and scheduled task management |
-| `windows-explorer` | File search, bulk rename, compression, clipboard, and file hashing |
-| `windows-office` | Create and edit Word, Excel, PowerPoint via python-docx/openpyxl/python-pptx |
-| `windows-outlook` | Send, read, and search emails via Outlook COM Automation |
+| Skill              | Description                                                                  |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `windows-system`   | Service, process, registry, event log, and scheduled task management         |
+| `windows-explorer` | File search, bulk rename, compression, clipboard, and file hashing           |
+| `windows-office`   | Create and edit Word, Excel, PowerPoint via python-docx/openpyxl/python-pptx |
+| `windows-outlook`  | Send, read, and search emails via Outlook COM Automation                     |
 
 ### PowerShell script support
 
@@ -415,6 +415,7 @@ winclaw onboard --flow quickstart
 **Installer says "Node.js JavaScript Runtime is in use"**
 
 A previous WinClaw Gateway process is still running. Either:
+
 - Select "Automatically close the applications" in the installer prompt, or
 - Manually stop them before installing:
   ```powershell
@@ -428,19 +429,19 @@ A previous WinClaw Gateway process is still running. Either:
 WinClaw supports the following messaging channels. Enable them during onboarding
 or add them to your config manually.
 
-| Channel | Auth method | Docs |
-|---|---|---|
-| WhatsApp | QR code pairing | [Guide](https://docs.winclaw.ai/channels/whatsapp) |
-| Telegram | Bot token | [Guide](https://docs.winclaw.ai/channels/telegram) |
-| Slack | OAuth / Bot token | [Guide](https://docs.winclaw.ai/channels/slack) |
-| Discord | Bot token | [Guide](https://docs.winclaw.ai/channels/discord) |
-| Google Chat | Service account | [Guide](https://docs.winclaw.ai/channels/google-chat) |
-| Signal | Signal CLI / linked device | [Guide](https://docs.winclaw.ai/channels/signal) |
-| iMessage | macOS only (AppleScript) | [Guide](https://docs.winclaw.ai/channels/imessage) |
-| Microsoft Teams | Bot Framework | [Guide](https://docs.winclaw.ai/channels/msteams) |
-| Matrix | Access token | [Guide](https://docs.winclaw.ai/channels/matrix) |
-| Zalo | Zalo OA token | [Guide](https://docs.winclaw.ai/channels/zalo) |
-| WebChat | Built-in (HTTP) | [Guide](https://docs.winclaw.ai/channels/webchat) |
+| Channel         | Auth method                | Docs                                                  |
+| --------------- | -------------------------- | ----------------------------------------------------- |
+| WhatsApp        | QR code pairing            | [Guide](https://docs.winclaw.ai/channels/whatsapp)    |
+| Telegram        | Bot token                  | [Guide](https://docs.winclaw.ai/channels/telegram)    |
+| Slack           | OAuth / Bot token          | [Guide](https://docs.winclaw.ai/channels/slack)       |
+| Discord         | Bot token                  | [Guide](https://docs.winclaw.ai/channels/discord)     |
+| Google Chat     | Service account            | [Guide](https://docs.winclaw.ai/channels/google-chat) |
+| Signal          | Signal CLI / linked device | [Guide](https://docs.winclaw.ai/channels/signal)      |
+| iMessage        | macOS only (AppleScript)   | [Guide](https://docs.winclaw.ai/channels/imessage)    |
+| Microsoft Teams | Bot Framework              | [Guide](https://docs.winclaw.ai/channels/msteams)     |
+| Matrix          | Access token               | [Guide](https://docs.winclaw.ai/channels/matrix)      |
+| Zalo            | Zalo OA token              | [Guide](https://docs.winclaw.ai/channels/zalo)        |
+| WebChat         | Built-in (HTTP)            | [Guide](https://docs.winclaw.ai/channels/webchat)     |
 
 ## Skills System
 
@@ -449,12 +450,12 @@ containing a `SKILL.md` file with frontmatter metadata and instructions.
 
 ### Skill categories
 
-| Category | Location | Description |
-|---|---|---|
-| Bundled | `skills/` in the package | Ship with WinClaw (weather, github, slack, etc.) |
-| Managed | Installed via `winclaw skill install` | Downloaded from ClawHub or npm |
-| Workspace | `./skills/` in your project | Project-specific, version-controlled |
-| Extra dirs | `skills.load.extraDirs` in config | Additional scan directories |
+| Category   | Location                              | Description                                      |
+| ---------- | ------------------------------------- | ------------------------------------------------ |
+| Bundled    | `skills/` in the package              | Ship with WinClaw (weather, github, slack, etc.) |
+| Managed    | Installed via `winclaw skill install` | Downloaded from ClawHub or npm                   |
+| Workspace  | `./skills/` in your project           | Project-specific, version-controlled             |
+| Extra dirs | `skills.load.extraDirs` in config     | Additional scan directories                      |
 
 ### Dynamic skill loading
 
@@ -489,15 +490,15 @@ pnpm winclaw onboard
 
 The project is an ESM-only pnpm monorepo built with [tsdown](https://github.com/nicepkg/tsdown).
 
-| Command | Description |
-|---|---|
-| `pnpm build` | Full production build |
-| `pnpm dev` | Run from source |
-| `pnpm test` | Run unit tests (parallel) |
-| `pnpm test:e2e` | End-to-end tests |
-| `pnpm lint` | Lint with oxlint (type-aware) |
-| `pnpm format` | Format with oxfmt |
-| `pnpm check` | format + typecheck + lint |
+| Command         | Description                   |
+| --------------- | ----------------------------- |
+| `pnpm build`    | Full production build         |
+| `pnpm dev`      | Run from source               |
+| `pnpm test`     | Run unit tests (parallel)     |
+| `pnpm test:e2e` | End-to-end tests              |
+| `pnpm lint`     | Lint with oxlint (type-aware) |
+| `pnpm format`   | Format with oxfmt             |
+| `pnpm check`    | format + typecheck + lint     |
 
 ## Building the Windows Installer
 

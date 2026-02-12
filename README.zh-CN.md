@@ -29,13 +29,14 @@ WinClaw 现已提供原生 Windows 支持，包含基于 Inno Setup 构建的 EX
 2. 运行安装程序（默认使用用户权限，无需管理员）
 3. 在安装向导中按需选择选项：
 
-| 选项 | 说明 | 默认 |
-|------|------|------|
-| 创建桌面快捷方式 | 在桌面生成 WinClaw 图标 | 否 |
-| 添加到 PATH | 将 WinClaw 加入用户环境变量 | 是 |
-| 安装 Gateway 守护进程 | 注册 Windows 任务计划程序任务，开机自启 | 是 |
+| 选项                  | 说明                                    | 默认 |
+| --------------------- | --------------------------------------- | ---- |
+| 创建桌面快捷方式      | 在桌面生成 WinClaw 图标                 | 否   |
+| 添加到 PATH           | 将 WinClaw 加入用户环境变量             | 是   |
+| 安装 Gateway 守护进程 | 注册 Windows 任务计划程序任务，开机自启 | 是   |
 
 安装程序会自动完成以下操作：
+
 - 释放 Node.js 22 运行时到 `node\` 子目录
 - 安装应用到 `app\` 子目录，设置 `WINCLAW_HOME` 环境变量
 - 若勾选守护进程，执行 `winclaw daemon install` 注册计划任务
@@ -191,18 +192,18 @@ winclaw tui
 
 ### 主要 CLI 命令
 
-| 命令 | 说明 |
-|------|------|
-| `winclaw onboard` | 引导设置向导 |
-| `winclaw gateway` | 启动网关服务 |
-| `winclaw dashboard` | 打开控制面板（自动带令牌） |
-| `winclaw agent --message "..."` | 发送单条消息 |
-| `winclaw daemon install / status / restart` | 守护进程管理 |
-| `winclaw doctor` | 诊断配置问题 |
-| `winclaw tui` | 终端交互界面 |
-| `winclaw models auth login` | 刷新 AI 模型认证令牌 |
-| `winclaw config get <key>` | 查看配置项 |
-| `winclaw config set <key> <value>` | 修改配置项 |
+| 命令                                        | 说明                       |
+| ------------------------------------------- | -------------------------- |
+| `winclaw onboard`                           | 引导设置向导               |
+| `winclaw gateway`                           | 启动网关服务               |
+| `winclaw dashboard`                         | 打开控制面板（自动带令牌） |
+| `winclaw agent --message "..."`             | 发送单条消息               |
+| `winclaw daemon install / status / restart` | 守护进程管理               |
+| `winclaw doctor`                            | 诊断配置问题               |
+| `winclaw tui`                               | 终端交互界面               |
+| `winclaw models auth login`                 | 刷新 AI 模型认证令牌       |
+| `winclaw config get <key>`                  | 查看配置项                 |
+| `winclaw config set <key> <value>`          | 修改配置项                 |
 
 ---
 
@@ -210,21 +211,21 @@ winclaw tui
 
 ### 配置文件路径
 
-| 平台 | 路径 |
-|------|------|
+| 平台                    | 路径                                  |
+| ----------------------- | ------------------------------------- |
 | Windows（所有安装方式） | `%USERPROFILE%\.winclaw\winclaw.json` |
-| macOS / Linux | `~/.winclaw/winclaw.json` |
+| macOS / Linux           | `~/.winclaw/winclaw.json`             |
 
 可通过 `WINCLAW_CONFIG_PATH` 或 `WINCLAW_STATE_DIR` 环境变量覆盖。
 
 Windows 下的主要配置文件：
 
-| 文件 | 路径 | 用途 |
-|------|------|------|
-| 主配置 | `%USERPROFILE%\.winclaw\winclaw.json` | Gateway、渠道、技能、代理设置 |
+| 文件     | 路径                                                          | 用途                                  |
+| -------- | ------------------------------------------------------------- | ------------------------------------- |
+| 主配置   | `%USERPROFILE%\.winclaw\winclaw.json`                         | Gateway、渠道、技能、代理设置         |
 | 认证配置 | `%USERPROFILE%\.winclaw\agents\main\agent\auth-profiles.json` | AI 提供商令牌（Anthropic、OpenAI 等） |
-| 渠道凭据 | `%USERPROFILE%\.winclaw\credentials\` | WhatsApp 会话等渠道认证数据 |
-| 会话记录 | `%USERPROFILE%\.winclaw\agents\main\sessions\` | 对话会话历史 |
+| 渠道凭据 | `%USERPROFILE%\.winclaw\credentials\`                         | WhatsApp 会话等渠道认证数据           |
+| 会话记录 | `%USERPROFILE%\.winclaw\agents\main\sessions\`                | 对话会话历史                          |
 
 ### 最小配置示例
 
@@ -248,15 +249,15 @@ Windows 下的主要配置文件：
 
 ### 关键配置项
 
-| 配置项 | 说明 |
-|--------|------|
-| `agent.model` | AI 模型标识 (`claude-sonnet-4-20250514`, `gpt-4o` 等) |
-| `agent.apiKey` | 模型 API 密钥 |
-| `agent.systemPrompt` | 自定义系统提示词 |
-| `channels.<id>.enabled` | 启用/禁用指定消息渠道 |
-| `gateway.port` | 网关监听端口，默认 18789 |
-| `skills.entries` | 技能加载配置 |
-| `skills.dynamicFilter` | 动态技能加载配置 |
+| 配置项                  | 说明                                                  |
+| ----------------------- | ----------------------------------------------------- |
+| `agent.model`           | AI 模型标识 (`claude-sonnet-4-20250514`, `gpt-4o` 等) |
+| `agent.apiKey`          | 模型 API 密钥                                         |
+| `agent.systemPrompt`    | 自定义系统提示词                                      |
+| `channels.<id>.enabled` | 启用/禁用指定消息渠道                                 |
+| `gateway.port`          | 网关监听端口，默认 18789                              |
+| `skills.entries`        | 技能加载配置                                          |
+| `skills.dynamicFilter`  | 动态技能加载配置                                      |
 
 ### 动态技能加载
 
@@ -283,12 +284,12 @@ Windows 下的主要配置文件：
 
 ### Windows 原生技能
 
-| 技能 | 说明 |
-|------|------|
-| `windows-office` | 创建/编辑 Word、Excel、PowerPoint (python-docx, openpyxl, python-pptx)，可选 COM 支持 PDF 导出 |
-| `windows-system` | 系统管理：服务、进程、注册表、事件日志、计划任务 (PowerShell) |
-| `windows-explorer` | 文件操作：递归搜索、批量重命名、压缩解压、剪贴板 |
-| `windows-outlook` | 通过 Outlook COM Automation 发送/读取邮件 |
+| 技能               | 说明                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `windows-office`   | 创建/编辑 Word、Excel、PowerPoint (python-docx, openpyxl, python-pptx)，可选 COM 支持 PDF 导出 |
+| `windows-system`   | 系统管理：服务、进程、注册表、事件日志、计划任务 (PowerShell)                                  |
+| `windows-explorer` | 文件操作：递归搜索、批量重命名、压缩解压、剪贴板                                               |
+| `windows-outlook`  | 通过 Outlook COM Automation 发送/读取邮件                                                      |
 
 ### PowerShell 脚本支持
 
@@ -296,12 +297,12 @@ Windows 下的主要配置文件：
 
 ### Windows 包管理器
 
-| 管理器 | 用途 |
-|--------|------|
-| `winget` | Windows 原生包管理器 |
-| `scoop` | 便携式包管理器，面向开发者 |
-| `choco` | Chocolatey，企业级包管理 |
-| `pip` | Python 包 (Office 技能等) |
+| 管理器   | 用途                       |
+| -------- | -------------------------- |
+| `winget` | Windows 原生包管理器       |
+| `scoop`  | 便携式包管理器，面向开发者 |
+| `choco`  | Chocolatey，企业级包管理   |
+| `pip`    | Python 包 (Office 技能等)  |
 
 ### Gateway 守护进程 (schtasks)
 
@@ -392,19 +393,19 @@ Get-Process -Name node | Where-Object { $_.Path -like '*WinClaw*' } | Stop-Proce
 
 ## 渠道配置
 
-| 渠道 | 配置键 | 协议 |
-|------|--------|------|
-| WhatsApp | `channels.whatsapp` | WhatsApp Web (Baileys) |
-| Telegram | `channels.telegram` | Telegram Bot API |
-| Slack | `channels.slack` | Slack Events API / Socket Mode |
-| Discord | `channels.discord` | Discord Bot API |
-| Google Chat | `channels.googlechat` | Google Chat API |
-| Signal | `channels.signal` | Signal CLI / API |
-| iMessage | `channels.imessage` | BlueBubbles / AppleScript (macOS) |
-| Microsoft Teams | `channels.msteams` | Microsoft Graph API |
-| Matrix | `channels.matrix` | Matrix Client-Server API |
-| Zalo | `channels.zalo` | Zalo OA API |
-| WebChat | `channels.webchat` | 内置 Web 界面 |
+| 渠道            | 配置键                | 协议                              |
+| --------------- | --------------------- | --------------------------------- |
+| WhatsApp        | `channels.whatsapp`   | WhatsApp Web (Baileys)            |
+| Telegram        | `channels.telegram`   | Telegram Bot API                  |
+| Slack           | `channels.slack`      | Slack Events API / Socket Mode    |
+| Discord         | `channels.discord`    | Discord Bot API                   |
+| Google Chat     | `channels.googlechat` | Google Chat API                   |
+| Signal          | `channels.signal`     | Signal CLI / API                  |
+| iMessage        | `channels.imessage`   | BlueBubbles / AppleScript (macOS) |
+| Microsoft Teams | `channels.msteams`    | Microsoft Graph API               |
+| Matrix          | `channels.matrix`     | Matrix Client-Server API          |
+| Zalo            | `channels.zalo`       | Zalo OA API                       |
+| WebChat         | `channels.webchat`    | 内置 Web 界面                     |
 
 每个渠道需配置 `enabled`、认证凭据和允许列表 (`allowFrom`)。详见[官方文档](https://github.com/itc-ou-shigou/winclaw/tree/main/docs)。
 
@@ -414,11 +415,11 @@ Get-Process -Name node | Where-Object { $_.Path -like '*WinClaw*' } | Stop-Proce
 
 每个技能是一个 `SKILL.md` 文件，包含名称、描述、前置条件和使用说明。
 
-| 类型 | 位置 | 说明 |
-|------|------|------|
-| 内置技能 | `skills/` (安装目录) | 随 WinClaw 发布，开箱即用 |
-| 托管技能 | `~/.winclaw/skills/` | 用户安装或社区获取 |
-| 工作区技能 | 项目目录下 `.winclaw/skills/` | 项目级，跟随项目分发 |
+| 类型       | 位置                          | 说明                      |
+| ---------- | ----------------------------- | ------------------------- |
+| 内置技能   | `skills/` (安装目录)          | 随 WinClaw 发布，开箱即用 |
+| 托管技能   | `~/.winclaw/skills/`          | 用户安装或社区获取        |
+| 工作区技能 | 项目目录下 `.winclaw/skills/` | 项目级，跟随项目分发      |
 
 内置 50+ 技能，涵盖：**生产力** (github, notion, obsidian, trello)、**编码** (coding-agent, canvas)、**多媒体** (openai-image-gen, video-frames, whisper-api)、**通信** (himalaya, discord, voice-call)、**系统** (windows-office/system/explorer/outlook)、**智能家居** (openhue, sonoscli)。
 
@@ -525,20 +526,24 @@ Inno Setup 编译大约需要 30 分钟（因 node_modules 文件数量庞大）
 ## 安全模型
 
 **认证与授权**
+
 - 渠道允许列表 (`allowFrom`)：仅允许指定用户/群组交互
 - API 密钥通过环境变量替换 (`${ENV_VAR}`)，避免明文存储
 - 多 Auth Profile 支持优先级轮询、冷却与故障转移
 
 **工具执行安全**
+
 - 敏感操作 (文件写入、Shell 命令) 需用户确认
 - 支持 Docker 沙箱隔离；通过 `tools.alsoAllow` 控制工具白名单
 
 **数据保护**
+
 - 诊断输出自动脱敏密钥和 Token
 - 会话隔离：每个用户/对话独立上下文
 - 本地优先：数据不经过第三方中转服务器
 
 **Windows 安全**
+
 - 安装程序默认用户权限 (`PrivilegesRequired=lowest`)
 - 计划任务以当前用户身份运行，注册表操作仅限 `HKCU`
 

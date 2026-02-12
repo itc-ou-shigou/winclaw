@@ -18,17 +18,17 @@ import { CONFIG_DIR, resolveUserPath } from "../../utils.js";
 import { resolveBundledSkillsDir } from "./bundled-dir.js";
 import { shouldIncludeSkill } from "./config.js";
 import {
+  resolveSkillFilterFromPrompt,
+  type DynamicFilterConfig,
+  type DynamicFilterResult,
+} from "./dynamic-filter.js";
+import {
   parseFrontmatter,
   resolveOpenClawMetadata,
   resolveSkillInvocationPolicy,
 } from "./frontmatter.js";
 import { resolvePluginSkillDirs } from "./plugin-skills.js";
 import { serializeByKey } from "./serialize.js";
-import {
-  resolveSkillFilterFromPrompt,
-  type DynamicFilterConfig,
-  type DynamicFilterResult,
-} from "./dynamic-filter.js";
 
 const fsp = fs.promises;
 const skillsLogger = createSubsystemLogger("skills");
@@ -455,8 +455,9 @@ export function resolveDynamicSkillFilter(params: {
   config?: OpenClawConfig;
   snapshotVersion?: number;
 }): DynamicFilterResult | undefined {
-  const filterConfig: DynamicFilterConfig | undefined =
-    params.config?.skills?.dynamicFilter as DynamicFilterConfig | undefined;
+  const filterConfig: DynamicFilterConfig | undefined = params.config?.skills?.dynamicFilter as
+    | DynamicFilterConfig
+    | undefined;
   const mode = filterConfig?.mode ?? "off";
 
   if (mode === "off") return undefined;
