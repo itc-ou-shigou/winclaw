@@ -83,3 +83,4 @@ USER.md
 local/
 releases/WinClawSetup-2026.2.9.exe
 nul
+.claude/settings.local.json
