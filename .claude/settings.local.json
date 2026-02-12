@@ -21,7 +21,10 @@
       "Bash(taskkill:*)",
       "Bash(wmic process where \"name=''node.exe''\" get ProcessId,CommandLine)",
       "Bash(npm run build:*)",
-      "Bash(schtasks /Query /TN \"OpenClaw Gateway\" /XML ONE)"
+      "Bash(schtasks /Query /TN \"OpenClaw Gateway\" /XML ONE)",
+      "Bash(npx oxfmt:*)",
+      "Bash(git add:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
