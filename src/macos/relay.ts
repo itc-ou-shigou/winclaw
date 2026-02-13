@@ -57,7 +57,7 @@ async function main() {
 
   const { assertSupportedRuntime } = await import("../infra/runtime-guard.js");
   assertSupportedRuntime();
-  const { formatUncaughtError } = await import("../infra/errors.js");
+  const { formatUncaughtError, isNonFatalException } = await import("../infra/errors.js");
   const { installUnhandledRejectionHandler } = await import("../infra/unhandled-rejections.js");
 
   const { buildProgram } = await import("../cli/program.js");
@@ -66,6 +66,10 @@ async function main() {
   installUnhandledRejectionHandler();
 
   process.on("uncaughtException", (error) => {
+    if (isNonFatalException(error)) {
+      console.warn("[openclaw] Non-fatal uncaught exception (continuing):", formatUncaughtError(error));
+      return;
+    }
     console.error("[openclaw] Uncaught exception:", formatUncaughtError(error));
     process.exit(1);
   });

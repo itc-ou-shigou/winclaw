@@ -158,4 +158,66 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
       expect(consoleWarnSpy).toHaveBeenCalled();
     });
   });
+
+  describe("Playwright internal errors", () => {
+    it("does NOT exit on Playwright FrameManager assertion error", () => {
+      const assertionErr = new Error("Assertion error");
+      assertionErr.stack = [
+        "Error: Assertion error",
+        "    at assert (playwright-core/lib/utils/isomorphic/assert.js:26:11)",
+        "    at FrameManager.frameAttached (playwright-core/lib/server/frames.js:114:31)",
+        "    at FrameSession._onFrameAttached (playwright-core/lib/server/chromium/crPage.js:503:29)",
+      ].join("\n");
+
+      process.emit("unhandledRejection", assertionErr, Promise.resolve());
+
+      expect(exitCalls).toEqual([]);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "[openclaw] Suppressed Playwright internal error (continuing):",
+        expect.stringContaining("Assertion error"),
+      );
+    });
+
+    it("does NOT exit on Playwright 'Frame was detached' error", () => {
+      const frameErr = new Error("Frame was detached");
+      frameErr.stack = [
+        "Error: Frame was detached",
+        "    at Frame.click (playwright-core/lib/server/frames.js:200:10)",
+      ].join("\n");
+
+      process.emit("unhandledRejection", frameErr, Promise.resolve());
+
+      expect(exitCalls).toEqual([]);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "[openclaw] Suppressed Playwright internal error (continuing):",
+        expect.stringContaining("Frame was detached"),
+      );
+    });
+
+    it("does NOT exit on Playwright 'Target closed' error", () => {
+      const targetErr = new Error("Target closed");
+      targetErr.stack = [
+        "Error: Target closed",
+        "    at CDPSession.send (playwright-core/lib/server/chromium/crConnection.js:100:15)",
+      ].join("\n");
+
+      process.emit("unhandledRejection", targetErr, Promise.resolve());
+
+      expect(exitCalls).toEqual([]);
+      expect(consoleWarnSpy).toHaveBeenCalled();
+    });
+
+    it("still exits on non-Playwright assertion errors", () => {
+      const genericAssertionErr = new Error("Assertion error");
+      // No playwright in the stack
+      genericAssertionErr.stack = [
+        "Error: Assertion error",
+        "    at myFunction (app/src/something.js:10:5)",
+      ].join("\n");
+
+      process.emit("unhandledRejection", genericAssertionErr, Promise.resolve());
+
+      expect(exitCalls).toEqual([1]);
+    });
+  });
 });

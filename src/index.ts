@@ -18,7 +18,7 @@ import {
 import { ensureBinary } from "./infra/binaries.js";
 import { loadDotEnv } from "./infra/dotenv.js";
 import { normalizeEnv } from "./infra/env.js";
-import { formatUncaughtError } from "./infra/errors.js";
+import { formatUncaughtError, isNonFatalException } from "./infra/errors.js";
 import { isMainModule } from "./infra/is-main.js";
 import { ensureOpenClawCliOnPath } from "./infra/path-env.js";
 import {
@@ -82,6 +82,10 @@ if (isMain) {
   installUnhandledRejectionHandler();
 
   process.on("uncaughtException", (error) => {
+    if (isNonFatalException(error)) {
+      console.warn("[openclaw] Non-fatal uncaught exception (continuing):", formatUncaughtError(error));
+      return;
+    }
     console.error("[openclaw] Uncaught exception:", formatUncaughtError(error));
     process.exit(1);
   });
