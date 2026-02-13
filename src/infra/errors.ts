@@ -43,6 +43,17 @@ export function formatErrorMessage(err: unknown): string {
   }
 }
 
+/**
+ * Checks if an uncaught exception is non-fatal and the process should continue running.
+ *
+ * Currently handles:
+ * - EPIPE (broken pipe): occurs when stdout/stderr pipe to a parent process breaks,
+ *   e.g., when the terminal or shell exits. This is harmless for a background gateway.
+ */
+export function isNonFatalException(err: unknown): boolean {
+  return hasErrnoCode(err, "EPIPE");
+}
+
 export function formatUncaughtError(err: unknown): string {
   if (extractErrorCode(err) === "INVALID_CONFIG") {
     return formatErrorMessage(err);

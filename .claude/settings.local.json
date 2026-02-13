@@ -24,7 +24,16 @@
       "Bash(schtasks /Query /TN \"OpenClaw Gateway\" /XML ONE)",
       "Bash(npx oxfmt:*)",
       "Bash(git add:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(OPENCLAW_SKIP_CHANNELS=1 CLAWDBOT_SKIP_CHANNELS=1 \"C:\\\\Program Files\\\\WinClaw\\\\node\\\\node.exe\":*)",
+      "Bash(netstat:*)",
+      "Bash(wmic process:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(pnpm build:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(du:*)",
+      "Bash(node -e:*)",
+      "Bash(echo:*)"
     ]
   }
 }

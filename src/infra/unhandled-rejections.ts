@@ -81,6 +81,56 @@ function isConfigError(err: unknown): boolean {
 }
 
 /**
+ * Checks if an error is an internal Playwright/browser-automation error that shouldn't crash the gateway.
+ *
+ * Playwright-core can throw assertion errors during Chrome frame race conditions
+ * (e.g., FrameManager.frameAttached) and other transient browser lifecycle events.
+ * These are internal to the browser automation layer and do not affect gateway stability.
+ */
+export function isPlaywrightInternalError(err: unknown): boolean {
+  if (!err || typeof err !== "object") {
+    return false;
+  }
+
+  const message = "message" in err && typeof err.message === "string" ? err.message : "";
+  const stack = "stack" in err && typeof err.stack === "string" ? err.stack : "";
+
+  // Playwright assertion errors from frame management race conditions
+  if (message === "Assertion error" || message.startsWith("Assertion error")) {
+    if (
+      stack.includes("playwright-core") ||
+      stack.includes("FrameManager") ||
+      stack.includes("frameAttached") ||
+      stack.includes("crPage")
+    ) {
+      return true;
+    }
+  }
+
+  // Other known Playwright internal errors that are non-fatal
+  const playwrightNonFatalPatterns = [
+    "Frame was detached",
+    "Execution context was destroyed",
+    "Target closed",
+    "Session closed",
+    "Browser has been closed",
+    "Protocol error",
+    "Navigation failed because page was closed",
+    "Connection closed",
+  ];
+
+  if (stack.includes("playwright-core") || stack.includes("playwright")) {
+    for (const pattern of playwrightNonFatalPatterns) {
+      if (message.includes(pattern)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Checks if an error is a transient network error that shouldn't crash the gateway.
  * These are typically temporary connectivity issues that will resolve on their own.
  */
@@ -162,6 +212,14 @@ export function installUnhandledRejectionHandler(): void {
     if (isConfigError(reason)) {
       console.error("[openclaw] CONFIGURATION ERROR - requires fix:", formatUncaughtError(reason));
       process.exit(1);
+      return;
+    }
+
+    if (isPlaywrightInternalError(reason)) {
+      console.warn(
+        "[openclaw] Suppressed Playwright internal error (continuing):",
+        formatUncaughtError(reason),
+      );
       return;
     }
 
