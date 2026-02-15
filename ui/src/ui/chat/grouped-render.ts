@@ -1,6 +1,7 @@
 import { html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { AssistantIdentity } from "../assistant-identity.ts";
+import { icons } from "../icons.ts";
 import type { MessageGroup } from "../types/chat-types.ts";
 import { toSanitizedMarkdownHtml } from "../markdown.ts";
 import { renderCopyAsMarkdownButton } from "./copy-as-markdown.ts";
@@ -174,15 +175,16 @@ function renderAvatar(role: string, assistant?: Pick<AssistantIdentity, "name" |
           ? "tool"
           : "other";
 
-  if (assistantAvatar && normalized === "assistant") {
-    if (isAvatarUrl(assistantAvatar)) {
+  // Assistant: use bot icon (pencil design), unless a custom image URL is set
+  if (normalized === "assistant") {
+    if (assistantAvatar && isAvatarUrl(assistantAvatar)) {
       return html`<img
         class="chat-avatar ${className}"
         src="${assistantAvatar}"
         alt="${assistantName}"
       />`;
     }
-    return html`<div class="chat-avatar ${className}">${assistantAvatar}</div>`;
+    return html`<div class="chat-avatar ${className}">${icons.bot}</div>`;
   }
 
   return html`<div class="chat-avatar ${className}">${initial}</div>`;

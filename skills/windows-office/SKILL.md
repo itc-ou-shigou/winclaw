@@ -134,6 +134,17 @@ print('Exported PDF')
 "
 ```
 
+## GUI Operations (via VNC)
+
+For complex formatting via the Office ribbon UI, visual layout adjustments, SmartArt, etc.,
+use **winclaw-vnc-desktop** skill for desktop control via VNC.
+- Apply styles and themes via the Office ribbon
+- PowerPoint slide design (drag & drop)
+- Excel chart creation and visual adjustments
+- Features not available via Python libraries / COM (Copilot, Designer, etc.)
+
+Most document operations can be handled programmatically with the Python / COM commands above. Use VNC only when GUI interaction is required.
+
 ## Notes
 
 - python-docx/openpyxl/python-pptx work without Office installed

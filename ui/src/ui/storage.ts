@@ -11,8 +11,10 @@ export type UiSettings = {
   chatFocusMode: boolean;
   chatShowThinking: boolean;
   splitRatio: number; // Sidebar split ratio (0.4 to 0.7, default 0.6)
-  navCollapsed: boolean; // Collapsible sidebar state
-  navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
+  navCollapsed: boolean; // Legacy – kept for compat, unused in Notion-style layout
+  navGroupsCollapsed: Record<string, boolean>; // Legacy – kept for compat
+  openTabs: string[]; // Session tabs (Notion-style layout)
+  recentCommands: string[]; // Command palette recent commands
 };
 
 export function loadSettings(): UiSettings {
@@ -32,6 +34,8 @@ export function loadSettings(): UiSettings {
     splitRatio: 0.6,
     navCollapsed: false,
     navGroupsCollapsed: {},
+    openTabs: ["chat"],
+    recentCommands: [],
   };
 
   try {
@@ -77,6 +81,15 @@ export function loadSettings(): UiSettings {
         typeof parsed.navGroupsCollapsed === "object" && parsed.navGroupsCollapsed !== null
           ? parsed.navGroupsCollapsed
           : defaults.navGroupsCollapsed,
+      openTabs:
+        Array.isArray(parsed.openTabs) && parsed.openTabs.every((t) => typeof t === "string")
+          ? parsed.openTabs
+          : defaults.openTabs,
+      recentCommands:
+        Array.isArray(parsed.recentCommands) &&
+        parsed.recentCommands.every((c) => typeof c === "string")
+          ? parsed.recentCommands
+          : defaults.recentCommands,
     };
   } catch {
     return defaults;

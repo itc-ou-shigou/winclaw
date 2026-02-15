@@ -102,8 +102,19 @@
 }
 
 .chat-avatar.assistant {
-  background: var(--secondary);
-  color: var(--muted);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-radius: 999px;
+}
+
+.chat-avatar.assistant svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .chat-avatar.other {
@@ -253,19 +264,21 @@ img.chat-avatar {
   background: var(--bg-hover);
 }
 
-/* User bubbles have different styling */
+/* User bubbles - orange accent (pencil design) */
 .chat-group.user .chat-bubble {
-  background: var(--accent-subtle);
+  background: var(--accent);
+  color: var(--accent-foreground);
   border-color: transparent;
 }
 
 :root[data-theme="light"] .chat-group.user .chat-bubble {
-  border-color: rgba(234, 88, 12, 0.2);
-  background: rgba(251, 146, 60, 0.12);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: transparent;
 }
 
 .chat-group.user .chat-bubble:hover {
-  background: rgba(255, 77, 77, 0.15);
+  background: var(--accent-hover);
 }
 
 /* Streaming animation */

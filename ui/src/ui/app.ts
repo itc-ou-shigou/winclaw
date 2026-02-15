@@ -324,6 +324,14 @@ export class OpenClawApp extends LitElement {
   @state() logsMaxBytes = 250_000;
   @state() logsAtBottom = true;
 
+  // Command palette & session tabs (Notion-style layout)
+  @state() commandPaletteOpen = false;
+  @state() openTabs: Tab[] = this.settings.openTabs?.length
+    ? (this.settings.openTabs as Tab[])
+    : ["chat"];
+  @state() statusBarExpanded = false;
+  @state() recentCommands: string[] = this.settings.recentCommands ?? [];
+
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;
   private chatScrollTimeout: number | null = null;
@@ -563,6 +571,37 @@ export class OpenClawApp extends LitElement {
     const newRatio = Math.max(0.4, Math.min(0.7, ratio));
     this.splitRatio = newRatio;
     this.applySettings({ ...this.settings, splitRatio: newRatio });
+  }
+
+  // Command palette & session tabs
+  toggleCommandPalette() {
+    this.commandPaletteOpen = !this.commandPaletteOpen;
+  }
+
+  openTabFromPalette(tab: Tab) {
+    if (!this.openTabs.includes(tab)) {
+      this.openTabs = [...this.openTabs, tab];
+    }
+    this.setTab(tab);
+    this.commandPaletteOpen = false;
+    this.applySettings({ ...this.settings, openTabs: this.openTabs });
+  }
+
+  closeTab(tab: Tab) {
+    if (tab === "chat") {
+      return;
+    }
+    this.openTabs = this.openTabs.filter((t) => t !== tab);
+    if (this.tab === tab) {
+      this.setTab("chat");
+    }
+    this.applySettings({ ...this.settings, openTabs: this.openTabs });
+  }
+
+  addRecentCommand(commandId: string) {
+    const next = [commandId, ...this.recentCommands.filter((c) => c !== commandId)].slice(0, 5);
+    this.recentCommands = next;
+    this.applySettings({ ...this.settings, recentCommands: next });
   }
 
   render() {

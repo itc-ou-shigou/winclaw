@@ -2,48 +2,6 @@
    Mobile Layout
    =========================================== */
 
-/* Tablet: Horizontal nav */
-@media (max-width: 1100px) {
-  .nav {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 4px;
-    padding: 10px 14px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-group {
-    display: contents;
-  }
-
-  .nav-group__items {
-    display: contents;
-  }
-
-  .nav-label {
-    display: none;
-  }
-
-  .nav-group--collapsed .nav-group__items {
-    display: contents;
-  }
-
-  .nav-item {
-    padding: 8px 14px;
-    font-size: 13px;
-    border-radius: var(--radius-md);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-}
-
 /* Mobile-specific styles */
 @media (max-width: 600px) {
   .shell {
@@ -70,56 +28,31 @@
     font-size: 14px;
   }
 
-  .brand-sub {
+  .topbar-center {
     display: none;
   }
 
-  .topbar-status {
-    gap: 6px;
-    width: auto;
-    flex-wrap: nowrap;
+  .topbar-cmd-btn {
+    display: none;
   }
 
-  .topbar-status .pill {
+  /* Session tabs */
+  .session-tabs {
     padding: 4px 8px;
-    font-size: 11px;
-    gap: 4px;
   }
 
-  .topbar-status .pill .mono {
-    display: none;
-  }
-
-  .topbar-status .pill span:nth-child(2) {
-    display: none;
-  }
-
-  /* Nav */
-  .nav {
-    padding: 8px 10px;
-    gap: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-group {
-    display: contents;
-  }
-
-  .nav-label {
-    display: none;
-  }
-
-  .nav-item {
-    padding: 6px 10px;
+  .session-tabs__tab {
+    padding: 4px 8px;
     font-size: 12px;
-    border-radius: var(--radius-md);
-    white-space: nowrap;
-    flex-shrink: 0;
+  }
+
+  /* Status bar */
+  .statusbar__content {
+    padding: 0 10px;
+  }
+
+  .statusbar__section {
+    padding: 0 6px;
   }
 
   /* Content */
@@ -315,15 +248,6 @@
     font-size: 13px;
   }
 
-  .nav {
-    padding: 6px 8px;
-  }
-
-  .nav-item {
-    padding: 6px 8px;
-    font-size: 11px;
-  }
-
   .content {
     padding: 4px 4px 12px;
     gap: 10px;
@@ -354,11 +278,6 @@
   .btn {
     padding: 6px 10px;
     font-size: 11px;
-  }
-
-  .topbar-status .pill {
-    padding: 3px 6px;
-    font-size: 10px;
   }
 
   .theme-toggle {

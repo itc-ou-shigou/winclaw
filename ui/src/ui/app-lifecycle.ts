@@ -32,6 +32,9 @@ type LifecycleHost = {
   logsEntries: unknown[];
   popStateHandler: () => void;
   topbarObserver: ResizeObserver | null;
+  commandPaletteOpen: boolean;
+  toggleCommandPalette: () => void;
+  keydownHandler?: (e: KeyboardEvent) => void;
 };
 
 export function handleConnected(host: LifecycleHost) {
@@ -41,6 +44,20 @@ export function handleConnected(host: LifecycleHost) {
   syncThemeWithSettings(host as unknown as Parameters<typeof syncThemeWithSettings>[0]);
   attachThemeListener(host as unknown as Parameters<typeof attachThemeListener>[0]);
   window.addEventListener("popstate", host.popStateHandler);
+
+  // Ctrl+K / Cmd+K → command palette
+  host.keydownHandler = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      e.preventDefault();
+      host.toggleCommandPalette();
+    }
+    if (e.key === "Escape" && host.commandPaletteOpen) {
+      e.preventDefault();
+      host.toggleCommandPalette();
+    }
+  };
+  window.addEventListener("keydown", host.keydownHandler);
+
   connectGateway(host as unknown as Parameters<typeof connectGateway>[0]);
   startNodesPolling(host as unknown as Parameters<typeof startNodesPolling>[0]);
   if (host.tab === "logs") {
@@ -57,6 +74,10 @@ export function handleFirstUpdated(host: LifecycleHost) {
 
 export function handleDisconnected(host: LifecycleHost) {
   window.removeEventListener("popstate", host.popStateHandler);
+  if (host.keydownHandler) {
+    window.removeEventListener("keydown", host.keydownHandler);
+    host.keydownHandler = undefined;
+  }
   stopNodesPolling(host as unknown as Parameters<typeof stopNodesPolling>[0]);
   stopLogsPolling(host as unknown as Parameters<typeof stopLogsPolling>[0]);
   stopDebugPolling(host as unknown as Parameters<typeof stopDebugPolling>[0]);

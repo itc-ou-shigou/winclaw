@@ -68,6 +68,18 @@ for msg in results:
 "
 ```
 
+## GUI Operations (via VNC)
+
+For Outlook GUI operations (calendar drag & drop, rich text editing, Rules Wizard, etc.),
+use **winclaw-vnc-desktop** skill for desktop control via VNC.
+- Calendar event drag & drop
+- Rich text formatting via the Outlook editor
+- Rule management via the Rules Wizard GUI
+- Visual navigation of the Outlook folder tree
+- Features not available via COM (Focused Inbox, @mentions, etc.)
+
+Most email / calendar operations can be handled programmatically with the COM commands above. Use VNC only when GUI interaction is required.
+
 ## Notes
 
 - Requires Microsoft Outlook installed and configured
