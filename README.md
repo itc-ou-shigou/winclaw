@@ -503,12 +503,16 @@ The project is an ESM-only pnpm monorepo built with [tsdown](https://github.com/
 ## Building the Windows Installer
 
 The installer is built with [Inno Setup 6](https://jrsoftware.org/isinfo.php)
-and PowerShell packaging scripts.
+and PowerShell packaging scripts. The final EXE is kept **under 100 MB** via
+automated size optimizations.
 
 ```powershell
 # Full build (includes pnpm build step)
 # Prerequisites: Inno Setup 6, pnpm, Node.js 22+
 .\scripts\package-windows-installer.ps1
+
+# Skip the pnpm build step (reuse existing build artifacts)
+.\scripts\package-windows-installer.ps1 -SkipBuild
 
 # Rebuild installer only (reuses existing build artifacts in dist/cache)
 # Faster: skips pnpm build, only re-stages and re-compiles the installer
@@ -520,12 +524,23 @@ The build process:
 1. Downloads Node.js 22 LTS portable (x64) to `dist/cache/`.
 2. Runs `pnpm build` to produce the production bundle (full build only).
 3. Runs `npm pack` and extracts the tarball to `dist/win-staging/app/`.
-4. Copies the Node.js runtime, launcher scripts, and assets to `dist/win-staging/`.
-5. Compiles `scripts/windows-installer.iss` into `dist/WinClawSetup-{version}.exe`.
-6. Copies the installer to `releases/` and optionally to `C:\work\docs\`.
+4. **Removes bloat** from the staged app: old installer EXEs, download caches,
+   and `win-staging` leftovers that `npm pack` may include via the `dist/` entry
+   in `package.json` `files`.
+5. **Strips heavy optional packages** to stay under 100 MB: GPU runtimes
+   (CUDA/Vulkan/ARM64), `node-llama-cpp`, `@napi-rs/canvas`, `playwright-core`,
+   `@lydell/node-pty`, and type-only packages (`@types`, `bun-types`, etc.).
+   Users who need these can install them separately after installation.
+6. **Trims node_modules**: removes test suites, docs, TypeScript source files,
+   source maps, and config files that are not needed at runtime.
+7. Copies the Node.js runtime, launcher scripts, WinClawUI desktop app, and
+   assets to `dist/win-staging/`.
+8. Compiles `scripts/windows-installer.iss` into `dist/WinClawSetup-{version}.exe`
+   using LZMA2/ultra64 solid compression.
+9. Copies the installer to `releases/`.
 
-The Inno Setup compilation takes approximately 30 minutes due to the large
-number of files (~thousands of node_modules entries) being compressed.
+The Inno Setup compilation takes approximately 1-2 minutes. The resulting
+installer is typically **~84 MB**.
 
 ## Architecture
 

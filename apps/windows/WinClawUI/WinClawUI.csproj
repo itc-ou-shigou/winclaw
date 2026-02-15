@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Resources\winclaw.ico</ApplicationIcon>
+    <AssemblyName>WinClawUI</AssemblyName>
+    <RootNamespace>WinClawUI</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Version info -->
+    <AssemblyTitle>WinClaw</AssemblyTitle>
+    <Product>WinClaw</Product>
+    <Company>WinClaw</Company>
+    <Description>WinClaw Desktop App - Personal AI Assistant</Description>
+
+    <!-- Publish settings: trimming flags are passed via dotnet publish CLI
+         to avoid NETSDK1175 during normal builds. See publish.ps1. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+  </ItemGroup>
+
+  <!-- NOTE: Do NOT enable PublishTrimmed.  WebView2 relies on COM interop and
+       runtime reflection that the IL trimmer silently breaks, even with
+       TrimMode=partial and TrimmerRootAssembly hints.  The ~50 MB size increase
+       from skipping trimming is acceptable for a desktop shell. -->
+
+  <ItemGroup>
+    <Content Include="Resources\winclaw.ico" />
+  </ItemGroup>
+
+</Project>
