@@ -57,6 +57,12 @@ Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{app}"; Flags:
 ; Assets
 Source: "{#StagingDir}\assets\winclaw.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "{#StagingDir}\assets\logo.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+; VNC Desktop Control components
+Source: "{#StagingDir}\vnc\tightvnc-setup.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion
+Source: "{#StagingDir}\vnc\novnc\*"; DestDir: "{app}\vnc\novnc"; Flags: ignoreversion recursesubdirs
+Source: "{#StagingDir}\vnc\setup-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
+Source: "{#StagingDir}\vnc\start-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
+Source: "{#StagingDir}\vnc\stop-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu — desktop app (preferred) or browser fallback
@@ -75,6 +81,12 @@ Name: "{group}\WinClaw Onboard"; Filename: "{app}\winclaw.cmd"; Parameters: "onb
   WorkingDir: "{app}"; Comment: "WinClaw Setup Wizard"
 Name: "{group}\WinClaw TUI"; Filename: "{app}\winclaw.cmd"; Parameters: "tui"; \
   WorkingDir: "{app}"; Comment: "WinClaw Terminal UI"
+Name: "{group}\VNC Desktop - Start"; Filename: "powershell.exe"; \
+  Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\start-vnc-desktop.ps1"""; \
+  WorkingDir: "{app}\vnc"; Comment: "Start VNC desktop streaming"
+Name: "{group}\VNC Desktop - Stop"; Filename: "powershell.exe"; \
+  Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\stop-vnc-desktop.ps1"""; \
+  WorkingDir: "{app}\vnc"; Comment: "Stop VNC desktop streaming"
 Name: "{group}\Uninstall WinClaw"; Filename: "{uninstallexe}"
 ; Desktop shortcut — desktop app (preferred) or browser fallback
 Name: "{autodesktop}\WinClaw"; Filename: "{app}\WinClawUI.exe"; \
@@ -90,6 +102,8 @@ Name: "{autodesktop}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"
 Name: "addtopath"; Description: "Add WinClaw to system PATH"; GroupDescription: "Additional options:"; \
   Flags: checkedonce
+Name: "vncsetup"; Description: "Install VNC Desktop Control (enables AI desktop automation)"; \
+  GroupDescription: "VNC Desktop Control:"; Flags: unchecked
 
 [Registry]
 ; Add to PATH (user-level, non-admin safe)
@@ -122,6 +136,13 @@ Filename: "{app}\winclaw.cmd"; Parameters: "daemon install"; \
 Filename: "{app}\winclaw.cmd"; Parameters: "gateway restart"; \
   StatusMsg: "Restarting WinClaw Gateway..."; \
   Flags: runhidden waituntilterminated
+; Step 5: VNC Desktop Control setup (optional, requires admin elevation via UAC)
+Filename: "powershell.exe"; \
+  Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\setup-vnc-desktop.ps1"""; \
+  StatusMsg: "Setting up VNC Desktop Control (requires Administrator)..."; \
+  Description: "Set up VNC Desktop Control (requires Administrator)"; \
+  Flags: postinstall waituntilterminated skipifsilent shellexec; \
+  Tasks: vncsetup; Verb: runas
 
 [UninstallRun]
 ; Pre-uninstall: stop and remove daemon

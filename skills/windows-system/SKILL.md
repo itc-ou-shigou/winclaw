@@ -76,6 +76,19 @@ Get-NetTCPConnection -State Established | Select-Object LocalPort, RemoteAddress
 winget list --source winget | Select-Object -Skip 2
 ```
 
+## GUI Operations (via VNC)
+
+For GUI operations such as Windows Settings and Control Panel,
+use **winclaw-vnc-desktop** skill for desktop control via VNC.
+- Windows Settings (Display, Network, Bluetooth, Privacy)
+- Control Panel (items not accessible via PowerShell)
+- Hardware troubleshooting in Device Manager
+- Visual process management in Task Manager
+- Windows Update GUI interface
+- System tray icon interaction
+
+Most system management tasks can be handled programmatically with the PowerShell commands above. Use VNC only when GUI interaction is required.
+
 ## Notes
 
 - Some commands require elevated (Administrator) PowerShell

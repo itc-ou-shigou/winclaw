@@ -246,7 +246,50 @@ if (Test-Path $webview2Bootstrapper) {
     Write-Warning "WebView2 Bootstrapper not found at $webview2Bootstrapper"
 }
 
-# -- 4c. Build WinClawUI desktop app (C# + WebView2) ----------------------
+# -- 4c. Stage VNC Desktop Control assets ----------------------------------
+Write-Host "==> Staging VNC Desktop Control assets..."
+$vncStaging = "$STAGING\vnc"
+New-Item -ItemType Directory -Path $vncStaging -Force | Out-Null
+
+# TightVNC MSI (download and cache)
+$tightvncMsi = "$ROOT\dist\cache\tightvnc-setup.msi"
+if (-not (Test-Path $tightvncMsi) -or (Get-Item $tightvncMsi -ErrorAction SilentlyContinue).Length -lt 100000) {
+    Write-Host "    Downloading TightVNC MSI..."
+    Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.85/tightvnc-2.8.85-gpl-setup-64bit.msi" -OutFile $tightvncMsi -UseBasicParsing
+}
+Copy-Item $tightvncMsi "$vncStaging\tightvnc-setup.msi" -Force
+Write-Host "    TightVNC MSI: $([math]::Round((Get-Item "$vncStaging\tightvnc-setup.msi").Length / 1MB, 1)) MB"
+
+# noVNC HTML client (download, extract essential files only)
+$novncZip = "$ROOT\dist\cache\novnc-1.5.0.zip"
+if (-not (Test-Path $novncZip) -or (Get-Item $novncZip -ErrorAction SilentlyContinue).Length -lt 100000) {
+    Write-Host "    Downloading noVNC v1.5.0..."
+    Invoke-WebRequest -Uri "https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.zip" -OutFile $novncZip -UseBasicParsing
+}
+$novncExtractTmp = "$vncStaging\novnc-extract"
+Expand-Archive -Path $novncZip -DestinationPath $novncExtractTmp -Force
+$extractedDir = Get-ChildItem $novncExtractTmp -Directory | Select-Object -First 1
+New-Item -ItemType Directory -Path "$vncStaging\novnc" -Force | Out-Null
+# Copy only essential files (skip docs, tests, screenshots)
+foreach ($item in @("vnc.html", "vnc_lite.html", "app", "core", "vendor")) {
+    $src = Join-Path $extractedDir.FullName $item
+    if (Test-Path $src) { Copy-Item $src "$vncStaging\novnc\$item" -Recurse -Force }
+}
+Copy-Item (Join-Path $extractedDir.FullName "package.json") "$vncStaging\novnc\" -Force -ErrorAction SilentlyContinue
+Remove-Item $novncExtractTmp -Recurse -Force
+
+# VNC PowerShell scripts
+Copy-Item "$ROOT\scripts\setup-vnc-desktop.ps1" "$vncStaging\" -Force
+Copy-Item "$ROOT\scripts\start-vnc-desktop.ps1" "$vncStaging\" -Force
+Copy-Item "$ROOT\scripts\stop-vnc-desktop.ps1" "$vncStaging\" -Force
+if (Test-Path "$ROOT\scripts\vnc-check-status.ps1") {
+    Copy-Item "$ROOT\scripts\vnc-check-status.ps1" "$vncStaging\" -Force
+}
+
+$vncSizeMB = [math]::Round(((Get-ChildItem "$vncStaging" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
+Write-Host "    VNC staging size: $vncSizeMB MB" -ForegroundColor Yellow
+
+# -- 4d. Build WinClawUI desktop app (C# + WebView2) ----------------------
 $winclawUiProject = "$ROOT\apps\windows\WinClawUI\WinClawUI.csproj"
 if (Test-Path $winclawUiProject) {
     Write-Host "==> Building WinClawUI desktop app..."

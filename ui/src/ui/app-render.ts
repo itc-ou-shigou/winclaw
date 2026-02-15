@@ -3,7 +3,10 @@ import type { AppViewState } from "./app-view-state.ts";
 import type { UsageState } from "./controllers/usage.ts";
 import { parseAgentSessionKey } from "../../../src/routing/session-key.js";
 import { refreshChatAvatar } from "./app-chat.ts";
-import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers.ts";
+import { renderChatControls } from "./app-render.helpers.ts";
+import { renderCommandPalette } from "./components/command-palette.ts";
+import { renderSessionTabs } from "./components/session-tabs.ts";
+import { renderStatusBar } from "./components/status-bar.ts";
 import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
@@ -52,7 +55,7 @@ import {
 } from "./controllers/skills.ts";
 import { loadUsage, loadSessionTimeSeries, loadSessionLogs } from "./controllers/usage.ts";
 import { icons } from "./icons.ts";
-import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
+import { COMMANDS, normalizeBasePath, subtitleForTab, titleForTab } from "./navigation.ts";
 
 // Module-scope debounce for usage date changes (avoids type-unsafe hacks on state object)
 let usageDateDebounceTimeout: number | null = null;
@@ -117,96 +120,50 @@ export function renderApp(state: AppViewState) {
     null;
 
   return html`
-    <div class="shell ${isChat ? "shell--chat" : ""} ${chatFocus ? "shell--chat-focus" : ""} ${state.settings.navCollapsed ? "shell--nav-collapsed" : ""} ${state.onboarding ? "shell--onboarding" : ""}">
+    <div class="shell ${isChat ? "shell--chat" : ""} ${state.onboarding ? "shell--onboarding" : ""}">
       <header class="topbar">
         <div class="topbar-left">
-          <button
-            class="nav-collapse-toggle"
-            @click=${() =>
-              state.applySettings({
-                ...state.settings,
-                navCollapsed: !state.settings.navCollapsed,
-              })}
-            title="${state.settings.navCollapsed ? "Expand sidebar" : "Collapse sidebar"}"
-            aria-label="${state.settings.navCollapsed ? "Expand sidebar" : "Collapse sidebar"}"
-          >
-            <span class="nav-collapse-toggle__icon">${icons.menu}</span>
-          </button>
           <div class="brand">
             <div class="brand-logo">
               <img src=${basePath ? `${basePath}/favicon.svg` : "/favicon.svg"} alt="WinClaw" />
             </div>
-            <div class="brand-text">
-              <div class="brand-title">WINCLAW</div>
-              <div class="brand-sub">Gateway Dashboard</div>
-            </div>
+            <div class="brand-title">WinClaw</div>
           </div>
         </div>
-        <div class="topbar-status">
-          <div class="pill">
-            <span class="statusDot ${state.connected ? "ok" : ""}"></span>
-            <span>Health</span>
-            <span class="mono">${state.connected ? "OK" : "Offline"}</span>
-          </div>
-          ${renderThemeToggle(state)}
+        <div class="topbar-center">
+          <span class="statusDot ${state.connected ? "ok" : ""}"></span>
+          <span>${state.connected ? "Connected" : "Disconnected"}</span>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-cmd-btn" @click=${() => state.toggleCommandPalette()} title="Command Palette (Ctrl+K)">
+            Ctrl+K
+          </button>
+          <button class="topbar-add-btn" @click=${() => state.toggleCommandPalette()} title="Open command palette">
+            +
+          </button>
         </div>
       </header>
-      <aside class="nav ${state.settings.navCollapsed ? "nav--collapsed" : ""}">
-        ${TAB_GROUPS.map((group) => {
-          const isGroupCollapsed = state.settings.navGroupsCollapsed[group.label] ?? false;
-          const hasActiveTab = group.tabs.some((tab) => tab === state.tab);
-          return html`
-            <div class="nav-group ${isGroupCollapsed && !hasActiveTab ? "nav-group--collapsed" : ""}">
-              <button
-                class="nav-label"
-                @click=${() => {
-                  const next = { ...state.settings.navGroupsCollapsed };
-                  next[group.label] = !isGroupCollapsed;
-                  state.applySettings({
-                    ...state.settings,
-                    navGroupsCollapsed: next,
-                  });
-                }}
-                aria-expanded=${!isGroupCollapsed}
-              >
-                <span class="nav-label__text">${group.label}</span>
-                <span class="nav-label__chevron">${isGroupCollapsed ? "+" : "−"}</span>
-              </button>
-              <div class="nav-group__items">
-                ${group.tabs.map((tab) => renderTab(state, tab))}
-              </div>
-            </div>
-          `;
-        })}
-        <div class="nav-group nav-group--links">
-          <div class="nav-label nav-label--static">
-            <span class="nav-label__text">Resources</span>
-          </div>
-          <div class="nav-group__items">
-            <a
-              class="nav-item nav-item--external"
-              href="https://docs.winclaw.ai"
-              target="_blank"
-              rel="noreferrer"
-              title="Docs (opens in new tab)"
-            >
-              <span class="nav-item__icon" aria-hidden="true">${icons.book}</span>
-              <span class="nav-item__text">Docs</span>
-            </a>
-          </div>
-        </div>
-      </aside>
       <main class="content ${isChat ? "content--chat" : ""}">
-        <section class="content-header">
-          <div>
-            ${state.tab === "usage" ? nothing : html`<div class="page-title">${titleForTab(state.tab)}</div>`}
-            ${state.tab === "usage" ? nothing : html`<div class="page-sub">${subtitleForTab(state.tab)}</div>`}
-          </div>
-          <div class="page-meta">
-            ${state.lastError ? html`<div class="pill danger">${state.lastError}</div>` : nothing}
-            ${isChat ? renderChatControls(state) : nothing}
-          </div>
-        </section>
+        ${renderSessionTabs({
+          activeTab: state.tab,
+          openTabs: state.openTabs,
+          onTabSelect: (tab) => state.openTabFromPalette(tab),
+          onTabClose: (tab) => state.closeTab(tab),
+          onAddTab: () => state.toggleCommandPalette(),
+        })}
+        ${isChat
+          ? nothing
+          : html`
+              <section class="content-header">
+                <div>
+                  ${state.tab === "usage" ? nothing : html`<div class="page-title">${titleForTab(state.tab)}</div>`}
+                  ${state.tab === "usage" ? nothing : html`<div class="page-sub">${subtitleForTab(state.tab)}</div>`}
+                </div>
+                <div class="page-meta">
+                  ${state.lastError ? html`<div class="pill danger">${state.lastError}</div>` : nothing}
+                </div>
+              </section>
+            `}
 
         ${
           state.tab === "overview"
@@ -1215,6 +1172,34 @@ export function renderApp(state: AppViewState) {
             : nothing
         }
       </main>
+      <footer class="statusbar">
+        ${renderStatusBar({
+          connected: state.connected,
+          channels: state.channelsSnapshot,
+          totalCost: state.usageCostSummary?.totals?.totalCost ?? null,
+          expanded: state.statusBarExpanded,
+          onToggle: () => {
+            state.statusBarExpanded = !state.statusBarExpanded;
+          },
+        })}
+      </footer>
+      ${renderCommandPalette({
+        open: state.commandPaletteOpen,
+        recentCommandIds: state.recentCommands,
+        onSelect: (cmd) => {
+          state.addRecentCommand(cmd.id);
+          if (cmd.id === "new-chat") {
+            state.openTabFromPalette("chat");
+            void state.handleSendChat("/new", { restoreDraft: true });
+          } else if (cmd.tab) {
+            state.openTabFromPalette(cmd.tab);
+          }
+          state.commandPaletteOpen = false;
+        },
+        onClose: () => {
+          state.commandPaletteOpen = false;
+        },
+      })}
       ${renderExecApprovalPrompt(state)}
       ${renderGatewayUrlConfirmation(state)}
     </div>

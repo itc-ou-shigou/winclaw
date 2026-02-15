@@ -476,6 +476,84 @@ winclaw skill list
 # (brew on macOS, apt on Linux, winget/scoop/choco on Windows, pip for Python)
 ```
 
+## Chat-based Configuration (Settings Skills)
+
+WinClaw includes 6 built-in **settings skills** that let you configure everything through natural conversation in the Chat tab or any connected messaging channel. No need to manually edit config files — just tell the AI what you want.
+
+### Available settings skills
+
+| Skill | Emoji | What it does |
+|-------|-------|-------------|
+| `winclaw-setup` | ⚙️ | Gateway core settings: port, auth token, TLS, AI model, theme, logging |
+| `winclaw-channels` | 🔗 | Add, remove, enable/disable messaging channels; manage DM/group policies |
+| `winclaw-agents` | 🤖 | Create/configure AI agents: model, personality, workspace, thinking level |
+| `winclaw-cron` | ⏰ | Schedule recurring tasks: daily reports, reminders, periodic checks |
+| `winclaw-status` | 📊 | Check system health, usage stats, connected channels, active sessions |
+| `winclaw-sns-wizard` | 📲 | Step-by-step guided setup for connecting any of the 19 supported platforms |
+
+### How it works
+
+Open the **Chat** tab in the Dashboard (or send a message from any connected channel) and describe what you want in plain language. The AI automatically activates the appropriate skill and applies changes through the Gateway API.
+
+### Example conversations
+
+**Initial setup:**
+```
+You:   Help me set up WinClaw for the first time
+AI:    I'll guide you through the initial setup. Let me check your current
+       configuration... Your gateway is running on port 18789. Let's configure
+       your AI model. Which provider would you like to use?
+You:   Anthropic Claude
+AI:    Done! I've set agent.model to claude-sonnet-4-20250514. Would you like
+       to connect any messaging channels next?
+```
+
+**Connecting a messaging platform:**
+```
+You:   I want to connect Telegram
+AI:    Great! Let's set up Telegram step by step.
+       1. Open Telegram and search for @BotFather
+       2. Send /newbot and follow the prompts to create your bot
+       3. Copy the bot token (looks like 123456:ABC-DEF...)
+       Paste the token here when ready.
+You:   7891234567:AAH2kx9...
+AI:    ✅ Telegram connected! Your bot is now receiving messages.
+       Would you like to configure DM policies or add allowed users?
+```
+
+**Scheduling a recurring task:**
+```
+You:   Send me a weather summary every morning at 8am
+AI:    I'll create a cron job for that. Setting up a daily task at 08:00
+       with the prompt "Give a brief weather summary for today"...
+       ✅ Cron job created! You'll receive the summary every day at 8:00 AM.
+```
+
+**Checking system status:**
+```
+You:   Is everything working? Show me what's connected
+AI:    📊 System Status:
+       • Gateway: healthy (uptime 3d 12h)
+       • Channels: WhatsApp ✅, Telegram ✅, Discord ❌ (disabled)
+       • Active sessions: 4
+       • Model: claude-sonnet-4-20250514
+       • Skills loaded: 23/50
+```
+
+**Managing agents:**
+```
+You:   Create a new agent called "translator" that uses GPT-4o
+AI:    I'll create a new agent with ID "translator" using gpt-4o.
+       Would you like to set a system prompt or personality for it?
+You:   Yes, make it a Japanese-English translator
+AI:    ✅ Agent "translator" created with a translation-focused system prompt.
+       It's ready to use. Want to bind it to a specific channel?
+```
+
+> **Tip:** These skills are loaded automatically based on keyword matching. Just describe your intent naturally — WinClaw will figure out which skill to use.
+
+---
+
 ## Development (from source)
 
 ```bash

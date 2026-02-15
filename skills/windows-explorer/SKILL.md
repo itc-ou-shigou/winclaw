@@ -70,6 +70,17 @@ Get-Clipboard
 Get-FileHash -Path file.exe -Algorithm SHA256 | Format-List
 ```
 
+## GUI Operations (via VNC)
+
+For operations that require the Explorer GUI (drag & drop, right-click menus, preview pane, etc.),
+use **winclaw-vnc-desktop** skill for desktop control via VNC.
+- Drag & drop file move / copy
+- Right-click context menu (Properties, "Open with", Share)
+- File preview in Explorer preview pane
+- Visual folder navigation
+
+Most file operations can be handled programmatically with the PowerShell commands above. Use VNC only when GUI interaction is required.
+
 ## Notes
 
 - Use `-ErrorAction SilentlyContinue` for recursive searches to skip access-denied directories

@@ -282,4 +282,13 @@ export type AppViewState = {
   handleOpenSidebar: (content: string) => void;
   handleCloseSidebar: () => void;
   handleSplitRatioChange: (ratio: number) => void;
+  // Command palette & session tabs
+  commandPaletteOpen: boolean;
+  openTabs: Tab[];
+  statusBarExpanded: boolean;
+  recentCommands: string[];
+  toggleCommandPalette: () => void;
+  openTabFromPalette: (tab: Tab) => void;
+  closeTab: (tab: Tab) => void;
+  addRecentCommand: (commandId: string) => void;
 };
