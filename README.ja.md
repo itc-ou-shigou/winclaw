@@ -478,7 +478,7 @@ pnpm gateway:watch
 
 ## Windows インストーラーのビルド
 
-EXE インストーラーをソースからビルドする手順:
+EXE インストーラーをソースからビルドする手順です。最終的なインストーラーは自動的なサイズ最適化により **100 MB 以内** に収まります。
 
 ### 前提条件
 
@@ -492,6 +492,9 @@ EXE インストーラーをソースからビルドする手順:
 # フルビルド（pnpm build 含む）
 .\scripts\package-windows-installer.ps1
 
+# pnpm build をスキップ（既存のビルド成果物を再利用）
+.\scripts\package-windows-installer.ps1 -SkipBuild
+
 # インストーラーのみ再ビルド（既存のビルド成果物を再利用、pnpm build をスキップ）
 .\scripts\rebuild-installer.ps1
 ```
@@ -501,11 +504,14 @@ EXE インストーラーをソースからビルドする手順:
 1. Node.js 22 LTS ポータブル版を `dist/cache/` にダウンロード
 2. `pnpm build` でプロダクションバンドルを生成（フルビルド時のみ）
 3. `npm pack` でターボールを作成し `dist/win-staging/app/` に展開
-4. Node.js ランタイム、ランチャースクリプト、アセットを `dist/win-staging/` にコピー
-5. Inno Setup で `scripts/windows-installer.iss` を `dist/WinClawSetup-{version}.exe` にコンパイル
-6. インストーラーを `releases/` および `C:\work\docs\` にコピー
+4. **Bloat 除去**: `npm pack` が `package.json` の `files` フィールド経由で含む古いインストーラー EXE、ダウンロードキャッシュ、ステージングファイルを削除
+5. **重量級オプショナルパッケージ削除**: GPU ランタイム（CUDA/Vulkan/ARM64）、`node-llama-cpp`、`@napi-rs/canvas`、`playwright-core`、`@lydell/node-pty`、型定義パッケージ（`@types`、`bun-types` 等）を削除。これらはインストール後に個別に追加可能
+6. **node_modules トリミング**: テストスイート、ドキュメント、TypeScript ソース、ソースマップ等のランタイム不要ファイルを削除
+7. Node.js ランタイム、ランチャースクリプト、WinClawUI デスクトップアプリ、アセットを `dist/win-staging/` にコピー
+8. Inno Setup で `scripts/windows-installer.iss` を LZMA2/ultra64 ソリッド圧縮で `dist/WinClawSetup-{version}.exe` にコンパイル
+9. インストーラーを `releases/` にコピー
 
-Inno Setup のコンパイルは node_modules のファイル数が膨大なため、約 30 分かかります。
+Inno Setup のコンパイルは約 1〜2 分で完了します。生成されるインストーラーは通常 **約 84 MB** です。
 
 ## アーキテクチャ
 

@@ -67,6 +67,12 @@ apps/ios/*.dSYM.zip
 # provisioning profiles (local)
 apps/ios/*.mobileprovision
 
+# .NET build artifacts (WinClawUI)
+apps/windows/**/bin/
+apps/windows/**/obj/
+apps/windows/publish/
+apps/windows/publish-fd/
+
 # Local untracked files
 .local/
 IDENTITY.md

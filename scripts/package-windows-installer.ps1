@@ -82,7 +82,17 @@ $nodeDir = Get-ChildItem $tmpDir -Directory | Select-Object -First 1
 New-Item -ItemType Directory -Path "$STAGING\node" -Force | Out-Null
 & robocopy "$($nodeDir.FullName)" "$STAGING\node" /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
 Remove-Item $tmpDir -Recurse -Force
-Write-Host "    node/ items: $((Get-ChildItem "$STAGING\node").Count)"
+# Remove npm and corepack — not needed at runtime (we run node.exe directly on .mjs files)
+foreach ($unneeded in @("node_modules\npm", "node_modules\corepack", "npm.cmd", "npx.cmd", "corepack.cmd")) {
+    $target = "$STAGING\node\$unneeded"
+    if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
+}
+# Remove empty node_modules if nothing left
+$nodeModules = "$STAGING\node\node_modules"
+if ((Test-Path $nodeModules) -and (Get-ChildItem $nodeModules -ErrorAction SilentlyContinue).Count -eq 0) {
+    Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
+}
+Write-Host "    node/ items: $((Get-ChildItem "$STAGING\node").Count) (npm/corepack removed)"
 
 # App directory
 Write-Host "    Creating app directory..."
@@ -120,6 +130,91 @@ if ($deps.Count -gt 0) {
 Remove-Item "$STAGING\app-global" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$STAGING\$tarball" -Force -ErrorAction SilentlyContinue
 
+# -- 3b. Remove bloat from staged app (installer EXEs, caches, win-staging) ---
+# npm pack includes dist/ per package.json "files", which may contain old
+# installer artefacts and Node.js download caches.  Remove them here so
+# they never end up inside the final installer.
+Write-Host "    Removing bloat from staged app..."
+$bloatPatterns = @(
+    "$STAGING\app\dist\WinClawSetup-*.exe",
+    "$STAGING\app\dist\cache",
+    "$STAGING\app\dist\win-staging"
+)
+foreach ($pattern in $bloatPatterns) {
+    foreach ($item in (Get-Item $pattern -ErrorAction SilentlyContinue)) {
+        Write-Host "      Removing: $($item.Name) ($([math]::Round($item.Length / 1MB, 1)) MB)"
+        Remove-Item $item -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Remove heavy optional packages to keep installer under 100 MB.
+# These are either GPU-specific, used only for optional features, or type-only packages.
+# Users can install them separately if needed (e.g. `npm i node-llama-cpp`).
+$heavyPackages = @(
+    # GPU runtime variants (CUDA, Vulkan, ARM64)
+    "$STAGING\app\node_modules\@node-llama-cpp\win-x64-cuda",
+    "$STAGING\app\node_modules\@node-llama-cpp\win-x64-cuda-ext",
+    "$STAGING\app\node_modules\@node-llama-cpp\win-x64-vulkan",
+    "$STAGING\app\node_modules\@node-llama-cpp\win-arm64",
+    # Full LLM runtime (optional — users install separately for local models)
+    "$STAGING\app\node_modules\@node-llama-cpp",
+    "$STAGING\app\node_modules\node-llama-cpp",
+    # Native image processing (optional — sharp handles most needs)
+    "$STAGING\app\node_modules\@napi-rs\canvas-win32-x64-msvc",
+    "$STAGING\app\node_modules\@napi-rs\canvas",
+    "$STAGING\app\node_modules\@img\sharp-win32-x64",
+    # Playwright (optional — only for browser automation features)
+    "$STAGING\app\node_modules\playwright-core",
+    # Node PTY (optional — only for terminal features)
+    "$STAGING\app\node_modules\@lydell",
+    # Type-only packages (not needed at runtime)
+    "$STAGING\app\node_modules\@cloudflare\workers-types",
+    "$STAGING\app\node_modules\bun-types",
+    "$STAGING\app\node_modules\@types",
+    "$STAGING\app\node_modules\@octokit\openapi-types",
+    "$STAGING\app\node_modules\@octokit\openapi-webhooks-types",
+    "$STAGING\app\node_modules\web-streams-polyfill"
+)
+foreach ($pkg in $heavyPackages) {
+    if (Test-Path $pkg) {
+        $sz = [math]::Round(((Get-ChildItem $pkg -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
+        Write-Host "      Removing: $(Split-Path $pkg -Leaf) ($sz MB)"
+        Remove-Item $pkg -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+# Clean up empty scoped package directories
+foreach ($scopeDir in (Get-ChildItem "$STAGING\app\node_modules\@*" -Directory -ErrorAction SilentlyContinue)) {
+    if ((Get-ChildItem $scopeDir.FullName -ErrorAction SilentlyContinue).Count -eq 0) {
+        Remove-Item $scopeDir.FullName -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Remove tests, docs, source-maps, TypeScript sources from node_modules to save ~30-50 MB
+Write-Host "      Trimming node_modules (tests, docs, TS sources)..."
+$trimDirs = @("test", "tests", "__tests__", "spec", ".github", "benchmarks", "examples", "example")
+foreach ($trimDir in $trimDirs) {
+    Get-ChildItem "$STAGING\app\node_modules" -Directory -Recurse -Filter $trimDir -ErrorAction SilentlyContinue |
+        ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$trimFilePatterns = @("*.md", "CHANGELOG*", "HISTORY*", ".npmignore", ".eslintrc*", ".prettierrc*",
+    "tsconfig*.json", ".editorconfig", ".travis.yml", ".taprc*", ".nojekyll")
+foreach ($pat in $trimFilePatterns) {
+    Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter $pat -ErrorAction SilentlyContinue |
+        ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+}
+# Remove .ts sources (keep .d.ts and .d.cts)
+Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter "*.ts" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike "*.d.ts" -and $_.Name -notlike "*.d.cts" } |
+    ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+# Remove source maps
+Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter "*.map" -ErrorAction SilentlyContinue |
+    ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+# Remove app/docs (not needed at runtime)
+Remove-Item "$STAGING\app\docs" -Recurse -Force -ErrorAction SilentlyContinue
+
+$appSizeMB = [math]::Round(((Get-ChildItem "$STAGING\app" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
+Write-Host "    App directory size after cleanup: $appSizeMB MB" -ForegroundColor Yellow
+
 # Assets
 Write-Host "    Copying assets..."
 New-Item -ItemType Directory -Path "$STAGING\assets" -Force | Out-Null
@@ -131,12 +226,59 @@ Copy-Item "$ROOT\assets\logo.png" "$STAGING\assets\" -Force
 @echo off
 setlocal
 set "WINCLAW_NODE=%~dp0node\node.exe"
-set "WINCLAW_APP=%~dp0app\openclaw.mjs"
+if exist "%~dp0app\winclaw.mjs" (
+    set "WINCLAW_APP=%~dp0app\winclaw.mjs"
+) else (
+    set "WINCLAW_APP=%~dp0app\openclaw.mjs"
+)
 "%WINCLAW_NODE%" "%WINCLAW_APP%" %*
 "@ | Set-Content "$STAGING\winclaw.cmd" -Encoding ASCII
 
 # UI Launcher script (starts gateway + opens browser)
 Copy-Item "$ROOT\scripts\winclaw-ui.cmd" "$STAGING\winclaw-ui.cmd" -Force
+
+# -- 4b. Copy WebView2 Bootstrapper (for auto-install on target machines) ---
+$webview2Bootstrapper = "$ROOT\scripts\MicrosoftEdgeWebview2Setup.exe"
+if (Test-Path $webview2Bootstrapper) {
+    Copy-Item $webview2Bootstrapper "$STAGING\MicrosoftEdgeWebview2Setup.exe" -Force
+    Write-Host "    WebView2 Bootstrapper: $([math]::Round((Get-Item $webview2Bootstrapper).Length / 1MB, 1)) MB"
+} else {
+    Write-Warning "WebView2 Bootstrapper not found at $webview2Bootstrapper"
+}
+
+# -- 4c. Build WinClawUI desktop app (C# + WebView2) ----------------------
+$winclawUiProject = "$ROOT\apps\windows\WinClawUI\WinClawUI.csproj"
+if (Test-Path $winclawUiProject) {
+    Write-Host "==> Building WinClawUI desktop app..."
+    $publishDir = "$STAGING\winclawui-publish"
+    $prevEAP2 = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    # NOTE: PublishTrimmed is intentionally disabled.  WebView2 relies on COM
+    # interop and runtime reflection that the IL trimmer silently breaks, even
+    # with TrimMode=partial.  EnableCompressionInSingleFile keeps the EXE small
+    # (~49 MB compressed vs ~57 MB trimmed, ~109 MB uncompressed).
+    dotnet publish $winclawUiProject `
+        -c Release `
+        -r win-x64 `
+        --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:EnableCompressionInSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -o $publishDir 2>&1 | ForEach-Object { Write-Host "    $_" }
+    $ErrorActionPreference = $prevEAP2
+
+    $publishedExe = "$publishDir\WinClawUI.exe"
+    if (Test-Path $publishedExe) {
+        Copy-Item $publishedExe "$STAGING\WinClawUI.exe" -Force
+        Remove-Item $publishDir -Recurse -Force -ErrorAction SilentlyContinue
+        $exeSize = [math]::Round((Get-Item "$STAGING\WinClawUI.exe").Length / 1MB, 1)
+        Write-Host "    WinClawUI.exe: $exeSize MB" -ForegroundColor Green
+    } else {
+        Write-Warning "WinClawUI.exe not found after publish; desktop app will not be included"
+    }
+} else {
+    Write-Host "==> Skipping WinClawUI (project not found)"
+}
 
 # -- 5. Compile Inno Setup --------------------------------------------------
 Write-Host "==> Compiling Inno Setup installer..."

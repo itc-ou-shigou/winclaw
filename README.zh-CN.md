@@ -458,11 +458,15 @@ winclaw/
 
 ## 构建 Windows 安装程序
 
-前置条件：[Inno Setup 6+](https://jrsoftware.org/isinfo.php)、PowerShell 5.1+、pnpm 9+。
+前置条件：[Inno Setup 6+](https://jrsoftware.org/isinfo.php)、PowerShell 5.1+、pnpm 10+。
+最终安装程序通过自动化体积优化，严格控制在 **100 MB 以内**。
 
 ```powershell
 # 完整构建（包含 pnpm build）
 .\scripts\package-windows-installer.ps1
+
+# 跳过 pnpm build 步骤（复用已有构建产物）
+.\scripts\package-windows-installer.ps1 -SkipBuild
 
 # 仅重新打包安装程序（复用已有构建产物，跳过 pnpm build）
 .\scripts\rebuild-installer.ps1
@@ -473,11 +477,14 @@ winclaw/
 1. 下载 Node.js 22 LTS 便携版到 `dist/cache/`
 2. 运行 `pnpm build` 生成生产包（仅完整构建时执行）
 3. 运行 `npm pack` 并解压到 `dist/win-staging/app/`
-4. 复制 Node.js 运行时、启动脚本和资源到 `dist/win-staging/`
-5. 使用 Inno Setup 编译 `scripts/windows-installer.iss` 为 `dist/WinClawSetup-{version}.exe`
-6. 复制安装程序到 `releases/` 和 `C:\work\docs\`
+4. **清除冗余文件**：删除 `npm pack` 通过 `package.json` `files` 字段带入的旧安装程序 EXE、下载缓存和 staging 残留
+5. **移除重型可选依赖**：GPU 运行时 (CUDA/Vulkan/ARM64)、`node-llama-cpp`、`@napi-rs/canvas`、`playwright-core`、`@lydell/node-pty` 和纯类型包 (`@types`、`bun-types` 等)。用户可在安装后按需单独安装
+6. **精简 node_modules**：移除测试套件、文档、TypeScript 源文件、Source Map 等运行时不需要的文件
+7. 复制 Node.js 运行时、启动脚本、WinClawUI 桌面应用和资源到 `dist/win-staging/`
+8. 使用 Inno Setup 以 LZMA2/ultra64 固实压缩编译 `scripts/windows-installer.iss` 为 `dist/WinClawSetup-{version}.exe`
+9. 复制安装程序到 `releases/`
 
-Inno Setup 编译大约需要 30 分钟（因 node_modules 文件数量庞大）。
+Inno Setup 编译大约需要 1-2 分钟。生成的安装程序通常约 **84 MB**。
 
 ---
 
