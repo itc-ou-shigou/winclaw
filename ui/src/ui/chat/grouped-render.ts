@@ -236,6 +236,13 @@ function renderGroupedMessage(
   const images = extractImages(message);
   const hasImages = images.length > 0;
 
+  // Hide synthetic tool results inserted by transcript repair — they are internal
+  // bookkeeping and should never be shown to the user.
+  const isSynthetic = Boolean((m as Record<string, unknown>)._synthetic);
+  if (isSynthetic && isToolResult) {
+    return nothing;
+  }
+
   const extractedText = extractTextCached(message);
   const extractedThinking =
     opts.showReasoning && role === "assistant" ? extractThinkingCached(message) : null;

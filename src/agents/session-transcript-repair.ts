@@ -81,10 +81,11 @@ function makeMissingToolResult(params: {
     content: [
       {
         type: "text",
-        text: "[winclaw] missing tool result in session history; inserted synthetic error result for transcript repair.",
+        text: "Tool result unavailable (session history truncated).",
       },
     ],
     isError: true,
+    _synthetic: true,
     timestamp: Date.now(),
   } as Extract<AgentMessage, { role: "toolResult" }>;
 }

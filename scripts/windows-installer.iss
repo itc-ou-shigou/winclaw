@@ -45,24 +45,24 @@ Name: "chinesetraditional"; MessagesFile: "compiler:Languages\ChineseTraditional
 Source: "{#StagingDir}\node\*"; DestDir: "{app}\node"; Flags: ignoreversion recursesubdirs
 ; WinClaw app
 Source: "{#StagingDir}\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs
-; Desktop app (WinClawUI.exe — native WebView2 shell)
-Source: "{#StagingDir}\WinClawUI.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: FileExists(ExpandConstant('{#StagingDir}\WinClawUI.exe'))
+; Desktop app (WinClawUI.exe — native WebView2 shell, optional)
+Source: "{#StagingDir}\WinClawUI.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 ; Launchers (winclaw-ui.cmd kept as browser fallback)
 Source: "{#StagingDir}\winclaw.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\winclaw-ui.cmd"; DestDir: "{app}"; Flags: ignoreversion
 ; WebView2 Evergreen Bootstrapper (~1.7MB, installs runtime if missing)
 ; Copy to {tmp} for installer-time install, and to {app} for background install by WinClawUI
-Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Check: FileExists(ExpandConstant('{#StagingDir}\MicrosoftEdgeWebview2Setup.exe'))
-Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: FileExists(ExpandConstant('{#StagingDir}\MicrosoftEdgeWebview2Setup.exe'))
+Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall skipifsourcedoesntexist
+Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 ; Assets
 Source: "{#StagingDir}\assets\winclaw.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "{#StagingDir}\assets\logo.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-; VNC Desktop Control components
-Source: "{#StagingDir}\vnc\tightvnc-setup.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion
-Source: "{#StagingDir}\vnc\novnc\*"; DestDir: "{app}\vnc\novnc"; Flags: ignoreversion recursesubdirs
-Source: "{#StagingDir}\vnc\setup-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
-Source: "{#StagingDir}\vnc\start-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
-Source: "{#StagingDir}\vnc\stop-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion
+; VNC Desktop Control components (optional — staged by full installer build)
+Source: "{#StagingDir}\vnc\tightvnc-setup.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\vnc\novnc\*"; DestDir: "{app}\vnc\novnc"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
+Source: "{#StagingDir}\vnc\setup-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\vnc\start-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\vnc\stop-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 ; Start Menu — desktop app (preferred) or browser fallback

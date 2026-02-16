@@ -54,6 +54,16 @@ export function isNonFatalException(err: unknown): boolean {
   return hasErrnoCode(err, "EPIPE");
 }
 
+/**
+ * Checks if an error is an EPIPE (broken pipe) error.
+ * EPIPE errors must be silently swallowed — attempting to log them via
+ * console.warn/console.error triggers another EPIPE, creating an infinite
+ * recursive loop that freezes the event loop and generates multi-GB log files.
+ */
+export function isEpipeError(err: unknown): boolean {
+  return hasErrnoCode(err, "EPIPE");
+}
+
 export function formatUncaughtError(err: unknown): string {
   if (extractErrorCode(err) === "INVALID_CONFIG") {
     return formatErrorMessage(err);
