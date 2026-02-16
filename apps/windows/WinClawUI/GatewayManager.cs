@@ -88,7 +88,7 @@ public sealed class GatewayManager : IDisposable
     private void ResolvePort()
     {
         // 1. Environment variable
-        var envPort = Environment.GetEnvironmentVariable("OPENCLAW_GATEWAY_PORT")
+        var envPort = Environment.GetEnvironmentVariable("WINCLAW_GATEWAY_PORT")
                    ?? Environment.GetEnvironmentVariable("CLAWDBOT_GATEWAY_PORT");
         if (!string.IsNullOrWhiteSpace(envPort) &&
             int.TryParse(envPort.Trim(), out int parsed) && parsed > 0 && parsed <= 65535)
@@ -97,7 +97,7 @@ public sealed class GatewayManager : IDisposable
             return;
         }
 
-        // 2. Config file: ~/.openclaw/openclaw.json -> gateway.port (path must match Node.js side)
+        // 2. Config file: ~/.winclaw/winclaw.json -> gateway.port (path must match Node.js side)
         try
         {
             var configPath = ResolveConfigPath();
@@ -129,7 +129,7 @@ public sealed class GatewayManager : IDisposable
     private void ResolveToken()
     {
         // 1. Environment variable (same precedence as Node.js side)
-        var envToken = Environment.GetEnvironmentVariable("OPENCLAW_GATEWAY_TOKEN")
+        var envToken = Environment.GetEnvironmentVariable("WINCLAW_GATEWAY_TOKEN")
                     ?? Environment.GetEnvironmentVariable("CLAWDBOT_GATEWAY_TOKEN");
         if (!string.IsNullOrWhiteSpace(envToken))
         {
@@ -137,7 +137,7 @@ public sealed class GatewayManager : IDisposable
             return;
         }
 
-        // 2. Config file: ~/.openclaw/openclaw.json -> gateway.auth.token
+        // 2. Config file: ~/.winclaw/winclaw.json -> gateway.auth.token
         try
         {
             var configPath = ResolveConfigPath();
@@ -171,7 +171,7 @@ public sealed class GatewayManager : IDisposable
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        var primary = Path.Combine(home, ".openclaw", "openclaw.json");
+        var primary = Path.Combine(home, ".winclaw", "winclaw.json");
         if (File.Exists(primary)) return primary;
 
         var legacy = Path.Combine(home, ".clawdbot", "clawdbot.json");
@@ -320,7 +320,7 @@ public sealed class GatewayManager : IDisposable
     //  Path resolution — matches installer layout:
     //    {app}\WinClawUI.exe
     //    {app}\node\node.exe
-    //    {app}\app\winclaw.mjs (or openclaw.mjs for compat)
+    //    {app}\app\winclaw.mjs (or winclaw.mjs for compat)
     // ──────────────────────────────────────────────────────────────────
 
     private static (string? nodePath, string? appPath) ResolveGatewayPaths()
@@ -330,9 +330,9 @@ public sealed class GatewayManager : IDisposable
         // Installer layout
         var nodePath = Path.Combine(exeDir, "node", "node.exe");
 
-        // Try winclaw.mjs first, then openclaw.mjs (legacy npm bin name)
+        // Try winclaw.mjs first, then winclaw.mjs (legacy npm bin name)
         string? appPath = null;
-        foreach (var name in new[] { "winclaw.mjs", "openclaw.mjs" })
+        foreach (var name in new[] { "winclaw.mjs", "winclaw.mjs" })
         {
             var candidate = Path.Combine(exeDir, "app", name);
             if (File.Exists(candidate))
@@ -359,7 +359,7 @@ public sealed class GatewayManager : IDisposable
         if (!string.IsNullOrEmpty(winclawHome))
         {
             var homeNode = Path.Combine(winclawHome, "node", "node.exe");
-            foreach (var name in new[] { "winclaw.mjs", "openclaw.mjs" })
+            foreach (var name in new[] { "winclaw.mjs", "winclaw.mjs" })
             {
                 var candidate = Path.Combine(winclawHome, "app", name);
                 if (File.Exists(candidate))

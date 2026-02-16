@@ -1,7 +1,7 @@
 ---
 name: windows-explorer
 description: Windows file system operations - search, bulk rename, permissions, compression, and clipboard via PowerShell.
-metadata: { "openclaw": { "emoji": "📂", "os": ["win32"] } }
+metadata: { "winclaw": { "emoji": "📂", "os": ["win32"] } }
 ---
 
 # Windows File Explorer

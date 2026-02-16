@@ -4,7 +4,7 @@ import CoreLocation
 import CoreMotion
 import EventKit
 import Foundation
-import OpenClawKit
+import WinClawKit
 import Network
 import Observation
 import Photos
@@ -426,7 +426,7 @@ final class GatewayConnectionController {
         if manualClientId?.isEmpty == false {
             return manualClientId!
         }
-        return "openclaw-ios"
+        return "winclaw-ios"
     }
 
     private func resolveManualPort(host: String, port: Int, useTLS: Bool) -> Int? {
@@ -456,29 +456,29 @@ final class GatewayConnectionController {
     }
 
     private func currentCaps() -> [String] {
-        var caps = [OpenClawCapability.canvas.rawValue, OpenClawCapability.screen.rawValue]
+        var caps = [WinClawCapability.canvas.rawValue, WinClawCapability.screen.rawValue]
 
         // Default-on: if the key doesn't exist yet, treat it as enabled.
         let cameraEnabled =
             UserDefaults.standard.object(forKey: "camera.enabled") == nil
                 ? true
                 : UserDefaults.standard.bool(forKey: "camera.enabled")
-        if cameraEnabled { caps.append(OpenClawCapability.camera.rawValue) }
+        if cameraEnabled { caps.append(WinClawCapability.camera.rawValue) }
 
         let voiceWakeEnabled = UserDefaults.standard.bool(forKey: VoiceWakePreferences.enabledKey)
-        if voiceWakeEnabled { caps.append(OpenClawCapability.voiceWake.rawValue) }
+        if voiceWakeEnabled { caps.append(WinClawCapability.voiceWake.rawValue) }
 
         let locationModeRaw = UserDefaults.standard.string(forKey: "location.enabledMode") ?? "off"
-        let locationMode = OpenClawLocationMode(rawValue: locationModeRaw) ?? .off
-        if locationMode != .off { caps.append(OpenClawCapability.location.rawValue) }
+        let locationMode = WinClawLocationMode(rawValue: locationModeRaw) ?? .off
+        if locationMode != .off { caps.append(WinClawCapability.location.rawValue) }
 
-        caps.append(OpenClawCapability.device.rawValue)
-        caps.append(OpenClawCapability.photos.rawValue)
-        caps.append(OpenClawCapability.contacts.rawValue)
-        caps.append(OpenClawCapability.calendar.rawValue)
-        caps.append(OpenClawCapability.reminders.rawValue)
+        caps.append(WinClawCapability.device.rawValue)
+        caps.append(WinClawCapability.photos.rawValue)
+        caps.append(WinClawCapability.contacts.rawValue)
+        caps.append(WinClawCapability.calendar.rawValue)
+        caps.append(WinClawCapability.reminders.rawValue)
         if Self.motionAvailable() {
-            caps.append(OpenClawCapability.motion.rawValue)
+            caps.append(WinClawCapability.motion.rawValue)
         }
 
         return caps
@@ -486,54 +486,54 @@ final class GatewayConnectionController {
 
     private func currentCommands() -> [String] {
         var commands: [String] = [
-            OpenClawCanvasCommand.present.rawValue,
-            OpenClawCanvasCommand.hide.rawValue,
-            OpenClawCanvasCommand.navigate.rawValue,
-            OpenClawCanvasCommand.evalJS.rawValue,
-            OpenClawCanvasCommand.snapshot.rawValue,
-            OpenClawCanvasA2UICommand.push.rawValue,
-            OpenClawCanvasA2UICommand.pushJSONL.rawValue,
-            OpenClawCanvasA2UICommand.reset.rawValue,
-            OpenClawScreenCommand.record.rawValue,
-            OpenClawSystemCommand.notify.rawValue,
-            OpenClawChatCommand.push.rawValue,
-            OpenClawTalkCommand.pttStart.rawValue,
-            OpenClawTalkCommand.pttStop.rawValue,
-            OpenClawTalkCommand.pttCancel.rawValue,
-            OpenClawTalkCommand.pttOnce.rawValue,
+            WinClawCanvasCommand.present.rawValue,
+            WinClawCanvasCommand.hide.rawValue,
+            WinClawCanvasCommand.navigate.rawValue,
+            WinClawCanvasCommand.evalJS.rawValue,
+            WinClawCanvasCommand.snapshot.rawValue,
+            WinClawCanvasA2UICommand.push.rawValue,
+            WinClawCanvasA2UICommand.pushJSONL.rawValue,
+            WinClawCanvasA2UICommand.reset.rawValue,
+            WinClawScreenCommand.record.rawValue,
+            WinClawSystemCommand.notify.rawValue,
+            WinClawChatCommand.push.rawValue,
+            WinClawTalkCommand.pttStart.rawValue,
+            WinClawTalkCommand.pttStop.rawValue,
+            WinClawTalkCommand.pttCancel.rawValue,
+            WinClawTalkCommand.pttOnce.rawValue,
         ]
 
         let caps = Set(self.currentCaps())
-        if caps.contains(OpenClawCapability.camera.rawValue) {
-            commands.append(OpenClawCameraCommand.list.rawValue)
-            commands.append(OpenClawCameraCommand.snap.rawValue)
-            commands.append(OpenClawCameraCommand.clip.rawValue)
+        if caps.contains(WinClawCapability.camera.rawValue) {
+            commands.append(WinClawCameraCommand.list.rawValue)
+            commands.append(WinClawCameraCommand.snap.rawValue)
+            commands.append(WinClawCameraCommand.clip.rawValue)
         }
-        if caps.contains(OpenClawCapability.location.rawValue) {
-            commands.append(OpenClawLocationCommand.get.rawValue)
+        if caps.contains(WinClawCapability.location.rawValue) {
+            commands.append(WinClawLocationCommand.get.rawValue)
         }
-        if caps.contains(OpenClawCapability.device.rawValue) {
-            commands.append(OpenClawDeviceCommand.status.rawValue)
-            commands.append(OpenClawDeviceCommand.info.rawValue)
+        if caps.contains(WinClawCapability.device.rawValue) {
+            commands.append(WinClawDeviceCommand.status.rawValue)
+            commands.append(WinClawDeviceCommand.info.rawValue)
         }
-        if caps.contains(OpenClawCapability.photos.rawValue) {
-            commands.append(OpenClawPhotosCommand.latest.rawValue)
+        if caps.contains(WinClawCapability.photos.rawValue) {
+            commands.append(WinClawPhotosCommand.latest.rawValue)
         }
-        if caps.contains(OpenClawCapability.contacts.rawValue) {
-            commands.append(OpenClawContactsCommand.search.rawValue)
-            commands.append(OpenClawContactsCommand.add.rawValue)
+        if caps.contains(WinClawCapability.contacts.rawValue) {
+            commands.append(WinClawContactsCommand.search.rawValue)
+            commands.append(WinClawContactsCommand.add.rawValue)
         }
-        if caps.contains(OpenClawCapability.calendar.rawValue) {
-            commands.append(OpenClawCalendarCommand.events.rawValue)
-            commands.append(OpenClawCalendarCommand.add.rawValue)
+        if caps.contains(WinClawCapability.calendar.rawValue) {
+            commands.append(WinClawCalendarCommand.events.rawValue)
+            commands.append(WinClawCalendarCommand.add.rawValue)
         }
-        if caps.contains(OpenClawCapability.reminders.rawValue) {
-            commands.append(OpenClawRemindersCommand.list.rawValue)
-            commands.append(OpenClawRemindersCommand.add.rawValue)
+        if caps.contains(WinClawCapability.reminders.rawValue) {
+            commands.append(WinClawRemindersCommand.list.rawValue)
+            commands.append(WinClawRemindersCommand.add.rawValue)
         }
-        if caps.contains(OpenClawCapability.motion.rawValue) {
-            commands.append(OpenClawMotionCommand.activity.rawValue)
-            commands.append(OpenClawMotionCommand.pedometer.rawValue)
+        if caps.contains(WinClawCapability.motion.rawValue) {
+            commands.append(WinClawMotionCommand.activity.rawValue)
+            commands.append(WinClawMotionCommand.pedometer.rawValue)
         }
 
         return commands

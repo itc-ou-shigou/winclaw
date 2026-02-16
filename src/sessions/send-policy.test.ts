@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import { resolveSendPolicy } from "./send-policy.js";
 
 describe("resolveSendPolicy", () => {
   it("defaults to allow", () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as WinClawConfig;
     expect(resolveSendPolicy({ cfg })).toBe("allow");
   });
 
   it("entry override wins", () => {
     const cfg = {
       session: { sendPolicy: { default: "allow" } },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const entry: SessionEntry = {
       sessionId: "s",
       updatedAt: 0,
@@ -34,7 +34,7 @@ describe("resolveSendPolicy", () => {
           ],
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const entry: SessionEntry = {
       sessionId: "s",
       updatedAt: 0,
@@ -52,7 +52,7 @@ describe("resolveSendPolicy", () => {
           rules: [{ action: "deny", match: { keyPrefix: "cron:" } }],
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     expect(resolveSendPolicy({ cfg, sessionKey: "cron:job-1" })).toBe("deny");
   });
 });

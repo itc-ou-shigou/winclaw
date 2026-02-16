@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { SandboxContext } from "./sandbox.js";
-import { ensureOpenClawModelsJson } from "./models-config.js";
+import { ensureWinClawModelsJson } from "./models-config.js";
 import { buildEmbeddedSandboxInfo } from "./pi-embedded-runner.js";
 
 vi.mock("@mariozechner/pi-ai", async () => {
@@ -68,10 +68,10 @@ const _makeOpenAiConfig = (modelIds: string[]) =>
         },
       },
     },
-  }) satisfies OpenClawConfig;
+  }) satisfies WinClawConfig;
 
-const _ensureModels = (cfg: OpenClawConfig, agentDir: string) =>
-  ensureOpenClawModelsJson(cfg, agentDir) as unknown;
+const _ensureModels = (cfg: WinClawConfig, agentDir: string) =>
+  ensureWinClawModelsJson(cfg, agentDir) as unknown;
 
 const _textFromContent = (content: unknown) => {
   if (typeof content === "string") {
@@ -107,14 +107,14 @@ describe("buildEmbeddedSandboxInfo", () => {
     const sandbox = {
       enabled: true,
       sessionKey: "session:test",
-      workspaceDir: "/tmp/openclaw-sandbox",
-      agentWorkspaceDir: "/tmp/openclaw-workspace",
+      workspaceDir: "/tmp/winclaw-sandbox",
+      agentWorkspaceDir: "/tmp/winclaw-workspace",
       workspaceAccess: "none",
-      containerName: "openclaw-sbx-test",
+      containerName: "winclaw-sbx-test",
       containerWorkdir: "/workspace",
       docker: {
-        image: "openclaw-sandbox:bookworm-slim",
-        containerPrefix: "openclaw-sbx-",
+        image: "winclaw-sandbox:bookworm-slim",
+        containerPrefix: "winclaw-sbx-",
         workdir: "/workspace",
         readOnlyRoot: true,
         tmpfs: ["/tmp"],
@@ -131,13 +131,13 @@ describe("buildEmbeddedSandboxInfo", () => {
       browser: {
         bridgeUrl: "http://localhost:9222",
         noVncUrl: "http://localhost:6080",
-        containerName: "openclaw-sbx-browser-test",
+        containerName: "winclaw-sbx-browser-test",
       },
     } satisfies SandboxContext;
 
     expect(buildEmbeddedSandboxInfo(sandbox)).toEqual({
       enabled: true,
-      workspaceDir: "/tmp/openclaw-sandbox",
+      workspaceDir: "/tmp/winclaw-sandbox",
       workspaceAccess: "none",
       agentWorkspaceMount: undefined,
       browserBridgeUrl: "http://localhost:9222",
@@ -149,14 +149,14 @@ describe("buildEmbeddedSandboxInfo", () => {
     const sandbox = {
       enabled: true,
       sessionKey: "session:test",
-      workspaceDir: "/tmp/openclaw-sandbox",
-      agentWorkspaceDir: "/tmp/openclaw-workspace",
+      workspaceDir: "/tmp/winclaw-sandbox",
+      agentWorkspaceDir: "/tmp/winclaw-workspace",
       workspaceAccess: "none",
-      containerName: "openclaw-sbx-test",
+      containerName: "winclaw-sbx-test",
       containerWorkdir: "/workspace",
       docker: {
-        image: "openclaw-sandbox:bookworm-slim",
-        containerPrefix: "openclaw-sbx-",
+        image: "winclaw-sandbox:bookworm-slim",
+        containerPrefix: "winclaw-sbx-",
         workdir: "/workspace",
         readOnlyRoot: true,
         tmpfs: ["/tmp"],
@@ -180,7 +180,7 @@ describe("buildEmbeddedSandboxInfo", () => {
       }),
     ).toEqual({
       enabled: true,
-      workspaceDir: "/tmp/openclaw-sandbox",
+      workspaceDir: "/tmp/winclaw-sandbox",
       workspaceAccess: "none",
       agentWorkspaceMount: undefined,
       hostBrowserAllowed: false,

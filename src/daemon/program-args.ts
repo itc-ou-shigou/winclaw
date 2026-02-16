@@ -31,7 +31,7 @@ async function resolveCliEntrypointPathForService(): Promise<string> {
     await fs.access(resolvedPath);
     // Prefer the original (possibly symlinked) path over the resolved realpath.
     // This keeps LaunchAgent/systemd paths stable across package version updates,
-    // since symlinks like node_modules/openclaw -> .pnpm/openclaw@X.Y.Z/...
+    // since symlinks like node_modules/winclaw -> .pnpm/winclaw@X.Y.Z/...
     // are automatically updated by pnpm, while the resolved path contains
     // version-specific directories that break after updates.
     const normalizedLooksLikeDist = /[/\\]dist[/\\].+\.(cjs|js|mjs)$/.test(normalized);
@@ -176,7 +176,7 @@ async function resolveCliProgramArguments(params: {
   const winclawHome = process.env.WINCLAW_HOME;
   if (process.platform === "win32" && winclawHome && !params.dev) {
     const embeddedNode = path.join(winclawHome, "node", "node.exe");
-    const appEntry = path.join(winclawHome, "app", "openclaw.mjs");
+    const appEntry = path.join(winclawHome, "app", "winclaw.mjs");
     try {
       await fs.access(embeddedNode);
       await fs.access(appEntry);

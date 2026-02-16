@@ -3,7 +3,7 @@ name: windows-office
 description: Create and edit Microsoft Office documents (Word, Excel, PowerPoint) via python-docx, openpyxl, python-pptx, and optional COM Automation.
 metadata:
   {
-    "openclaw":
+    "winclaw":
       {
         "emoji": "📄",
         "os": ["win32"],

@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/mattermost",
+  "name": "@winclaw/mattermost",
   "version": "2026.2.9",
   "private": true,
-  "description": "OpenClaw Mattermost channel plugin",
+  "description": "WinClaw Mattermost channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "winclaw": "workspace:*"
   },
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -21,7 +21,7 @@
       "order": 65
     },
     "install": {
-      "npmSpec": "@openclaw/mattermost",
+      "npmSpec": "@winclaw/mattermost",
       "localPath": "extensions/mattermost",
       "defaultChoice": "npm"
     }

@@ -1,9 +1,9 @@
 import EventKit
 import Foundation
-import OpenClawKit
+import WinClawKit
 
 final class RemindersService: RemindersServicing {
-    func list(params: OpenClawRemindersListParams) async throws -> OpenClawRemindersListPayload {
+    func list(params: WinClawRemindersListParams) async throws -> WinClawRemindersListPayload {
         let store = EKEventStore()
         let status = EKEventStore.authorizationStatus(for: .reminder)
         let authorized = await Self.ensureAuthorization(store: store, status: status)
@@ -17,7 +17,7 @@ final class RemindersService: RemindersServicing {
         let statusFilter = params.status ?? .incomplete
 
         let predicate = store.predicateForReminders(in: nil)
-        let payload = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[OpenClawReminderPayload], Error>) in
+        let payload = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[WinClawReminderPayload], Error>) in
             store.fetchReminders(matching: predicate) { items in
                 let formatter = ISO8601DateFormatter()
                 let filtered = (items ?? []).filter { reminder in
@@ -33,7 +33,7 @@ final class RemindersService: RemindersServicing {
                 let selected = Array(filtered.prefix(limit))
                 let payload = selected.map { reminder in
                     let due = reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) }
-                    return OpenClawReminderPayload(
+                    return WinClawReminderPayload(
                         identifier: reminder.calendarItemIdentifier,
                         title: reminder.title,
                         dueISO: due.map { formatter.string(from: $0) },
@@ -44,10 +44,10 @@ final class RemindersService: RemindersServicing {
             }
         }
 
-        return OpenClawRemindersListPayload(reminders: payload)
+        return WinClawRemindersListPayload(reminders: payload)
     }
 
-    func add(params: OpenClawRemindersAddParams) async throws -> OpenClawRemindersAddPayload {
+    func add(params: WinClawRemindersAddParams) async throws -> WinClawRemindersAddPayload {
         let store = EKEventStore()
         let status = EKEventStore.authorizationStatus(for: .reminder)
         let authorized = await Self.ensureWriteAuthorization(store: store, status: status)
@@ -90,14 +90,14 @@ final class RemindersService: RemindersServicing {
 
         let formatter = ISO8601DateFormatter()
         let due = reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) }
-        let payload = OpenClawReminderPayload(
+        let payload = WinClawReminderPayload(
             identifier: reminder.calendarItemIdentifier,
             title: reminder.title,
             dueISO: due.map { formatter.string(from: $0) },
             completed: reminder.isCompleted,
             listName: reminder.calendar.title)
 
-        return OpenClawRemindersAddPayload(reminder: payload)
+        return WinClawRemindersAddPayload(reminder: payload)
     }
 
     private static func ensureAuthorization(store: EKEventStore, status: EKAuthorizationStatus) async -> Bool {

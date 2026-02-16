@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk";
 import crypto from "node:crypto";
 import path from "node:path";
 import { resolveBlueBubblesAccount } from "./accounts.js";
@@ -16,7 +16,7 @@ export type BlueBubblesAttachmentOpts = {
   password?: string;
   accountId?: string;
   timeoutMs?: number;
-  cfg?: OpenClawConfig;
+  cfg?: WinClawConfig;
 };
 
 const DEFAULT_ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024;

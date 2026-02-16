@@ -3,7 +3,7 @@ name: windows-outlook
 description: Send and read emails via Microsoft Outlook COM Automation. Requires Outlook installed.
 metadata:
   {
-    "openclaw":
+    "winclaw":
       {
         "emoji": "📧",
         "os": ["win32"],

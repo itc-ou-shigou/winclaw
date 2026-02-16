@@ -1,6 +1,6 @@
 import type { ButtonInteraction, ComponentData, StringSelectMenuInteraction } from "@buape/carbon";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import { createAgentComponentButton, createAgentSelectMenu } from "./agent-components.js";
 
 const readAllowFromStoreMock = vi.hoisted(() => vi.fn());
@@ -20,7 +20,7 @@ vi.mock("../../infra/system-events.js", async (importOriginal) => {
   };
 });
 
-const createCfg = (): OpenClawConfig => ({}) as OpenClawConfig;
+const createCfg = (): WinClawConfig => ({}) as WinClawConfig;
 
 const createDmButtonInteraction = (overrides: Partial<ButtonInteraction> = {}) => {
   const reply = vi.fn().mockResolvedValue(undefined);

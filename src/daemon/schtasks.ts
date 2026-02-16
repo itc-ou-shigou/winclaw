@@ -16,19 +16,19 @@ const formatLine = (label: string, value: string) => {
 };
 
 function resolveTaskName(env: Record<string, string | undefined>): string {
-  const override = env.OPENCLAW_WINDOWS_TASK_NAME?.trim();
+  const override = env.WINCLAW_WINDOWS_TASK_NAME?.trim();
   if (override) {
     return override;
   }
-  return resolveGatewayWindowsTaskName(env.OPENCLAW_PROFILE);
+  return resolveGatewayWindowsTaskName(env.WINCLAW_PROFILE);
 }
 
 export function resolveTaskScriptPath(env: Record<string, string | undefined>): string {
-  const override = env.OPENCLAW_TASK_SCRIPT?.trim();
+  const override = env.WINCLAW_TASK_SCRIPT?.trim();
   if (override) {
     return override;
   }
-  const scriptName = env.OPENCLAW_TASK_SCRIPT_NAME?.trim() || "gateway.cmd";
+  const scriptName = env.WINCLAW_TASK_SCRIPT_NAME?.trim() || "gateway.cmd";
   const stateDir = resolveGatewayStateDir(env);
   return path.join(stateDir, scriptName);
 }
@@ -258,8 +258,8 @@ export async function installScheduledTask({
   const taskDescription =
     description ??
     formatGatewayServiceDescription({
-      profile: env.OPENCLAW_PROFILE,
-      version: environment?.OPENCLAW_SERVICE_VERSION ?? env.OPENCLAW_SERVICE_VERSION,
+      profile: env.WINCLAW_PROFILE,
+      version: environment?.WINCLAW_SERVICE_VERSION ?? env.WINCLAW_SERVICE_VERSION,
     });
   const script = buildTaskScript({
     description: taskDescription,

@@ -1,4 +1,4 @@
-import type { GatewayRequestHandlerOptions, OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { GatewayRequestHandlerOptions, WinClawPluginApi } from "winclaw/plugin-sdk";
 import { Type } from "@sinclair/typebox";
 import type { CoreConfig } from "./src/core-bridge.js";
 import { registerVoiceCallCli } from "./src/cli.js";
@@ -145,7 +145,7 @@ const voiceCallPlugin = {
   name: "Voice Call",
   description: "Voice-call plugin with Telnyx/Twilio/Plivo providers",
   configSchema: voiceCallConfigSchema,
-  register(api: OpenClawPluginApi) {
+  register(api: WinClawPluginApi) {
     const config = resolveVoiceCallConfig(voiceCallConfigSchema.parse(api.pluginConfig));
     const validation = validateProviderConfig(config);
 

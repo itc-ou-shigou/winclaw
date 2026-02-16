@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { safeParseJson } from "openclaw/plugin-sdk";
+import { safeParseJson } from "winclaw/plugin-sdk";
 import lockfile from "proper-lockfile";
 
 const STORE_LOCK_OPTIONS = {

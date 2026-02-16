@@ -4,12 +4,12 @@ description: "Save session context to memory when /new command is issued"
 homepage: https://docs.openclaw.ai/hooks#session-memory
 metadata:
   {
-    "openclaw":
+    "winclaw":
       {
         "emoji": "💾",
         "events": ["command:new"],
         "requires": { "config": ["workspace.dir"] },
-        "install": [{ "id": "bundled", "kind": "bundled", "label": "Bundled with OpenClaw" }],
+        "install": [{ "id": "bundled", "kind": "bundled", "label": "Bundled with WinClaw" }],
       },
   }
 ---
@@ -82,7 +82,7 @@ Example configuration:
 
 The hook automatically:
 
-- Uses your workspace directory (`~/.openclaw/workspace` by default)
+- Uses your workspace directory (`~/.winclaw/workspace` by default)
 - Uses your configured LLM for slug generation
 - Falls back to timestamp slugs if LLM is unavailable
 
@@ -91,7 +91,7 @@ The hook automatically:
 To disable this hook:
 
 ```bash
-openclaw hooks disable session-memory
+winclaw hooks disable session-memory
 ```
 
 Or remove it from your config:

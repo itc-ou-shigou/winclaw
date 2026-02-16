@@ -1,8 +1,8 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import fs from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
-import { ensureOpenClawModelsJson } from "./models-config.js";
+import type { WinClawConfig } from "../config/config.js";
+import { ensureWinClawModelsJson } from "./models-config.js";
 import { limitHistoryTurns } from "./pi-embedded-runner.js";
 
 vi.mock("@mariozechner/pi-ai", async () => {
@@ -68,10 +68,10 @@ const _makeOpenAiConfig = (modelIds: string[]) =>
         },
       },
     },
-  }) satisfies OpenClawConfig;
+  }) satisfies WinClawConfig;
 
-const _ensureModels = (cfg: OpenClawConfig, agentDir: string) =>
-  ensureOpenClawModelsJson(cfg, agentDir) as unknown;
+const _ensureModels = (cfg: WinClawConfig, agentDir: string) =>
+  ensureWinClawModelsJson(cfg, agentDir) as unknown;
 
 const _textFromContent = (content: unknown) => {
   if (typeof content === "string") {

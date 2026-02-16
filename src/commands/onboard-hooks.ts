@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
@@ -6,10 +6,10 @@ import { formatCliCommand } from "../cli/command-format.js";
 import { buildWorkspaceHookStatus } from "../hooks/hooks-status.js";
 
 export async function setupInternalHooks(
-  cfg: OpenClawConfig,
+  cfg: WinClawConfig,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
-): Promise<OpenClawConfig> {
+): Promise<WinClawConfig> {
   await prompter.note(
     [
       "Hooks let you automate actions when agent commands are issued.",
@@ -58,7 +58,7 @@ export async function setupInternalHooks(
     entries[name] = { enabled: true };
   }
 
-  const next: OpenClawConfig = {
+  const next: WinClawConfig = {
     ...cfg,
     hooks: {
       ...cfg.hooks,
@@ -74,9 +74,9 @@ export async function setupInternalHooks(
       `Enabled ${selected.length} hook${selected.length > 1 ? "s" : ""}: ${selected.join(", ")}`,
       "",
       "You can manage hooks later with:",
-      `  ${formatCliCommand("openclaw hooks list")}`,
-      `  ${formatCliCommand("openclaw hooks enable <name>")}`,
-      `  ${formatCliCommand("openclaw hooks disable <name>")}`,
+      `  ${formatCliCommand("winclaw hooks list")}`,
+      `  ${formatCliCommand("winclaw hooks enable <name>")}`,
+      `  ${formatCliCommand("winclaw hooks disable <name>")}`,
     ].join("\n"),
     "Hooks Configured",
   );

@@ -1,13 +1,13 @@
 // Default service labels (canonical + legacy compatibility)
-export const GATEWAY_LAUNCH_AGENT_LABEL = "ai.openclaw.gateway";
-export const GATEWAY_SYSTEMD_SERVICE_NAME = "openclaw-gateway";
-export const GATEWAY_WINDOWS_TASK_NAME = "OpenClaw Gateway";
-export const GATEWAY_SERVICE_MARKER = "openclaw";
+export const GATEWAY_LAUNCH_AGENT_LABEL = "ai.winclaw.gateway";
+export const GATEWAY_SYSTEMD_SERVICE_NAME = "winclaw-gateway";
+export const GATEWAY_WINDOWS_TASK_NAME = "WinClaw Gateway";
+export const GATEWAY_SERVICE_MARKER = "winclaw";
 export const GATEWAY_SERVICE_KIND = "gateway";
-export const NODE_LAUNCH_AGENT_LABEL = "ai.openclaw.node";
-export const NODE_SYSTEMD_SERVICE_NAME = "openclaw-node";
-export const NODE_WINDOWS_TASK_NAME = "OpenClaw Node";
-export const NODE_SERVICE_MARKER = "openclaw";
+export const NODE_LAUNCH_AGENT_LABEL = "ai.winclaw.node";
+export const NODE_SYSTEMD_SERVICE_NAME = "winclaw-node";
+export const NODE_WINDOWS_TASK_NAME = "WinClaw Node";
+export const NODE_SERVICE_MARKER = "winclaw";
 export const NODE_SERVICE_KIND = "node";
 export const NODE_WINDOWS_TASK_SCRIPT_NAME = "node.cmd";
 export const LEGACY_GATEWAY_LAUNCH_AGENT_LABELS: string[] = [];
@@ -32,7 +32,7 @@ export function resolveGatewayLaunchAgentLabel(profile?: string): string {
   if (!normalized) {
     return GATEWAY_LAUNCH_AGENT_LABEL;
   }
-  return `ai.openclaw.${normalized}`;
+  return `ai.winclaw.${normalized}`;
 }
 
 export function resolveLegacyGatewayLaunchAgentLabels(profile?: string): string[] {
@@ -45,7 +45,7 @@ export function resolveGatewaySystemdServiceName(profile?: string): string {
   if (!suffix) {
     return GATEWAY_SYSTEMD_SERVICE_NAME;
   }
-  return `openclaw-gateway${suffix}`;
+  return `winclaw-gateway${suffix}`;
 }
 
 export function resolveGatewayWindowsTaskName(profile?: string): string {
@@ -53,7 +53,7 @@ export function resolveGatewayWindowsTaskName(profile?: string): string {
   if (!normalized) {
     return GATEWAY_WINDOWS_TASK_NAME;
   }
-  return `OpenClaw Gateway (${normalized})`;
+  return `WinClaw Gateway (${normalized})`;
 }
 
 export function formatGatewayServiceDescription(params?: {
@@ -70,9 +70,9 @@ export function formatGatewayServiceDescription(params?: {
     parts.push(`v${version}`);
   }
   if (parts.length === 0) {
-    return "OpenClaw Gateway";
+    return "WinClaw Gateway";
   }
-  return `OpenClaw Gateway (${parts.join(", ")})`;
+  return `WinClaw Gateway (${parts.join(", ")})`;
 }
 
 export function resolveNodeLaunchAgentLabel(): string {
@@ -90,7 +90,7 @@ export function resolveNodeWindowsTaskName(): string {
 export function formatNodeServiceDescription(params?: { version?: string }): string {
   const version = params?.version?.trim();
   if (!version) {
-    return "OpenClaw Node Host";
+    return "WinClaw Node Host";
   }
-  return `OpenClaw Node Host (v${version})`;
+  return `WinClaw Node Host (v${version})`;
 }

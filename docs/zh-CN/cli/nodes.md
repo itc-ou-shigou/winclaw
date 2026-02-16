@@ -2,7 +2,7 @@
 read_when:
   - 你正在管理已配对的节点（摄像头、屏幕、画布）
   - 你需要批准请求或调用节点命令
-summary: "`openclaw nodes` 的 CLI 参考（列表/状态/批准/调用，摄像头/画布/屏幕）"
+summary: "`winclaw nodes` 的 CLI 参考（列表/状态/批准/调用，摄像头/画布/屏幕）"
 title: nodes
 x-i18n:
   generated_at: "2026-02-03T10:04:26Z"
@@ -13,7 +13,7 @@ x-i18n:
   workflow: 15
 ---
 
-# `openclaw nodes`
+# `winclaw nodes`
 
 管理已配对的节点（设备）并调用节点功能。
 
@@ -30,14 +30,14 @@ x-i18n:
 ## 常用命令
 
 ```bash
-openclaw nodes list
-openclaw nodes list --connected
-openclaw nodes list --last-connected 24h
-openclaw nodes pending
-openclaw nodes approve <requestId>
-openclaw nodes status
-openclaw nodes status --connected
-openclaw nodes status --last-connected 24h
+winclaw nodes list
+winclaw nodes list --connected
+winclaw nodes list --last-connected 24h
+winclaw nodes pending
+winclaw nodes approve <requestId>
+winclaw nodes status
+winclaw nodes status --connected
+winclaw nodes status --last-connected 24h
 ```
 
 `nodes list` 打印待处理/已配对表格。已配对行包含最近连接时长（Last Connect）。
@@ -47,10 +47,10 @@ openclaw nodes status --last-connected 24h
 ## 调用 / 运行
 
 ```bash
-openclaw nodes invoke --node <id|name|ip> --command <command> --params <json>
-openclaw nodes run --node <id|name|ip> <command...>
-openclaw nodes run --raw "git status"
-openclaw nodes run --agent main --node <id|name|ip> --raw "git status"
+winclaw nodes invoke --node <id|name|ip> --command <command> --params <json>
+winclaw nodes run --node <id|name|ip> <command...>
+winclaw nodes run --raw "git status"
+winclaw nodes run --agent main --node <id|name|ip> --raw "git status"
 ```
 
 调用标志：

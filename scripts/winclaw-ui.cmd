@@ -11,7 +11,7 @@ set "GATEWAY_PORT=18789"
 set "GATEWAY_URL=http://127.0.0.1:%GATEWAY_PORT%/"
 
 rem Check if first-run setup is needed (no config or gateway.mode missing)
-"%WINCLAW_NODE%" -e "const fs=require('fs'),p=require('path').join(require('os').homedir(),'.openclaw','openclaw.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));if(!c.gateway||!c.gateway.mode){process.exit(1)}else{process.exit(0)}}catch{process.exit(1)}" >nul 2>&1
+"%WINCLAW_NODE%" -e "const fs=require('fs'),p=require('path').join(require('os').homedir(),'.winclaw','winclaw.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));if(!c.gateway||!c.gateway.mode){process.exit(1)}else{process.exit(0)}}catch{process.exit(1)}" >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo First-run setup required. Starting setup wizard...
     "%WINCLAW_NODE%" "%WINCLAW_APP%" onboard --flow quickstart

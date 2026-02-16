@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/signal",
+  "name": "@winclaw/signal",
   "version": "2026.2.9",
   "private": true,
-  "description": "OpenClaw Signal channel plugin",
+  "description": "WinClaw Signal channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "winclaw": "workspace:*"
   },
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

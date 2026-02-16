@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 
@@ -84,7 +84,7 @@ describe("setupSkills", () => {
         {
           name: "apple-reminders",
           description: "macOS-only",
-          source: "openclaw-bundled",
+          source: "winclaw-bundled",
           bundled: true,
           filePath: "/tmp/skills/apple-reminders",
           baseDir: "/tmp/skills/apple-reminders",
@@ -103,7 +103,7 @@ describe("setupSkills", () => {
         {
           name: "video-frames",
           description: "ffmpeg",
-          source: "openclaw-bundled",
+          source: "winclaw-bundled",
           bundled: true,
           filePath: "/tmp/skills/video-frames",
           baseDir: "/tmp/skills/video-frames",
@@ -121,7 +121,7 @@ describe("setupSkills", () => {
     });
 
     const { prompter, notes } = createPrompter({ multiselect: ["__skip__"] });
-    await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+    await setupSkills({} as WinClawConfig, "/tmp/ws", runtime, prompter);
 
     // OS-mismatched skill should be counted as unsupported, not installable/missing.
     const status = notes.find((n) => n.title === "Skills status")?.message ?? "";
@@ -151,7 +151,7 @@ describe("setupSkills", () => {
         {
           name: "video-frames",
           description: "ffmpeg",
-          source: "openclaw-bundled",
+          source: "winclaw-bundled",
           bundled: true,
           filePath: "/tmp/skills/video-frames",
           baseDir: "/tmp/skills/video-frames",
@@ -169,7 +169,7 @@ describe("setupSkills", () => {
     });
 
     const { prompter, notes } = createPrompter({ multiselect: ["video-frames"] });
-    await setupSkills({} as OpenClawConfig, "/tmp/ws", runtime, prompter);
+    await setupSkills({} as WinClawConfig, "/tmp/ws", runtime, prompter);
 
     const brewNote = notes.find((n) => n.title === "Homebrew recommended");
     expect(brewNote).toBeDefined();

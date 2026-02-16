@@ -1,5 +1,5 @@
 import Foundation
-import OpenClawKit
+import WinClawKit
 
 @MainActor
 final class NodeCapabilityRouter {

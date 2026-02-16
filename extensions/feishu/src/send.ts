@@ -1,4 +1,4 @@
-import type { ClawdbotConfig } from "openclaw/plugin-sdk";
+import type { ClawdbotConfig } from "winclaw/plugin-sdk";
 import type { MentionTarget } from "./mention.js";
 import type { FeishuSendResult, ResolvedFeishuAccount } from "./types.js";
 import { resolveFeishuAccount } from "./accounts.js";

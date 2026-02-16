@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import { redactIdentifier } from "../logging/redact-identifier.js";
 import {
   classifySessionKeyShape,
@@ -23,7 +23,7 @@ export type ResolveRunWorkspaceResult = {
 function resolveRunAgentId(params: {
   sessionKey?: string;
   agentId?: string;
-  config?: OpenClawConfig;
+  config?: WinClawConfig;
 }): {
   agentId: string;
   agentIdSource: AgentIdSource;
@@ -73,7 +73,7 @@ export function resolveRunWorkspaceDir(params: {
   workspaceDir: unknown;
   sessionKey?: string;
   agentId?: string;
-  config?: OpenClawConfig;
+  config?: WinClawConfig;
 }): ResolveRunWorkspaceResult {
   const requested = params.workspaceDir;
   const { agentId, agentIdSource } = resolveRunAgentId({

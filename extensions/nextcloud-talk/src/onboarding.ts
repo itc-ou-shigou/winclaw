@@ -6,9 +6,9 @@ import {
   normalizeAccountId,
   type ChannelOnboardingAdapter,
   type ChannelOnboardingDmPolicy,
-  type OpenClawConfig,
+  type WinClawConfig,
   type WizardPrompter,
-} from "openclaw/plugin-sdk";
+} from "winclaw/plugin-sdk";
 import type { CoreConfig, DmPolicy } from "./types.js";
 import {
   listNextcloudTalkAccountIds,
@@ -43,7 +43,7 @@ async function noteNextcloudTalkSecretHelp(prompter: WizardPrompter): Promise<vo
   await prompter.note(
     [
       "1) SSH into your Nextcloud server",
-      '2) Run: ./occ talk:bot:install "OpenClaw" "<shared-secret>" "<webhook-url>" --feature reaction',
+      '2) Run: ./occ talk:bot:install "WinClaw" "<shared-secret>" "<webhook-url>" --feature reaction',
       "3) Copy the shared secret you used in the command",
       "4) Enable the bot in your Nextcloud Talk room settings",
       "Tip: you can also set NEXTCLOUD_TALK_BOT_SECRET in your env.",
@@ -161,10 +161,10 @@ const dmPolicy: ChannelOnboardingDmPolicy = {
   getCurrent: (cfg) => cfg.channels?.["nextcloud-talk"]?.dmPolicy ?? "pairing",
   setPolicy: (cfg, policy) => setNextcloudTalkDmPolicy(cfg as CoreConfig, policy as DmPolicy),
   promptAllowFrom: promptNextcloudTalkAllowFromForAccount as (params: {
-    cfg: OpenClawConfig;
+    cfg: WinClawConfig;
     prompter: WizardPrompter;
     accountId?: string | undefined;
-  }) => Promise<OpenClawConfig>,
+  }) => Promise<WinClawConfig>,
 };
 
 export const nextcloudTalkOnboardingAdapter: ChannelOnboardingAdapter = {
@@ -201,7 +201,7 @@ export const nextcloudTalkOnboardingAdapter: ChannelOnboardingAdapter = {
         prompter,
         label: "Nextcloud Talk",
         currentId: accountId,
-        listAccountIds: listNextcloudTalkAccountIds as (cfg: OpenClawConfig) => string[],
+        listAccountIds: listNextcloudTalkAccountIds as (cfg: WinClawConfig) => string[],
         defaultAccountId,
       });
     }

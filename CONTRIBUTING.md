@@ -1,12 +1,12 @@
-# Contributing to OpenClaw
+# Contributing to WinClaw
 
 Welcome to the lobster tank! 🦞
 
 ## Quick Links
 
-- **GitHub:** https://github.com/openclaw/openclaw
+- **GitHub:** https://github.com/winclaw/winclaw
 - **Discord:** https://discord.gg/qkhbAGHRBT
-- **X/Twitter:** [@steipete](https://x.com/steipete) / [@openclaw](https://x.com/openclaw)
+- **X/Twitter:** [@steipete](https://x.com/steipete) / [@winclaw](https://x.com/winclaw)
 
 ## Contributors
 
@@ -15,12 +15,12 @@ See [Credits & Maintainers](https://docs.openclaw.ai/reference/credits) for the 
 ## How to Contribute
 
 1. **Bugs & small fixes** → Open a PR!
-2. **New features / architecture** → Start a [GitHub Discussion](https://github.com/openclaw/openclaw/discussions) or ask in Discord first
+2. **New features / architecture** → Start a [GitHub Discussion](https://github.com/winclaw/winclaw/discussions) or ask in Discord first
 3. **Questions** → Discord #setup-help
 
 ## Before You PR
 
-- Test locally with your OpenClaw instance
+- Test locally with your WinClaw instance
 - Run tests: `pnpm build && pnpm check && pnpm test`
 - Ensure CI checks pass
 - Keep PRs focused (one thing per PR)
@@ -60,21 +60,21 @@ We are currently prioritizing:
 
 - **Stability**: Fixing edge cases in channel connections (WhatsApp/Telegram).
 - **UX**: Improving the onboarding wizard and error messages.
-- **Skills**: For skill contributions, head to [ClawHub](https://clawhub.ai/) — the community hub for OpenClaw skills.
+- **Skills**: For skill contributions, head to [ClawHub](https://clawhub.ai/) — the community hub for WinClaw skills.
 - **Performance**: Optimizing token usage and compaction logic.
 
-Check the [GitHub Issues](https://github.com/openclaw/openclaw/issues) for "good first issue" labels!
+Check the [GitHub Issues](https://github.com/winclaw/winclaw/issues) for "good first issue" labels!
 
 ## Report a Vulnerability
 
 We take security reports seriously. Report vulnerabilities directly to the repository where the issue lives:
 
-- **Core CLI and gateway** — [openclaw/openclaw](https://github.com/openclaw/openclaw)
-- **macOS desktop app** — [openclaw/openclaw](https://github.com/openclaw/openclaw) (apps/macos)
-- **iOS app** — [openclaw/openclaw](https://github.com/openclaw/openclaw) (apps/ios)
-- **Android app** — [openclaw/openclaw](https://github.com/openclaw/openclaw) (apps/android)
-- **ClawHub** — [openclaw/clawhub](https://github.com/openclaw/clawhub)
-- **Trust and threat model** — [openclaw/trust](https://github.com/openclaw/trust)
+- **Core CLI and gateway** — [winclaw/winclaw](https://github.com/winclaw/winclaw)
+- **macOS desktop app** — [winclaw/winclaw](https://github.com/winclaw/winclaw) (apps/macos)
+- **iOS app** — [winclaw/winclaw](https://github.com/winclaw/winclaw) (apps/ios)
+- **Android app** — [winclaw/winclaw](https://github.com/winclaw/winclaw) (apps/android)
+- **ClawHub** — [winclaw/clawhub](https://github.com/winclaw/clawhub)
+- **Trust and threat model** — [winclaw/trust](https://github.com/winclaw/trust)
 
 For issues that don't fit a specific repo, or if you're unsure, email **security@openclaw.ai** and we'll route it.
 

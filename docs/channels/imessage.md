@@ -19,7 +19,7 @@ Status: legacy external CLI integration. Gateway spawns `imsg rpc` (JSON-RPC ove
 1. Ensure Messages is signed in on this Mac.
 2. Install `imsg`:
    - `brew install steipete/tap/imsg`
-3. Configure OpenClaw with `channels.imessage.cliPath` and `channels.imessage.dbPath`.
+3. Configure WinClaw with `channels.imessage.cliPath` and `channels.imessage.dbPath`.
 4. Start the gateway and approve any macOS prompts (Automation + Full Disk Access).
 
 Minimal config:
@@ -58,7 +58,7 @@ Disable with:
 ## Requirements
 
 - macOS with Messages signed in.
-- Full Disk Access for OpenClaw + `imsg` (Messages DB access).
+- Full Disk Access for WinClaw + `imsg` (Messages DB access).
 - Automation permission when sending.
 - `channels.imessage.cliPath` can point to any command that proxies stdin/stdout (for example, a wrapper script that SSHes to another Mac and runs `imsg rpc`).
 
@@ -70,11 +70,11 @@ macOS grants TCC permissions per app/process context. Approve prompts in the sam
 
 Checklist:
 
-- **Full Disk Access**: allow access for the process running OpenClaw (and any shell/SSH wrapper that executes `imsg`). This is required to read the Messages database (`chat.db`).
-- **Automation → Messages**: allow the process running OpenClaw (and/or your terminal) to control **Messages.app** for outbound sends.
+- **Full Disk Access**: allow access for the process running WinClaw (and any shell/SSH wrapper that executes `imsg`). This is required to read the Messages database (`chat.db`).
+- **Automation → Messages**: allow the process running WinClaw (and/or your terminal) to control **Messages.app** for outbound sends.
 - **`imsg` CLI health**: verify `imsg` is installed and supports RPC (`imsg rpc --help`).
 
-Tip: If OpenClaw is running headless (LaunchAgent/systemd/SSH) the macOS prompt can be easy to miss. Run a one-time interactive command in a GUI terminal to force the prompt, then retry:
+Tip: If WinClaw is running headless (LaunchAgent/systemd/SSH) the macOS prompt can be easy to miss. Run a one-time interactive command in a GUI terminal to force the prompt, then retry:
 
 ```bash
 imsg chats --limit 1
@@ -95,7 +95,7 @@ If you want the bot to send from a **separate iMessage identity** (and keep your
 
 1. Create a dedicated Apple ID (example: `my-cool-bot@icloud.com`).
    - Apple may require a phone number for verification / 2FA.
-2. Create a macOS user (example: `openclawhome`) and sign into it.
+2. Create a macOS user (example: `winclawhome`) and sign into it.
 3. Open Messages in that macOS user and sign into iMessage using the bot Apple ID.
 4. Enable Remote Login (System Settings → General → Sharing → Remote Login).
 5. Install `imsg`:
@@ -141,7 +141,7 @@ For single-account setups, use flat options (`channels.imessage.cliPath`, `chann
 
 ### Remote/SSH variant (optional)
 
-If you want iMessage on another Mac, set `channels.imessage.cliPath` to a wrapper that runs `imsg` on the remote macOS host over SSH. OpenClaw only needs stdio.
+If you want iMessage on another Mac, set `channels.imessage.cliPath` to a wrapper that runs `imsg` on the remote macOS host over SSH. WinClaw only needs stdio.
 
 Example wrapper:
 
@@ -150,7 +150,7 @@ Example wrapper:
 exec ssh -T gateway-host imsg "$@"
 ```
 
-**Remote attachments:** When `cliPath` points to a remote host via SSH, attachment paths in the Messages database reference files on the remote machine. OpenClaw can automatically fetch these over SCP by setting `channels.imessage.remoteHost`:
+**Remote attachments:** When `cliPath` points to a remote host via SSH, attachment paths in the Messages database reference files on the remote machine. WinClaw can automatically fetch these over SCP by setting `channels.imessage.remoteHost`:
 
 ```json5
 {
@@ -164,7 +164,7 @@ exec ssh -T gateway-host imsg "$@"
 }
 ```
 
-If `remoteHost` is not set, OpenClaw attempts to auto-detect it by parsing the SSH command in your wrapper script. Explicit configuration is recommended for reliability.
+If `remoteHost` is not set, WinClaw attempts to auto-detect it by parsing the SSH command in your wrapper script. Explicit configuration is recommended for reliability.
 
 #### Remote Mac via Tailscale (example)
 
@@ -193,7 +193,7 @@ flowchart TB
  subgraph T[" "]
  subgraph Tailscale[" "]
     direction LR
-      Gateway["<b>Gateway host (Linux/VM)<br></b><br>openclaw gateway<br>channels.imessage.cliPath"]
+      Gateway["<b>Gateway host (Linux/VM)<br></b><br>winclaw gateway<br>channels.imessage.cliPath"]
       Mac["<b>Mac with Messages + imsg<br></b><br>Messages signed in<br>Remote Login enabled"]
   end
     Gateway -- SSH (imsg rpc) --> Mac
@@ -210,7 +210,7 @@ Concrete config example (Tailscale hostname):
   channels: {
     imessage: {
       enabled: true,
-      cliPath: "~/.openclaw/scripts/imsg-ssh",
+      cliPath: "~/.winclaw/scripts/imsg-ssh",
       remoteHost: "bot@mac-mini.tailnet-1234.ts.net",
       includeAttachments: true,
       dbPath: "/Users/bot/Library/Messages/chat.db",
@@ -219,7 +219,7 @@ Concrete config example (Tailscale hostname):
 }
 ```
 
-Example wrapper (`~/.openclaw/scripts/imsg-ssh`):
+Example wrapper (`~/.winclaw/scripts/imsg-ssh`):
 
 ```bash
 #!/usr/bin/env bash
@@ -232,7 +232,7 @@ Notes:
 - Use SSH keys so `ssh bot@mac-mini.tailnet-1234.ts.net` works without prompts.
 - `remoteHost` should match the SSH target so SCP can fetch attachments.
 
-Multi-account support: use `channels.imessage.accounts` with per-account config and optional `name`. See [`gateway/configuration`](/gateway/configuration#telegramaccounts--discordaccounts--slackaccounts--signalaccounts--imessageaccounts) for the shared pattern. Don't commit `~/.openclaw/openclaw.json` (it often contains tokens).
+Multi-account support: use `channels.imessage.accounts` with per-account config and optional `name`. See [`gateway/configuration`](/gateway/configuration#telegramaccounts--discordaccounts--slackaccounts--signalaccounts--imessageaccounts) for the shared pattern. Don't commit `~/.winclaw/winclaw.json` (it often contains tokens).
 
 ## Access control (DMs + groups)
 
@@ -241,8 +241,8 @@ DMs:
 - Default: `channels.imessage.dmPolicy = "pairing"`.
 - Unknown senders receive a pairing code; messages are ignored until approved (codes expire after 1 hour).
 - Approve via:
-  - `openclaw pairing list imessage`
-  - `openclaw pairing approve imessage <CODE>`
+  - `winclaw pairing list imessage`
+  - `winclaw pairing approve imessage <CODE>`
 - Pairing is the default token exchange for iMessage DMs. Details: [Pairing](/channels/pairing)
 
 Groups:
@@ -261,7 +261,7 @@ Groups:
 
 Some iMessage threads can have multiple participants but still arrive with `is_group=false` depending on how Messages stores the chat identifier.
 
-If you explicitly configure a `chat_id` under `channels.imessage.groups`, OpenClaw treats that thread as a “group” for:
+If you explicitly configure a `chat_id` under `channels.imessage.groups`, WinClaw treats that thread as a “group” for:
 
 - session isolation (separate `agent:<agentId>:imessage:group:<chat_id>` session key)
 - group allowlisting / mention gating behavior

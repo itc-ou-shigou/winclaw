@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID } from "winclaw/plugin-sdk";
 import type { ZaloConfig } from "./types.js";
 
 export type ZaloTokenResolution = {

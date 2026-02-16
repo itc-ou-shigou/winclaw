@@ -32,7 +32,7 @@ describe("resolveProviderAuths key normalization", () => {
   it("strips embedded CR/LF from stored auth profiles (token + api_key)", async () => {
     await withTempHome(
       async (home) => {
-        const agentDir = path.join(home, ".openclaw", "agents", "main", "agent");
+        const agentDir = path.join(home, ".winclaw", "agents", "main", "agent");
         await fs.mkdir(agentDir, { recursive: true });
         await fs.writeFile(
           path.join(agentDir, "auth-profiles.json"),

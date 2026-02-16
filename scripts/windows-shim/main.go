@@ -18,7 +18,7 @@ func main() {
 	}
 
 	node := filepath.Join(dir, "node", "node.exe")
-	app := filepath.Join(dir, "app", "openclaw.mjs")
+	app := filepath.Join(dir, "app", "winclaw.mjs")
 	args := append([]string{app}, os.Args[1:]...)
 
 	cmd := exec.Command(node, args...)

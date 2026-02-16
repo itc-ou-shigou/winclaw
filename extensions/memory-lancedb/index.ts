@@ -1,5 +1,5 @@
 /**
- * OpenClaw Memory (LanceDB) Plugin
+ * WinClaw Memory (LanceDB) Plugin
  *
  * Long-term memory with vector search for AI conversations.
  * Uses LanceDB for storage and OpenAI for embeddings.
@@ -7,11 +7,11 @@
  */
 
 import type * as LanceDB from "@lancedb/lancedb";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk";
 import { Type } from "@sinclair/typebox";
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import { stringEnum } from "openclaw/plugin-sdk";
+import { stringEnum } from "winclaw/plugin-sdk";
 import {
   MEMORY_CATEGORIES,
   type MemoryCategory,
@@ -247,7 +247,7 @@ const memoryPlugin = {
   kind: "memory" as const,
   configSchema: memoryConfigSchema,
 
-  register(api: OpenClawPluginApi) {
+  register(api: WinClawPluginApi) {
     const cfg = memoryConfigSchema.parse(api.pluginConfig);
     const resolvedDbPath = api.resolvePath(cfg.dbPath!);
     const vectorDim = vectorDimsForModel(cfg.embedding.model ?? "text-embedding-3-small");

@@ -256,12 +256,12 @@ cancelWizard(state)            → Reset state
 **Purpose**: Glue between app state and wizard controller (follows existing pattern of `app-channels.ts`)
 
 ```typescript
-export async function handleWizardOpen(host: OpenClawApp) { ... }
-export async function handleWizardPlatformSelect(host: OpenClawApp, platform: string) { ... }
-export async function handleWizardQrRefresh(host: OpenClawApp) { ... }
-export async function handleWizardTokenValidate(host: OpenClawApp) { ... }
-export async function handleWizardComplete(host: OpenClawApp) { ... }
-export async function handleWizardCancel(host: OpenClawApp) { ... }
+export async function handleWizardOpen(host: WinClawApp) { ... }
+export async function handleWizardPlatformSelect(host: WinClawApp, platform: string) { ... }
+export async function handleWizardQrRefresh(host: WinClawApp) { ... }
+export async function handleWizardTokenValidate(host: WinClawApp) { ... }
+export async function handleWizardComplete(host: WinClawApp) { ... }
+export async function handleWizardCancel(host: WinClawApp) { ... }
 ```
 
 ### 2.4 Modify: `ui/src/ui/views/channels.ts`
@@ -292,7 +292,7 @@ ${props.wizardOpen ? renderChannelWizard(props.wizardProps) : nothing}
 
 ### 2.6 Modify: `ui/src/ui/app.ts`
 
-**Changes**: Add wizard state properties to OpenClawApp
+**Changes**: Add wizard state properties to WinClawApp
 
 ```typescript
 // New state properties:
@@ -506,7 +506,7 @@ Week 6: Phase 4 (Skills)
 | Token validation mocking | Mock HTTP responses for each platform API |
 | QR flow E2E | Manual test with real WhatsApp |
 | UI wizard flow | Manual test + screenshot verification |
-| Config persistence | Verify openclaw.json after wizard.complete |
+| Config persistence | Verify winclaw.json after wizard.complete |
 | Multi-account startup | Verify channels.status shows all accounts |
 | Skill-driven setup | Test via chat interface in debug tab |
 

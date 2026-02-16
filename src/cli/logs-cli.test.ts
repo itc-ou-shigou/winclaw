@@ -18,7 +18,7 @@ describe("logs cli", () => {
 
   it("writes output directly to stdout/stderr", async () => {
     callGatewayFromCli.mockResolvedValueOnce({
-      file: "/tmp/openclaw.log",
+      file: "/tmp/winclaw.log",
       cursor: 1,
       size: 123,
       lines: ["raw line"],
@@ -55,7 +55,7 @@ describe("logs cli", () => {
 
   it("warns when the output pipe closes", async () => {
     callGatewayFromCli.mockResolvedValueOnce({
-      file: "/tmp/openclaw.log",
+      file: "/tmp/winclaw.log",
       lines: ["line one"],
     });
 

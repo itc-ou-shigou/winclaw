@@ -32,17 +32,17 @@ const getArg = (flag: string) => {
 
 const hasFlag = (flag: string) => args.includes(flag);
 
-const urlRaw = getArg("--url") ?? process.env.OPENCLAW_GATEWAY_URL;
-const token = getArg("--token") ?? process.env.OPENCLAW_GATEWAY_TOKEN;
+const urlRaw = getArg("--url") ?? process.env.WINCLAW_GATEWAY_URL;
+const token = getArg("--token") ?? process.env.WINCLAW_GATEWAY_TOKEN;
 const nodeHint = getArg("--node");
-const dangerous = hasFlag("--dangerous") || process.env.OPENCLAW_RUN_DANGEROUS === "1";
+const dangerous = hasFlag("--dangerous") || process.env.WINCLAW_RUN_DANGEROUS === "1";
 const jsonOut = hasFlag("--json");
 
 if (!urlRaw || !token) {
   // eslint-disable-next-line no-console
   console.error(
     "Usage: bun scripts/dev/ios-node-e2e.ts --url <wss://host[:port]> --token <gateway.auth.token> [--node <id|name-substring>] [--dangerous] [--json]\n" +
-      "Or set env: OPENCLAW_GATEWAY_URL / OPENCLAW_GATEWAY_TOKEN",
+      "Or set env: WINCLAW_GATEWAY_URL / WINCLAW_GATEWAY_TOKEN",
   );
   process.exit(1);
 }
@@ -184,11 +184,11 @@ async function main() {
     maxProtocol: 3,
     client: {
       id: "cli",
-      displayName: "openclaw ios node e2e",
+      displayName: "winclaw ios node e2e",
       version: "dev",
       platform: "dev",
       mode: "cli",
-      instanceId: "openclaw-dev-ios-node-e2e",
+      instanceId: "winclaw-dev-ios-node-e2e",
     },
     locale: "en-US",
     userAgent: "ios-node-e2e",
@@ -244,7 +244,7 @@ async function main() {
     {
       id: "system.notify",
       command: "system.notify",
-      params: { title: "OpenClaw E2E", body: `ios-node-e2e @ ${isoNow()}`, delivery: "system" },
+      params: { title: "WinClaw E2E", body: `ios-node-e2e @ ${isoNow()}`, delivery: "system" },
     },
     {
       id: "contacts.search",

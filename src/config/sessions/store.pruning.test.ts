@@ -13,7 +13,7 @@ import {
   saveSessionStore,
 } from "./store.js";
 
-// Mock loadConfig so resolveMaintenanceConfig() never reads a real openclaw.json.
+// Mock loadConfig so resolveMaintenanceConfig() never reads a real winclaw.json.
 // Unit tests always pass explicit overrides so this mock is inert for them.
 // Integration tests set return values to control the config.
 vi.mock("../config.js", () => ({
@@ -251,7 +251,7 @@ describe("rotateSessionFile", () => {
   let storePath: string;
 
   beforeEach(async () => {
-    testDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-rotate-"));
+    testDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-rotate-"));
     storePath = path.join(testDir, "sessions.json");
   });
 
@@ -342,10 +342,10 @@ describe("Integration: saveSessionStore with pruning", () => {
   let mockLoadConfig: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    testDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-pruning-integ-"));
+    testDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-pruning-integ-"));
     storePath = path.join(testDir, "sessions.json");
-    savedCacheTtl = process.env.OPENCLAW_SESSION_CACHE_TTL_MS;
-    process.env.OPENCLAW_SESSION_CACHE_TTL_MS = "0";
+    savedCacheTtl = process.env.WINCLAW_SESSION_CACHE_TTL_MS;
+    process.env.WINCLAW_SESSION_CACHE_TTL_MS = "0";
     clearSessionStoreCacheForTest();
 
     const configModule = await import("../config.js");
@@ -357,9 +357,9 @@ describe("Integration: saveSessionStore with pruning", () => {
     await fs.rm(testDir, { recursive: true, force: true }).catch(() => undefined);
     clearSessionStoreCacheForTest();
     if (savedCacheTtl === undefined) {
-      delete process.env.OPENCLAW_SESSION_CACHE_TTL_MS;
+      delete process.env.WINCLAW_SESSION_CACHE_TTL_MS;
     } else {
-      process.env.OPENCLAW_SESSION_CACHE_TTL_MS = savedCacheTtl;
+      process.env.WINCLAW_SESSION_CACHE_TTL_MS = savedCacheTtl;
     }
   });
 

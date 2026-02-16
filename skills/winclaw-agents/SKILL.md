@@ -1,7 +1,7 @@
 ---
 name: winclaw-agents
-description: Create, configure, and manage AI agents in WinClaw/OpenClaw. Use when the user asks to add a new agent, change agent model, set agent workspace, configure agent identity/personality, manage agent bindings to channels, set thinking level, timeout, concurrency, context management, heartbeat schedule, or any agent-related settings.
-metadata: { "openclaw": { "emoji": "🤖" } }
+description: Create, configure, and manage AI agents in WinClaw/WinClaw. Use when the user asks to add a new agent, change agent model, set agent workspace, configure agent identity/personality, manage agent bindings to channels, set thinking level, timeout, concurrency, context management, heartbeat schedule, or any agent-related settings.
+metadata: { "winclaw": { "emoji": "🤖" } }
 ---
 
 # WinClaw Agent Management
@@ -11,19 +11,19 @@ Create, configure, and manage AI agents and their settings.
 ## List agents
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"agents.list","params":{}}'
 ```
 
 ## Create an agent
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
     "method": "agents.create",
     "params": {
       "name": "Research Assistant",
-      "workspace": "~/.openclaw/agents/research"
+      "workspace": "~/.winclaw/agents/research"
     }
   }'
 ```
@@ -33,7 +33,7 @@ Creates agent directory with IDENTITY.md and adds to config. Returns `agentId`.
 ## Update an agent
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
     "method": "agents.update",
     "params": {
@@ -46,7 +46,7 @@ curl -s http://127.0.0.1:18789/__openclaw__/api \
 ## Delete an agent
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
     "method": "agents.delete",
     "params": {
@@ -62,15 +62,15 @@ Cannot delete the "default" agent.
 
 ```bash
 # List files
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"agents.files.list","params":{"agentId":"default"}}'
 
 # Read a file (AGENTS.md, TOOLS.md, MEMORY.md, IDENTITY.md)
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"agents.files.get","params":{"agentId":"default","filename":"IDENTITY.md"}}'
 
 # Write a file
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"agents.files.set","params":{"agentId":"default","filename":"IDENTITY.md","content":"# My Agent\nYou are a helpful assistant."}}'
 ```
 
@@ -157,7 +157,7 @@ In `agents.list[]`, each agent can override defaults:
       {
         "id": "research",
         "name": "Research Agent",
-        "workspace": "~/.openclaw/agents/research",
+        "workspace": "~/.winclaw/agents/research",
         "model": "anthropic/claude-sonnet-4-5",
         "default": false
       }

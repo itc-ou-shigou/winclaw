@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import type { MsgContext } from "../templating.js";
 import type { ReplyPayload } from "../types.js";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
@@ -33,7 +33,7 @@ type ActiveBashJob =
 
 let activeJob: ActiveBashJob | null = null;
 
-function resolveForegroundMs(cfg: OpenClawConfig): number {
+function resolveForegroundMs(cfg: WinClawConfig): number {
   const raw = cfg.commands?.bashForegroundMs;
   if (typeof raw !== "number" || Number.isNaN(raw)) {
     return DEFAULT_FOREGROUND_MS;
@@ -97,7 +97,7 @@ function parseBashRequest(raw: string): BashRequest | null {
 
 function resolveRawCommandBody(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   agentId?: string;
   isGroup: boolean;
 }) {
@@ -197,7 +197,7 @@ function formatElevatedUnavailableMessage(params: {
   lines.push("- agents.list[].tools.elevated.allowFrom.<provider>");
   if (params.sessionKey) {
     lines.push(
-      `See: ${formatCliCommand(`openclaw sandbox explain --session ${params.sessionKey}`)}`,
+      `See: ${formatCliCommand(`winclaw sandbox explain --session ${params.sessionKey}`)}`,
     );
   }
   return lines.join("\n");
@@ -205,7 +205,7 @@ function formatElevatedUnavailableMessage(params: {
 
 export async function handleBashChatCommand(params: {
   ctx: MsgContext;
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   agentId?: string;
   sessionKey: string;
   isGroup: boolean;

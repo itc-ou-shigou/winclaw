@@ -1,17 +1,17 @@
 {
-  "name": "@openclaw/tlon",
+  "name": "@winclaw/tlon",
   "version": "2026.2.9",
   "private": true,
-  "description": "OpenClaw Tlon/Urbit channel plugin",
+  "description": "WinClaw Tlon/Urbit channel plugin",
   "type": "module",
   "dependencies": {
     "@urbit/aura": "^3.0.0",
     "@urbit/http-api": "^3.0.0"
   },
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "winclaw": "workspace:*"
   },
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -26,7 +26,7 @@
       "quickstartAllowFrom": true
     },
     "install": {
-      "npmSpec": "@openclaw/tlon",
+      "npmSpec": "@winclaw/tlon",
       "localPath": "extensions/tlon",
       "defaultChoice": "npm"
     }

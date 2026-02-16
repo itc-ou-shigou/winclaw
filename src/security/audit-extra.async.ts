@@ -6,7 +6,7 @@
 import JSON5 from "json5";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { OpenClawConfig, ConfigFileSnapshot } from "../config/config.js";
+import type { WinClawConfig, ConfigFileSnapshot } from "../config/config.js";
 import type { ExecFn } from "./windows-acl.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { loadWorkspaceSkillEntries } from "../agents/skills.js";
@@ -168,7 +168,7 @@ async function readPluginManifestExtensions(pluginPath: string): Promise<string[
   return extensions.map((entry) => (typeof entry === "string" ? entry.trim() : "")).filter(Boolean);
 }
 
-function listWorkspaceDirs(cfg: OpenClawConfig): string[] {
+function listWorkspaceDirs(cfg: WinClawConfig): string[] {
   const dirs = new Set<string>();
   const list = cfg.agents?.list;
   if (Array.isArray(list)) {
@@ -201,7 +201,7 @@ function formatCodeSafetyDetails(findings: SkillScanFinding[], rootDir: string):
 // --------------------------------------------------------------------------
 
 export async function collectPluginsTrustFindings(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
@@ -379,7 +379,7 @@ export async function collectIncludeFilePermFindings(params: {
 }
 
 export async function collectStateDeepFilesystemFindings(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   env: NodeJS.ProcessEnv;
   stateDir: string;
   platform?: NodeJS.Platform;
@@ -561,7 +561,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
       title: "Plugin extensions directory scan failed",
       detail: `Static code scan could not list extensions directory: ${String(err)}`,
       remediation:
-        "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
+        "Check file permissions and plugin layout, then rerun `winclaw security audit --deep`.",
     });
     return [];
   });
@@ -598,7 +598,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
         title: `Plugin "${pluginName}" has extension entry path traversal`,
         detail: `Found extension entries that escape the plugin directory:\n${escapedEntries.map((entry) => `  - ${entry}`).join("\n")}`,
         remediation:
-          "Update the plugin manifest so all openclaw.extensions entries stay inside the plugin directory.",
+          "Update the plugin manifest so all winclaw.extensions entries stay inside the plugin directory.",
       });
     }
 
@@ -611,7 +611,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
         title: `Plugin "${pluginName}" code scan failed`,
         detail: `Static code scan could not complete: ${String(err)}`,
         remediation:
-          "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
+          "Check file permissions and plugin layout, then rerun `winclaw security audit --deep`.",
       });
       return null;
     });
@@ -629,7 +629,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
         title: `Plugin "${pluginName}" contains dangerous code patterns`,
         detail: `Found ${summary.critical} critical issue(s) in ${summary.scannedFiles} scanned file(s):\n${details}`,
         remediation:
-          "Review the plugin source code carefully before use. If untrusted, remove the plugin from your OpenClaw extensions state directory.",
+          "Review the plugin source code carefully before use. If untrusted, remove the plugin from your WinClaw extensions state directory.",
       });
     } else if (summary.warn > 0) {
       const warnFindings = summary.findings.filter((f) => f.severity === "warn");
@@ -649,7 +649,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
 }
 
 export async function collectInstalledSkillsCodeSafetyFindings(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
@@ -660,7 +660,7 @@ export async function collectInstalledSkillsCodeSafetyFindings(params: {
   for (const workspaceDir of workspaceDirs) {
     const entries = loadWorkspaceSkillEntries(workspaceDir, { config: params.cfg });
     for (const entry of entries) {
-      if (entry.skill.source === "openclaw-bundled") {
+      if (entry.skill.source === "winclaw-bundled") {
         continue;
       }
 
@@ -682,7 +682,7 @@ export async function collectInstalledSkillsCodeSafetyFindings(params: {
           title: `Skill "${skillName}" code scan failed`,
           detail: `Static code scan could not complete for ${skillDir}: ${String(err)}`,
           remediation:
-            "Check file permissions and skill layout, then rerun `openclaw security audit --deep`.",
+            "Check file permissions and skill layout, then rerun `winclaw security audit --deep`.",
         });
         return null;
       });

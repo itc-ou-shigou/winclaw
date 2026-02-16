@@ -19,7 +19,7 @@
     "useDefineForClassFields": false,
     "paths": {
       "*": ["./*"],
-      "openclaw/plugin-sdk": ["./src/plugin-sdk/index.ts"]
+      "winclaw/plugin-sdk": ["./src/plugin-sdk/index.ts"]
     }
   },
   "include": ["src/**/*", "ui/**/*", "extensions/**/*"],

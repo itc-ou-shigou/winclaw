@@ -1,5 +1,5 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
 import type { NostrProfile } from "./src/config-schema.js";
 import { nostrPlugin } from "./src/channel.js";
 import { createNostrProfileHttpHandler } from "./src/nostr-profile-http.js";
@@ -11,7 +11,7 @@ const plugin = {
   name: "Nostr",
   description: "Nostr DM channel plugin via NIP-04",
   configSchema: emptyPluginConfigSchema(),
-  register(api: OpenClawPluginApi) {
+  register(api: WinClawPluginApi) {
     setNostrRuntime(api.runtime);
     api.registerChannel({ plugin: nostrPlugin });
 
