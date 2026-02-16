@@ -67,7 +67,9 @@ async function main() {
 
   process.on("uncaughtException", (error) => {
     if (isNonFatalException(error)) {
-      console.warn("[winclaw] Non-fatal uncaught exception (continuing):", formatUncaughtError(error));
+      // EPIPE errors must be silently swallowed — logging them via console.warn
+      // triggers another EPIPE, creating an infinite recursive loop that freezes
+      // the event loop and generates multi-GB log files.
       return;
     }
     console.error("[winclaw] Uncaught exception:", formatUncaughtError(error));

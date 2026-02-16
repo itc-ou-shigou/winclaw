@@ -1,5 +1,5 @@
 import process from "node:process";
-import { extractErrorCode, formatUncaughtError } from "./errors.js";
+import { extractErrorCode, formatUncaughtError, isEpipeError } from "./errors.js";
 
 type UnhandledRejectionHandler = (reason: unknown) => boolean;
 
@@ -220,6 +220,12 @@ export function installUnhandledRejectionHandler(): void {
         "[winclaw] Suppressed Playwright internal error (continuing):",
         formatUncaughtError(reason),
       );
+      return;
+    }
+
+    // EPIPE must be silently swallowed — logging it triggers another EPIPE,
+    // creating an infinite recursive loop that freezes the event loop.
+    if (isEpipeError(reason)) {
       return;
     }
 
