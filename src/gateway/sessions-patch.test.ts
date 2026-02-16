@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import { applySessionsPatchToStore } from "./sessions-patch.js";
 
@@ -7,7 +7,7 @@ describe("gateway sessions patch", () => {
   test("persists thinkingLevel=off (does not clear)", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { thinkingLevel: "off" },
@@ -24,7 +24,7 @@ describe("gateway sessions patch", () => {
       "agent:main:main": { thinkingLevel: "low" } as SessionEntry,
     };
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { thinkingLevel: null },
@@ -39,7 +39,7 @@ describe("gateway sessions patch", () => {
   test("persists elevatedLevel=off (does not clear)", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { elevatedLevel: "off" },
@@ -54,7 +54,7 @@ describe("gateway sessions patch", () => {
   test("persists elevatedLevel=on", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { elevatedLevel: "on" },
@@ -71,7 +71,7 @@ describe("gateway sessions patch", () => {
       "agent:main:main": { elevatedLevel: "off" } as SessionEntry,
     };
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { elevatedLevel: null },
@@ -86,7 +86,7 @@ describe("gateway sessions patch", () => {
   test("rejects invalid elevatedLevel values", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { elevatedLevel: "maybe" },
@@ -111,7 +111,7 @@ describe("gateway sessions patch", () => {
       } as SessionEntry,
     };
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as WinClawConfig,
       store,
       storeKey: "agent:main:main",
       patch: { model: "openai/gpt-5.2" },

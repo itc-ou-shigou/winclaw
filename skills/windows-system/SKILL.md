@@ -1,7 +1,7 @@
 ---
 name: windows-system
 description: Windows system management - services, processes, registry, event logs, and scheduled tasks via PowerShell.
-metadata: { "openclaw": { "emoji": "🖥️", "os": ["win32"] } }
+metadata: { "winclaw": { "emoji": "🖥️", "os": ["win32"] } }
 ---
 
 # Windows System Management

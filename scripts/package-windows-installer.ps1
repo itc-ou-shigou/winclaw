@@ -106,7 +106,7 @@ $ErrorActionPreference = $prevEAP
 
 # Locate installed package
 $appSrc = $null
-foreach ($pkgName in @("openclaw", "winclaw")) {
+foreach ($pkgName in @("winclaw", "winclaw")) {
     foreach ($subDir in @("node_modules\$pkgName", "lib\node_modules\$pkgName")) {
         $candidate = "$STAGING\app-global\$subDir"
         if (Test-Path $candidate) { $appSrc = $candidate; break }
@@ -229,7 +229,7 @@ set "WINCLAW_NODE=%~dp0node\node.exe"
 if exist "%~dp0app\winclaw.mjs" (
     set "WINCLAW_APP=%~dp0app\winclaw.mjs"
 ) else (
-    set "WINCLAW_APP=%~dp0app\openclaw.mjs"
+    set "WINCLAW_APP=%~dp0app\winclaw.mjs"
 )
 "%WINCLAW_NODE%" "%WINCLAW_APP%" %*
 "@ | Set-Content "$STAGING\winclaw.cmd" -Encoding ASCII

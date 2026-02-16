@@ -1,22 +1,22 @@
 ---
 name: winclaw-setup
-description: Configure WinClaw/OpenClaw gateway core settings via chat. Use when the user asks to change gateway port, authentication (token/password), TLS/HTTPS, bind address, AI model, theme, assistant identity, logging, update channel, or any general system configuration. Also use for initial setup, security settings, UI customization, or "help me set up WinClaw".
-metadata: { "openclaw": { "emoji": "⚙️" } }
+description: Configure WinClaw/WinClaw gateway core settings via chat. Use when the user asks to change gateway port, authentication (token/password), TLS/HTTPS, bind address, AI model, theme, assistant identity, logging, update channel, or any general system configuration. Also use for initial setup, security settings, UI customization, or "help me set up WinClaw".
+metadata: { "winclaw": { "emoji": "⚙️" } }
 ---
 
 # WinClaw Gateway Setup
 
-Configure core gateway settings by reading and patching `~/.openclaw/openclaw.json` via the gateway API.
+Configure core gateway settings by reading and patching `~/.winclaw/winclaw.json` via the gateway API.
 
 ## Config file
 
-Path: `~/.openclaw/openclaw.json` (JSON5 format, supports comments).
+Path: `~/.winclaw/winclaw.json` (JSON5 format, supports comments).
 Always read the current config before making changes.
 
 ## How to read config
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -H "Content-Type: application/json" \
   -d '{"method":"config.get","params":{}}'
 ```
@@ -28,7 +28,7 @@ Response includes `raw` (JSON5 text), `config` (parsed object), `hash` (for opti
 Use `config.patch` for partial updates. Always include `baseHash` from the most recent `config.get`.
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -H "Content-Type: application/json" \
   -d '{
     "method": "config.patch",
@@ -139,6 +139,6 @@ Options: "stable", "beta", "dev".
 ## Important
 
 - Always get `baseHash` first — writes without it may fail.
-- Sensitive values (tokens, passwords, API keys) are redacted as `__OPENCLAW_REDACTED__` in responses. Never overwrite redacted values.
+- Sensitive values (tokens, passwords, API keys) are redacted as `__WINCLAW_REDACTED__` in responses. Never overwrite redacted values.
 - Gateway settings changes require restart; model/UI/logging changes hot-reload.
 - Use JSON5 format in `raw` field (comments and trailing commas OK).

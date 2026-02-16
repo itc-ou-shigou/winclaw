@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import fs from "node:fs";
 import path from "node:path";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { PluginRecord } from "../plugins/registry.js";
 import { loadConfig, writeConfigFile } from "../config/config.js";
 import { resolveArchiveKind } from "../infra/archive.js";
@@ -71,9 +71,9 @@ function formatPluginLine(plugin: PluginRecord, verbose = false): string {
 }
 
 function applySlotSelectionForPlugin(
-  config: OpenClawConfig,
+  config: WinClawConfig,
   pluginId: string,
-): { config: OpenClawConfig; warnings: string[] } {
+): { config: WinClawConfig; warnings: string[] } {
   const report = buildPluginStatusReport({ config });
   const plugin = report.plugins.find((entry) => entry.id === pluginId);
   if (!plugin) {
@@ -100,7 +100,7 @@ function logSlotWarnings(warnings: string[]) {
 export function registerPluginsCli(program: Command) {
   const plugins = program
     .command("plugins")
-    .description("Manage OpenClaw plugins/extensions")
+    .description("Manage WinClaw plugins/extensions")
     .addHelpText(
       "after",
       () =>
@@ -289,7 +289,7 @@ export function registerPluginsCli(program: Command) {
     .argument("<id>", "Plugin id")
     .action(async (id: string) => {
       const cfg = loadConfig();
-      let next: OpenClawConfig = {
+      let next: WinClawConfig = {
         ...cfg,
         plugins: {
           ...cfg.plugins,
@@ -351,7 +351,7 @@ export function registerPluginsCli(program: Command) {
             process.exit(1);
           }
 
-          let next: OpenClawConfig = {
+          let next: WinClawConfig = {
             ...cfg,
             plugins: {
               ...cfg.plugins,
@@ -396,7 +396,7 @@ export function registerPluginsCli(program: Command) {
           process.exit(1);
         }
 
-        let next: OpenClawConfig = {
+        let next: WinClawConfig = {
           ...cfg,
           plugins: {
             ...cfg.plugins,
@@ -460,7 +460,7 @@ export function registerPluginsCli(program: Command) {
         process.exit(1);
       }
 
-      let next: OpenClawConfig = {
+      let next: WinClawConfig = {
         ...cfg,
         plugins: {
           ...cfg.plugins,

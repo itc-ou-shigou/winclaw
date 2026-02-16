@@ -103,7 +103,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Name: "addtopath"; Description: "Add WinClaw to system PATH"; GroupDescription: "Additional options:"; \
   Flags: checkedonce
 Name: "vncsetup"; Description: "Install VNC Desktop Control (enables AI desktop automation)"; \
-  GroupDescription: "VNC Desktop Control:"; Flags: unchecked
+  GroupDescription: "VNC Desktop Control:"; Flags: checkedonce
 
 [Registry]
 ; Add to PATH (user-level, non-admin safe)
@@ -136,12 +136,11 @@ Filename: "{app}\winclaw.cmd"; Parameters: "daemon install"; \
 Filename: "{app}\winclaw.cmd"; Parameters: "gateway restart"; \
   StatusMsg: "Restarting WinClaw Gateway..."; \
   Flags: runhidden waituntilterminated
-; Step 5: VNC Desktop Control setup (optional, requires admin elevation via UAC)
+; Step 5: VNC Desktop Control setup (auto-runs when vncsetup task selected)
 Filename: "powershell.exe"; \
   Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\setup-vnc-desktop.ps1"""; \
-  StatusMsg: "Setting up VNC Desktop Control (requires Administrator)..."; \
-  Description: "Set up VNC Desktop Control (requires Administrator)"; \
-  Flags: postinstall waituntilterminated skipifsilent shellexec; \
+  StatusMsg: "Setting up VNC Desktop Control..."; \
+  Flags: runhidden waituntilterminated shellexec; \
   Tasks: vncsetup; Verb: runas
 
 [UninstallRun]
@@ -173,15 +172,76 @@ begin
   Result := Pos(';' + Uppercase(Param) + ';', ';' + Uppercase(OrigPath) + ';') = 0;
 end;
 
-// Set WINCLAW_HOME env var and notify explorer of PATH change
+// Migrate .openclaw -> .winclaw config on post-install
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
+  UserHome, OldStateDir, NewStateDir, OldConfig, NewConfig: string;
 begin
   if CurStep = ssPostInstall then
   begin
+    // Remove stale WINCLAW_HOME pointing to install dir (legacy bug)
     Exec(ExpandConstant('{sys}\cmd.exe'),
-      '/c "setx WINCLAW_HOME "' + ExpandConstant('{app}') + '" >nul 2>&1"',
+      '/c "reg delete HKCU\Environment /v WINCLAW_HOME /f >nul 2>&1"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    // Determine user home directory
+    UserHome := GetEnv('USERPROFILE');
+    if UserHome = '' then
+      UserHome := GetEnv('HOME');
+    if UserHome = '' then
+      exit;
+
+    OldStateDir := UserHome + '\.openclaw';
+    NewStateDir := UserHome + '\.winclaw';
+    OldConfig := OldStateDir + '\openclaw.json';
+    NewConfig := NewStateDir + '\winclaw.json';
+
+    // Step 1: If .winclaw does not exist but .openclaw does, copy the whole dir
+    if not DirExists(NewStateDir) and DirExists(OldStateDir) then
+    begin
+      Exec(ExpandConstant('{sys}\cmd.exe'),
+        '/c xcopy "' + OldStateDir + '" "' + NewStateDir + '" /E /I /H /Y >nul 2>&1',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+
+    // Step 2: If .winclaw exists but winclaw.json is missing, copy from openclaw.json
+    if DirExists(NewStateDir) and not FileExists(NewConfig) then
+    begin
+      if FileExists(NewStateDir + '\openclaw.json') then
+      begin
+        CopyFile(NewStateDir + '\openclaw.json', NewConfig, False);
+      end
+      else if FileExists(OldConfig) then
+      begin
+        CopyFile(OldConfig, NewConfig, False);
+      end;
+    end;
+
+    // Step 3: If .winclaw exists but key subdirs are missing, copy them from .openclaw
+    if DirExists(NewStateDir) and DirExists(OldStateDir) then
+    begin
+      if not DirExists(NewStateDir + '\credentials') and DirExists(OldStateDir + '\credentials') then
+        Exec(ExpandConstant('{sys}\cmd.exe'),
+          '/c xcopy "' + OldStateDir + '\credentials" "' + NewStateDir + '\credentials" /E /I /H /Y >nul 2>&1',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if not DirExists(NewStateDir + '\identity') and DirExists(OldStateDir + '\identity') then
+        Exec(ExpandConstant('{sys}\cmd.exe'),
+          '/c xcopy "' + OldStateDir + '\identity" "' + NewStateDir + '\identity" /E /I /H /Y >nul 2>&1',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if not DirExists(NewStateDir + '\agents') and DirExists(OldStateDir + '\agents') then
+        Exec(ExpandConstant('{sys}\cmd.exe'),
+          '/c xcopy "' + OldStateDir + '\agents" "' + NewStateDir + '\agents" /E /I /H /Y >nul 2>&1',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if not DirExists(NewStateDir + '\devices') and DirExists(OldStateDir + '\devices') then
+        Exec(ExpandConstant('{sys}\cmd.exe'),
+          '/c xcopy "' + OldStateDir + '\devices" "' + NewStateDir + '\devices" /E /I /H /Y >nul 2>&1',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+
+    // Notify explorer of environment changes
+    Exec(ExpandConstant('{sys}\cmd.exe'),
+      '/c "setx WINCLAW_MIGRATED 1 >nul 2>&1"',
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;

@@ -1,7 +1,7 @@
 ---
 name: winclaw-sns-wizard
 description: Step-by-step guided wizard for connecting any messaging platform (SNS) to WinClaw. Covers all 19 supported channels including WhatsApp, Telegram, Discord, Slack, LINE, Signal, Google Chat, MS Teams, Feishu, Matrix, Mattermost, Nextcloud Talk, Nostr, Zalo, BlueBubbles, Tlon, Twitch. Handles credential acquisition guidance, config generation, connection testing, and troubleshooting. Use when user wants to add, connect, or set up a new SNS/messaging platform.
-metadata: { "openclaw": { "emoji": "📲" } }
+metadata: { "winclaw": { "emoji": "📲" } }
 ---
 
 # WinClaw SNS Connection Wizard
@@ -12,7 +12,7 @@ Complete guided setup for connecting any messaging platform to WinClaw.
 
 All API calls target the local gateway:
 ```
-POST http://127.0.0.1:18789/__openclaw__/api
+POST http://127.0.0.1:18789/__winclaw__/api
 Content-Type: application/json
 ```
 
@@ -31,7 +31,7 @@ Content-Type: application/json
 ## Step 0: List available platforms
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"channels.status","params":{"probe":false}}'
 ```
 
@@ -68,7 +68,7 @@ Respond with a friendly summary of what's connected and what's available.
 Always start by reading current config:
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"config.get","params":{}}'
 ```
 
@@ -127,14 +127,14 @@ Extract `hash` from response — this is required as `baseHash` for all config p
 
 **Start QR login via API (optional, same as UI button):**
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"web.login.start","params":{"force":false,"timeoutMs":30000}}'
 ```
 Returns `{qrDataUrl: "data:image/png;base64,..."}` if successful.
 
 **Wait for scan:**
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"web.login.wait","params":{"timeoutMs":120000}}'
 ```
 Returns `{connected: true}` when scan succeeds.
@@ -776,7 +776,7 @@ Use `"domain": "lark"` for Lark (international version).
 After building the config JSON for the chosen platform:
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
     "method": "config.patch",
     "params": {
@@ -797,7 +797,7 @@ The `raw` value must be a JSON **string** (escaped). The patch is merged using R
 Wait 3-5 seconds after config patch, then:
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"channels.status","params":{"probe":true,"timeoutMs":10000}}'
 ```
 

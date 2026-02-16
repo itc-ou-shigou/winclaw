@@ -1,7 +1,7 @@
 ---
 name: winclaw-status
-description: Check WinClaw/OpenClaw system status, usage statistics, gateway health, active sessions, connected channels, skill availability, node status, and debug information. Use when the user asks "what's my status", "how much have I used", "is everything working", "show me logs", "debug", "what's connected", "system info", or any monitoring/diagnostics question.
-metadata: { "openclaw": { "emoji": "📊" } }
+description: Check WinClaw/WinClaw system status, usage statistics, gateway health, active sessions, connected channels, skill availability, node status, and debug information. Use when the user asks "what's my status", "how much have I used", "is everything working", "show me logs", "debug", "what's connected", "system info", or any monitoring/diagnostics question.
+metadata: { "winclaw": { "emoji": "📊" } }
 ---
 
 # WinClaw Status & Monitoring
@@ -11,13 +11,13 @@ Check system health, usage, sessions, and debug info.
 ## Gateway health
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"health","params":{}}'
 ```
 
 Or via CLI:
 ```bash
-openclaw health --json
+winclaw health --json
 ```
 
 Returns gateway status, uptime, port, PID, connected channels.
@@ -25,7 +25,7 @@ Returns gateway status, uptime, port, PID, connected channels.
 ## Full system status
 
 ```bash
-openclaw status --deep
+winclaw status --deep
 ```
 
 Returns comprehensive status including gateway, channels, agents, cron, browser control.
@@ -33,7 +33,7 @@ Returns comprehensive status including gateway, channels, agents, cron, browser 
 ## Channel status
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"channels.status","params":{"probe":true}}'
 ```
 
@@ -42,7 +42,7 @@ With `probe: true`, actively tests each channel connection. Returns per-channel/
 ## Usage / token statistics
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"usage.summary","params":{}}'
 ```
 
@@ -51,7 +51,7 @@ Returns token counts (input/output), cost estimates, per-model breakdown, time p
 ## Active sessions
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"sessions.list","params":{}}'
 ```
 
@@ -60,21 +60,21 @@ Lists active sessions with agent, channel, message count, last activity time.
 ### Session details
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"sessions.get","params":{"sessionKey":"main"}}'
 ```
 
 ### Delete a session
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"sessions.delete","params":{"sessionKey":"<key>"}}'
 ```
 
 ## Skill status
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"skills.status","params":{}}'
 ```
 
@@ -83,21 +83,21 @@ Returns available skills, missing binary dependencies, eligibility.
 ### Install a skill dependency
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"skills.install","params":{"name":"ffmpeg","installId":"ffmpeg"}}'
 ```
 
 ### Enable/disable a skill
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"skills.update","params":{"skillKey":"weather","enabled":false}}'
 ```
 
 ## Config validation
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"config.get","params":{}}'
 ```
 
@@ -108,32 +108,32 @@ Check `valid` (bool) and `issues` (array) fields. Report any validation errors t
 Gateway log file location:
 ```bash
 # Default log path
-cat /tmp/openclaw/openclaw-$(date +%Y-%m-%d).log
+cat /tmp/winclaw/winclaw-$(date +%Y-%m-%d).log
 
 # Windows
-type %TEMP%\openclaw\openclaw-%DATE:~0,4%-%DATE:~5,2%-%DATE:~8,2%.log
+type %TEMP%\winclaw\winclaw-%DATE:~0,4%-%DATE:~5,2%-%DATE:~8,2%.log
 ```
 
 Or via CLI:
 ```bash
-openclaw logs --tail 50
+winclaw logs --tail 50
 ```
 
 ## Debug
 
 ```bash
-openclaw status --deep
+winclaw status --deep
 ```
 
 Also check:
-- Gateway process: `curl -s http://127.0.0.1:18789/__openclaw__/api -d '{"method":"health","params":{}}'`
+- Gateway process: `curl -s http://127.0.0.1:18789/__winclaw__/api -d '{"method":"health","params":{}}'`
 - Port listening: `netstat -tlnp | grep 18789` (Linux) or `netstat -ano | findstr :18789` (Windows)
 - Config validity: `config.get` and check `issues`
 
 ## Update status
 
 ```bash
-openclaw update status
+winclaw update status
 ```
 
 Reports current version, update channel, and whether updates are available.

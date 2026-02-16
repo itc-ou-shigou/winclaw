@@ -1,7 +1,7 @@
 ---
 name: winclaw-channels
-description: Connect, configure, and manage messaging channels (Slack, Discord, Telegram, WhatsApp, Signal, iMessage, Google Chat, MS Teams) for WinClaw/OpenClaw. Use when user asks to add, remove, enable, disable, or configure any messaging service integration, set up bot tokens, manage channel allowlists, DM/group policies, or troubleshoot channel connections.
-metadata: { "openclaw": { "emoji": "🔗" } }
+description: Connect, configure, and manage messaging channels (Slack, Discord, Telegram, WhatsApp, Signal, iMessage, Google Chat, MS Teams) for WinClaw/WinClaw. Use when user asks to add, remove, enable, disable, or configure any messaging service integration, set up bot tokens, manage channel allowlists, DM/group policies, or troubleshoot channel connections.
+metadata: { "winclaw": { "emoji": "🔗" } }
 ---
 
 # WinClaw Channel Management
@@ -11,7 +11,7 @@ Add, configure, and manage messaging platform integrations via config patches.
 ## Check current channels
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -H "Content-Type: application/json" \
   -d '{"method":"channels.status","params":{"probe":true}}'
 ```
@@ -37,13 +37,13 @@ Read current config, build patch, write. Example for Slack:
 
 **Step 1**: Get current config and hash:
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"config.get","params":{}}'
 ```
 
 **Step 2**: Patch to add Slack:
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
     "method": "config.patch",
     "params": {
@@ -148,7 +148,7 @@ Set the account to `null` to delete:
 ## Logout a channel
 
 ```bash
-curl -s http://127.0.0.1:18789/__openclaw__/api \
+curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"channels.logout","params":{"channel":"telegram","accountId":"default"}}'
 ```
 

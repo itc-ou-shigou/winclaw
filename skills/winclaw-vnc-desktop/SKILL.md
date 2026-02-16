@@ -3,7 +3,7 @@ name: winclaw-vnc-desktop
 description: Guide users through setting up VNC desktop streaming to enable AI-driven Windows desktop automation via Claude in Chrome. Covers TightVNC server installation, websockify bridge setup, noVNC client configuration, and troubleshooting. Use when user asks about "desktop control", "VNC setup", "operate Windows apps", "click desktop", "automate Windows", "remote desktop in browser", or wants Claude to control native Windows applications.
 metadata:
   {
-    "openclaw":
+    "winclaw":
       {
         "emoji": "🖥️",
         "os": ["win32"],

@@ -48,7 +48,7 @@ Gateway (server-channels.ts)
 │   ├── gateway.startAccount(id) → アカウント個別起動
 │   └── Per-Account AbortController
 │
-└── Config (openclaw.json)
+└── Config (winclaw.json)
     └── channels.<platform>.<accountId> → アカウント設定
 ```
 
@@ -67,7 +67,7 @@ Gateway (server-channels.ts)
                                 ↓
                     ユーザーがスマホでスキャン
                                 ↓
-                    認証完了 → ~/.openclaw/oauth/whatsapp/{id}/
+                    認証完了 → ~/.winclaw/oauth/whatsapp/{id}/
                                 ↓
                     チャネル接続開始
 ```

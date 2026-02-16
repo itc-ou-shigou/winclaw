@@ -4,7 +4,7 @@ title: "Pi Development Workflow"
 
 # Pi Development Workflow
 
-This guide summarizes a sane workflow for working on the pi integration in OpenClaw.
+This guide summarizes a sane workflow for working on the pi integration in WinClaw.
 
 ## Type Checking and Linting
 
@@ -43,7 +43,7 @@ Recommended flow:
 - Run the gateway in dev mode:
   - `pnpm gateway:dev`
 - Trigger the agent directly:
-  - `pnpm openclaw agent --message "Hello" --thinking low`
+  - `pnpm winclaw agent --message "Hello" --thinking low`
 - Use the TUI for interactive debugging:
   - `pnpm tui`
 
@@ -51,11 +51,11 @@ For tool call behavior, prompt for a `read` or `exec` action so you can see tool
 
 ## Clean Slate Reset
 
-State lives under the OpenClaw state directory. Default is `~/.openclaw`. If `OPENCLAW_STATE_DIR` is set, use that directory instead.
+State lives under the WinClaw state directory. Default is `~/.winclaw`. If `WINCLAW_STATE_DIR` is set, use that directory instead.
 
 To reset everything:
 
-- `openclaw.json` for config
+- `winclaw.json` for config
 - `credentials/` for auth profiles and tokens
 - `agents/<agentId>/sessions/` for agent session history
 - `agents/<agentId>/sessions.json` for the session index

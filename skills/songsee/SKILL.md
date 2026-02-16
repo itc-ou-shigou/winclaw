@@ -4,7 +4,7 @@ description: Generate spectrograms and feature-panel visualizations from audio w
 homepage: https://github.com/steipete/songsee
 metadata:
   {
-    "openclaw":
+    "winclaw":
       {
         "emoji": "🌊",
         "requires": { "bins": ["songsee"] },

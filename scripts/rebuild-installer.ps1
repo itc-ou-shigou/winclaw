@@ -66,7 +66,7 @@ $ErrorActionPreference = $prevEAP
 
 # Locate and copy package
 $appSrc = $null
-foreach ($pkgName in @("openclaw", "winclaw")) {
+foreach ($pkgName in @("winclaw", "winclaw")) {
     foreach ($subDir in @("node_modules\$pkgName", "lib\node_modules\$pkgName")) {
         $candidate = "$STAGING\app-global\$subDir"
         if (Test-Path $candidate) { $appSrc = $candidate; break }

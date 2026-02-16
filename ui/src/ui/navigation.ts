@@ -248,7 +248,7 @@ export function subtitleForTab(tab: Tab) {
     case "chat":
       return "Direct gateway chat session for quick interventions.";
     case "config":
-      return "Edit ~/.openclaw/openclaw.json (WinClaw config) safely.";
+      return "Edit ~/.winclaw/winclaw.json (WinClaw config) safely.";
     case "debug":
       return "Gateway snapshots, events, and manual RPC calls.";
     case "logs":

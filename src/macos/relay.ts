@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import process from "node:process";
 
-declare const __OPENCLAW_VERSION__: string | undefined;
+declare const __WINCLAW_VERSION__: string | undefined;
 
 const BUNDLED_VERSION =
-  (typeof __OPENCLAW_VERSION__ === "string" && __OPENCLAW_VERSION__) ||
-  process.env.OPENCLAW_BUNDLED_VERSION ||
+  (typeof __WINCLAW_VERSION__ === "string" && __WINCLAW_VERSION__) ||
+  process.env.WINCLAW_BUNDLED_VERSION ||
   "0.0.0";
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -49,8 +49,8 @@ async function main() {
   const { loadDotEnv } = await import("../infra/dotenv.js");
   loadDotEnv({ quiet: true });
 
-  const { ensureOpenClawCliOnPath } = await import("../infra/path-env.js");
-  ensureOpenClawCliOnPath();
+  const { ensureWinClawCliOnPath } = await import("../infra/path-env.js");
+  ensureWinClawCliOnPath();
 
   const { enableConsoleCapture } = await import("../logging.js");
   enableConsoleCapture();
@@ -67,10 +67,10 @@ async function main() {
 
   process.on("uncaughtException", (error) => {
     if (isNonFatalException(error)) {
-      console.warn("[openclaw] Non-fatal uncaught exception (continuing):", formatUncaughtError(error));
+      console.warn("[winclaw] Non-fatal uncaught exception (continuing):", formatUncaughtError(error));
       return;
     }
-    console.error("[openclaw] Uncaught exception:", formatUncaughtError(error));
+    console.error("[winclaw] Uncaught exception:", formatUncaughtError(error));
     process.exit(1);
   });
 
@@ -79,7 +79,7 @@ async function main() {
 
 void main().catch((err) => {
   console.error(
-    "[openclaw] Relay failed:",
+    "[winclaw] Relay failed:",
     err instanceof Error ? (err.stack ?? err.message) : err,
   );
   process.exit(1);

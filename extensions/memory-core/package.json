@@ -1,16 +1,16 @@
 {
-  "name": "@openclaw/memory-core",
+  "name": "@winclaw/memory-core",
   "version": "2026.2.9",
   "private": true,
-  "description": "OpenClaw core memory search plugin",
+  "description": "WinClaw core memory search plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "winclaw": "workspace:*"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.1.26"
+    "winclaw": ">=2026.1.26"
   },
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

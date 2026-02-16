@@ -22,7 +22,7 @@ export type SkillInstallSpec = {
   scoopPackage?: string;
 };
 
-export type OpenClawSkillMetadata = {
+export type WinClawSkillMetadata = {
   always?: boolean;
   skillKey?: string;
   primaryEnv?: string;
@@ -72,7 +72,7 @@ export type ParsedSkillFrontmatter = Record<string, string>;
 export type SkillEntry = {
   skill: Skill;
   frontmatter: ParsedSkillFrontmatter;
-  metadata?: OpenClawSkillMetadata;
+  metadata?: WinClawSkillMetadata;
   invocation?: SkillInvocationPolicy;
 };
 
