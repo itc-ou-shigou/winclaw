@@ -63,6 +63,9 @@ Source: "{#StagingDir}\vnc\novnc\*"; DestDir: "{app}\vnc\novnc"; Flags: ignoreve
 Source: "{#StagingDir}\vnc\setup-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\vnc\start-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\vnc\stop-vnc-desktop.ps1"; DestDir: "{app}\vnc"; Flags: ignoreversion skipifsourcedoesntexist
+; Chrome DevTools MCP launcher scripts
+Source: "{#StagingDir}\scripts\launch-chrome-devtools-mcp.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\scripts\ensure-chrome-debug.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 ; Start Menu — desktop app (preferred) or browser fallback
