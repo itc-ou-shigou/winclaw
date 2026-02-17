@@ -24,6 +24,7 @@ import {
   parseExecApprovalResolved,
   removeExecApproval,
 } from "./controllers/exec-approval.ts";
+import { loadChannels } from "./controllers/channels.ts";
 import { loadNodes } from "./controllers/nodes.ts";
 import { loadSessions } from "./controllers/sessions.ts";
 import { GatewayBrowserClient } from "./gateway.ts";
@@ -144,6 +145,7 @@ export function connectGateway(host: GatewayHost) {
       void loadAgents(host as unknown as WinClawApp);
       void loadNodes(host as unknown as WinClawApp, { quiet: true });
       void loadDevices(host as unknown as WinClawApp, { quiet: true });
+      void loadChannels(host as unknown as WinClawApp, false);
       void refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]);
     },
     onClose: ({ code, reason }) => {

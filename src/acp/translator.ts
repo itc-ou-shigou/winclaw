@@ -10,6 +10,7 @@ import type {
   ListSessionsResponse,
   LoadSessionRequest,
   LoadSessionResponse,
+  McpServer,
   NewSessionRequest,
   NewSessionResponse,
   PromptRequest,
@@ -23,6 +24,7 @@ import { randomUUID } from "node:crypto";
 import type { GatewayClient } from "../gateway/client.js";
 import type { EventFrame } from "../gateway/protocol/index.js";
 import type { SessionsListResult } from "../gateway/session-utils.js";
+import { applyIdeMcpServersToConfig } from "./mcp-config-bridge.js";
 import { getAvailableCommands } from "./commands.js";
 import {
   extractAttachmentsFromPrompt,
@@ -108,8 +110,8 @@ export class AcpGatewayAgent implements Agent {
           embeddedContext: true,
         },
         mcpCapabilities: {
-          http: false,
-          sse: false,
+          http: true,
+          sse: true,
         },
         sessionCapabilities: {
           list: {},
@@ -122,7 +124,8 @@ export class AcpGatewayAgent implements Agent {
 
   async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
     if (params.mcpServers.length > 0) {
-      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
+      this.log(`received ${params.mcpServers.length} MCP server(s) from IDE`);
+      this.applyIdeMcpServers(params.mcpServers);
     }
 
     const sessionId = randomUUID();
@@ -152,7 +155,8 @@ export class AcpGatewayAgent implements Agent {
 
   async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
     if (params.mcpServers.length > 0) {
-      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
+      this.log(`received ${params.mcpServers.length} MCP server(s) from IDE`);
+      this.applyIdeMcpServers(params.mcpServers);
     }
 
     const meta = parseSessionMeta(params._meta);
@@ -440,6 +444,14 @@ export class AcpGatewayAgent implements Agent {
       }
     }
     return undefined;
+  }
+
+  private applyIdeMcpServers(mcpServers: McpServer[]): void {
+    try {
+      applyIdeMcpServersToConfig(mcpServers, this.log);
+    } catch (err) {
+      this.log(`failed to apply IDE MCP servers: ${String(err)}`);
+    }
   }
 
   private async sendAvailableCommands(sessionId: string): Promise<void> {

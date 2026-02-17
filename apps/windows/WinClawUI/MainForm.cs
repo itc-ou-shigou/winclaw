@@ -12,6 +12,14 @@ public sealed class MainForm : Form
 {
     public const string WindowTitle = "WinClaw";
 
+    /// <summary>
+    /// Fixed window class name for FindWindow. The default WinForms class name
+    /// is auto-generated and unreliable for cross-process lookup. Using a fixed
+    /// name lets the second instance find this window even when the title has
+    /// changed (e.g. "Dashboard — WinClaw") or the window is hidden (tray).
+    /// </summary>
+    public const string WindowClassName = "WinClawUI_MainWindow";
+
     /// <summary>Custom window message for single-instance activation.</summary>
     public static readonly int WM_SHOWME =
         NativeMethods.RegisterWindowMessage("WinClawUI_WM_SHOWME");
@@ -308,6 +316,20 @@ public sealed class MainForm : Form
                     NavigateToGateway();
                 }
             }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    //  Fixed Window Class Name (for single-instance FindWindow lookup)
+    // ═════════════════════════════════════════════════════════════════
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ClassName = WindowClassName;
+            return cp;
         }
     }
 
