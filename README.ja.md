@@ -286,6 +286,70 @@ Windows 上の主要な設定ファイル:
 
 モード: `off`（デフォルト）/ `auto`（100 超で有効化）/ `on`（常時有効）
 
+## プラグインシステム
+
+WinClaw はプラグインアーキテクチャによる Gateway 機能の拡張をサポートしています。
+プラグインは `extensions/` ディレクトリに配置され、設定ファイルの `plugins.entries` で有効化します。
+
+### MCP Bridge プラグイン
+
+**MCP Bridge** プラグイン（`extensions/mcp-bridge/`）は、外部の
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーを
+WinClaw エージェントのツールとして統合します。ブラウザ自動化、データベースアクセス、
+カスタム API など、MCP 互換のツールサーバーを自然な会話から直接利用できます。
+
+**主な機能:**
+
+- **stdio**（サブプロセス）と **SSE**（HTTP）の両方の MCP トランスポートに対応
+- 自動再接続（リトライ回数設定可）
+- ツール呼び出しは `mcp__<サーバー名>__<ツール名>` の命名規則でネームスペース化
+- Chrome タブ保護: `before_tool_call` フックにより危険な操作（タブの閉鎖、Chrome の終了、ユーザータブへのナビゲーション）をブロック
+
+**設定例:**
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "mcp-bridge": {
+        "enabled": true,
+        "servers": [
+          {
+            "name": "chrome-devtools",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@anthropic/chrome-devtools-mcp@latest"]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### デスクトップアプリ操作（VNC + MCP）
+
+**desktop-app-control** スキルにより、AI アシスタントが VNC + Chrome DevTools MCP
+パイプラインを通じてネイティブデスクトップアプリケーション（Windows / macOS）を操作できます。
+アプリの起動、ボタンクリック、テキスト入力、メニュー操作、スクリーンショット取得が、
+すべて自然言語コマンドで実行可能です。
+
+**アーキテクチャ:** ユーザーリクエスト → WinClaw エージェント → `mcp__chrome_devtools__*`
+ツール → Chrome DevTools Protocol → noVNC タブ → websockify → VNC サーバー →
+デスクトップ
+
+**前提条件:**
+
+- MCP Bridge プラグインが有効（`chrome-devtools` サーバーを設定）
+- VNC サーバーが稼働中（Windows: TightVNC、macOS: 画面共有）
+- websockify + noVNC（ブラウザベースの VNC アクセス用）
+- Chrome を `--remote-debugging-port=9222` で起動
+
+**安全な Chrome デバッグ:** 同梱の `scripts/ensure-chrome-debug.ps1` スクリプトで、
+既存のブラウザセッションを中断せずに Chrome リモートデバッグを安全に有効化できます。
+
+---
+
 ## Windows 固有機能
 
 ### Windows ネイティブスキル
@@ -615,15 +679,18 @@ Signal / iMessage / Microsoft Teams / Matrix / Zalo / WebChat
          |       Pi Agent (RPC)          |
          |   Anthropic / OpenAI / etc.   |
          +------------------------------+
-                        |
-                +-------+-------+
-                |       |       |
-                v       v       v
-             CLI    WebChat   Apps
-                            (macOS/iOS/Android)
+                |               |
+         +------+------+ +-----+--------+
+         |      |      | |   Plugins    |
+         v      v      v |  MCP Bridge  |
+      CLI  WebChat  Apps  +------+------+
+                 (macOS/   |  MCP Servers |
+                  iOS/     |  (DevTools,  |
+                  Android) |   DB, etc.)  |
+                           +-------------+
 ```
 
-コンポーネント: **Gateway**（WS コントロールプレーン）、**Pi Agent**（AI ランタイム）、**Channels**（メッセージング接続）、**Skills**（拡張ツール）、**Tools**（ブラウザ/Cron/Webhook）、**WebChat**（Web UI）、**Apps**（macOS/iOS/Android）
+コンポーネント: **Gateway**（WS コントロールプレーン）、**Pi Agent**（AI ランタイム）、**Channels**（メッセージング接続）、**Skills**（拡張ツール）、**Tools**（ブラウザ/Cron/Webhook）、**Plugins**（MCP Bridge 等の拡張プラグイン）、**WebChat**（Web UI）、**Apps**（macOS/iOS/Android）
 
 ## セキュリティモデル
 

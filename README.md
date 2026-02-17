@@ -300,6 +300,74 @@ prevent context overflow:
 
 Modes: `"off"` (default), `"auto"` (activates when >100 skills), `"on"` (always active).
 
+## Plugin System
+
+WinClaw supports a plugin architecture for extending gateway functionality.
+Plugins are located in `extensions/` and enabled via `plugins.entries` in
+your config.
+
+### MCP Bridge Plugin
+
+The **MCP Bridge** plugin (`extensions/mcp-bridge/`) bridges external
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers
+into WinClaw agent tools. This enables the AI assistant to use any
+MCP-compatible tool server — such as browser automation, database access,
+or custom APIs — directly through natural conversation.
+
+**Key features:**
+
+- Supports **stdio** (subprocess) and **SSE** (HTTP) MCP transports
+- Auto-reconnect with configurable retry attempts
+- Tool calls are namespaced as `mcp__<server-name>__<tool-name>`
+- Chrome tab protection: a `before_tool_call` hook blocks dangerous
+  operations (closing tabs, killing Chrome, navigating user tabs)
+
+**Configuration example:**
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "mcp-bridge": {
+        "enabled": true,
+        "servers": [
+          {
+            "name": "chrome-devtools",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@anthropic/chrome-devtools-mcp@latest"]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Desktop App Control (VNC + MCP)
+
+The **desktop-app-control** skill enables the AI assistant to operate native
+desktop applications (Windows / macOS) through a VNC + Chrome DevTools MCP
+pipeline. The assistant can open apps, click buttons, type text, navigate
+menus, and take screenshots — all via natural language commands.
+
+**Architecture:** User Request → WinClaw Agent → `mcp__chrome_devtools__*`
+tools → Chrome DevTools Protocol → noVNC tab → websockify → VNC Server →
+Desktop
+
+**Prerequisites:**
+
+- MCP Bridge plugin enabled with `chrome-devtools` server configured
+- VNC server running (TightVNC on Windows, Screen Sharing on macOS)
+- websockify + noVNC for browser-based VNC access
+- Chrome launched with `--remote-debugging-port=9222`
+
+**Safe Chrome debugging:** Use the bundled `scripts/ensure-chrome-debug.ps1`
+script to safely enable Chrome remote debugging without disrupting existing
+browser sessions.
+
+---
+
 ## Windows-Specific Features
 
 ### Native Windows skills
@@ -636,7 +704,11 @@ installer is typically **~84 MB**.
 | Matrix      |---+           |  | Memory / Context    ||       | Skills    |
 | Zalo        |---+           |  +---------------------+|       | (SKILL.md)|
 | WebChat     |---+           |  | Cron / Hooks        ||       +-----------+
-+-------------+               +-------------------------+
++-------------+               |  +---------------------+|
+                              |  | Plugins             ||       +-----------+
+                              |  |  MCP Bridge --------||------>| MCP       |
+                              |  +---------------------+|       | Servers   |
+                              +-------------------------+       +-----------+
                                         |
                               +-------------------+
                               | Daemon            |
@@ -650,7 +722,9 @@ installer is typically **~84 MB**.
 to the agent. The agent processes the message using the configured model and
 available skills, then routes the response back to the originating channel.
 The gateway persists sessions, manages conversation memory, and executes
-scheduled tasks via hooks and cron.
+scheduled tasks via hooks and cron. Plugins extend the gateway with additional
+capabilities — the MCP Bridge plugin connects external MCP tool servers
+(e.g., Chrome DevTools for desktop automation) as agent-callable tools.
 
 ## Security Model
 

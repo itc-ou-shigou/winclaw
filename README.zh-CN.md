@@ -280,6 +280,68 @@ Windows 下的主要配置文件：
 
 ---
 
+## 插件系统
+
+WinClaw 支持通过插件架构扩展网关功能。插件位于 `extensions/` 目录，
+通过配置文件中的 `plugins.entries` 启用。
+
+### MCP Bridge 插件
+
+**MCP Bridge** 插件（`extensions/mcp-bridge/`）将外部
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) 服务器
+桥接为 WinClaw 代理的可调用工具。支持浏览器自动化、数据库访问、自定义 API 等
+MCP 兼容的工具服务器，通过自然对话直接使用。
+
+**核心功能：**
+
+- 支持 **stdio**（子进程）和 **SSE**（HTTP）两种 MCP 传输方式
+- 自动重连（可配置重试次数）
+- 工具调用以 `mcp__<服务器名>__<工具名>` 格式命名空间化
+- Chrome 标签页保护：`before_tool_call` 钩子阻止危险操作（关闭标签页、终止 Chrome、导航到用户标签页）
+
+**配置示例：**
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "mcp-bridge": {
+        "enabled": true,
+        "servers": [
+          {
+            "name": "chrome-devtools",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@anthropic/chrome-devtools-mcp@latest"]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### 桌面应用操控（VNC + MCP）
+
+**desktop-app-control** 技能使 AI 助手能够通过 VNC + Chrome DevTools MCP
+管道操控原生桌面应用程序（Windows / macOS）。助手可以打开应用、点击按钮、
+输入文字、操作菜单、截取屏幕截图——全部通过自然语言命令完成。
+
+**架构：** 用户请求 → WinClaw 代理 → `mcp__chrome_devtools__*` 工具
+→ Chrome DevTools Protocol → noVNC 标签页 → websockify → VNC 服务器 → 桌面
+
+**前置条件：**
+
+- 启用 MCP Bridge 插件并配置 `chrome-devtools` 服务器
+- VNC 服务器运行中（Windows: TightVNC，macOS: 屏幕共享）
+- websockify + noVNC（基于浏览器的 VNC 访问）
+- Chrome 以 `--remote-debugging-port=9222` 启动
+
+**安全的 Chrome 调试：** 使用随附的 `scripts/ensure-chrome-debug.ps1` 脚本，
+可在不中断现有浏览器会话的情况下安全启用 Chrome 远程调试。
+
+---
+
 ## Windows 专属功能
 
 ### Windows 原生技能
@@ -601,9 +663,15 @@ Inno Setup 编译大约需要 1-2 分钟。生成的安装程序通常约 **84 M
                                   +------------+------------+
                                   |            |            |
                             +-----v---+  +----v----+ +-----v-----+
-                            | Shell   |  | Skills  | | Channel   |
-                            | Tools   |  | Engine  | | Tools     |
-                            +---------+  +---------+ +-----------+
+                            | Shell   |  | Skills  | | Plugins   |
+                            | Tools   |  | Engine  | | MCP Bridge|
+                            +---------+  +---------+ +-----+-----+
+                                                           |
+                                                    +------v------+
+                                                    | MCP Servers |
+                                                    | (DevTools,  |
+                                                    |  DB, etc.)  |
+                                                    +-------------+
 ```
 
 ---
