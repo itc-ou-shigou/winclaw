@@ -128,14 +128,18 @@ Write-Host "    Slimming down staging..."
 $nm = "$STAGING\app\node_modules"
 $saved = 0
 
-# 1. TypeScript source (.ts) and source maps (.map) in node_modules - not needed at runtime
-foreach ($ext in @("*.ts", "*.map")) {
-    $files = Get-ChildItem $nm -Recurse -File -Filter $ext -ErrorAction SilentlyContinue
-    $sz = ($files | Measure-Object -Property Length -Sum).Sum / 1MB
-    $files | Remove-Item -Force -ErrorAction SilentlyContinue
-    $saved += $sz
-    Write-Host "      Removed $($files.Count) $ext files ($([math]::Round($sz, 1)) MB)"
-}
+# 1. TypeScript source (.ts, but keep .d.ts/.d.cts) and source maps (.map) in node_modules
+$tsFiles = Get-ChildItem $nm -Recurse -File -Filter "*.ts" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike "*.d.ts" -and $_.Name -notlike "*.d.cts" }
+$sz = ($tsFiles | Measure-Object -Property Length -Sum).Sum / 1MB
+$tsFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+$saved += $sz
+Write-Host "      Removed $($tsFiles.Count) .ts source files ($([math]::Round($sz, 1)) MB)"
+$mapFiles = Get-ChildItem $nm -Recurse -File -Filter "*.map" -ErrorAction SilentlyContinue
+$sz = ($mapFiles | Measure-Object -Property Length -Sum).Sum / 1MB
+$mapFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+$saved += $sz
+Write-Host "      Removed $($mapFiles.Count) .map files ($([math]::Round($sz, 1)) MB)"
 
 # 2. Debug symbols (.pdb)
 $pdbFiles = Get-ChildItem $STAGING -Recurse -File -Filter "*.pdb" -ErrorAction SilentlyContinue

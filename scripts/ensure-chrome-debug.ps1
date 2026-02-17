@@ -65,6 +65,9 @@ Write-Host "Scanning ports ${PortRangeStart}-${PortRangeEnd} for Chrome DevTools
 
 for ($port = $PortRangeStart; $port -le $PortRangeEnd; $port++) {
     if (Test-PortListening -Port $port) {
+        # Set environment variable for current session and persist for user
+        $env:CHROME_DEBUG_PORT = $port
+        [System.Environment]::SetEnvironmentVariable("CHROME_DEBUG_PORT", "$port", "User")
         Write-Host "CHROME_DEBUG_PORT=$port"
         Write-Host "OK: Port $port is already listening. Chrome DevTools MCP can connect."
         exit 0
@@ -115,6 +118,9 @@ while ($waited -lt $maxWait) {
     Start-Sleep -Seconds 1
     $waited++
     if (Test-PortListening -Port $DebugPort) {
+        # Set environment variable for current session and persist for user
+        $env:CHROME_DEBUG_PORT = $DebugPort
+        [System.Environment]::SetEnvironmentVariable("CHROME_DEBUG_PORT", "$DebugPort", "User")
         Write-Host "CHROME_DEBUG_PORT=$DebugPort"
         Write-Host "OK: WinClaw Chrome started. Port $DebugPort is listening after ${waited}s."
         exit 0

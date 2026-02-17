@@ -196,7 +196,7 @@ foreach ($trimDir in $trimDirs) {
     Get-ChildItem "$STAGING\app\node_modules" -Directory -Recurse -Filter $trimDir -ErrorAction SilentlyContinue |
         ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
 }
-$trimFilePatterns = @("*.md", "CHANGELOG*", "HISTORY*", ".npmignore", ".eslintrc*", ".prettierrc*",
+$trimFilePatterns = @("*.md", "CHANGELOG.md", "CHANGELOG.txt", "HISTORY.md", "HISTORY.txt", ".npmignore", ".eslintrc*", ".prettierrc*",
     "tsconfig*.json", ".editorconfig", ".travis.yml", ".taprc*", ".nojekyll")
 foreach ($pat in $trimFilePatterns) {
     Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter $pat -ErrorAction SilentlyContinue |
@@ -289,7 +289,20 @@ if (Test-Path "$ROOT\scripts\vnc-check-status.ps1") {
 $vncSizeMB = [math]::Round(((Get-ChildItem "$vncStaging" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
 Write-Host "    VNC staging size: $vncSizeMB MB" -ForegroundColor Yellow
 
-# -- 4d. Build WinClawUI desktop app (C# + WebView2) ----------------------
+# -- 4d-2. Chrome DevTools MCP launcher scripts ----------------------------
+$scriptsStaging = "$STAGING\scripts"
+New-Item -ItemType Directory -Path $scriptsStaging -Force | Out-Null
+foreach ($scriptName in @("launch-chrome-devtools-mcp.ps1", "ensure-chrome-debug.ps1")) {
+    $scriptPath = "$ROOT\scripts\$scriptName"
+    if (Test-Path $scriptPath) {
+        Copy-Item $scriptPath "$scriptsStaging\" -Force
+        Write-Host "    Copied $scriptName to staging\scripts\"
+    } else {
+        Write-Host "    WARNING: $scriptName not found at $scriptPath" -ForegroundColor Yellow
+    }
+}
+
+# -- 4e. Build WinClawUI desktop app (C# + WebView2) ----------------------
 $winclawUiProject = "$ROOT\apps\windows\WinClawUI\WinClawUI.csproj"
 if (Test-Path $winclawUiProject) {
     Write-Host "==> Building WinClawUI desktop app..."
