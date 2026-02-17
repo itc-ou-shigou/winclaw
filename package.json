@@ -1,6 +1,6 @@
 {
   "name": "winclaw",
-  "version": "2026.2.16",
+  "version": "2026.2.17",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
   "license": "MIT",
@@ -119,6 +119,7 @@
     "@mariozechner/pi-ai": "0.52.9",
     "@mariozechner/pi-coding-agent": "0.52.9",
     "@mariozechner/pi-tui": "0.52.9",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@mozilla/readability": "^0.6.0",
     "@sinclair/typebox": "0.34.48",
     "@slack/bolt": "^4.6.0",

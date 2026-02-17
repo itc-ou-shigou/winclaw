@@ -36,30 +36,27 @@ internal static class Program
 
     private static void ActivateExistingInstance()
     {
-        var hwnd = NativeMethods.FindWindow(null, MainForm.WindowTitle);
+        // Search by fixed window class name — immune to dynamic title changes
+        // (e.g. "Dashboard — WinClaw") and works even when the window is hidden.
+        var hwnd = NativeMethods.FindWindow(MainForm.WindowClassName, null);
         if (hwnd != IntPtr.Zero)
         {
-            // If window is minimized, restore it first
-            if (NativeMethods.IsIconic(hwnd))
-            {
-                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
-            }
-            else
-            {
-                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOW);
-            }
-            NativeMethods.SetForegroundWindow(hwnd);
-        }
-        else
-        {
-            // Window may be hidden (minimized to tray). Send a custom message
-            // to the running instance to show itself. Use WM_USER broadcast.
+            // Grant the existing instance permission to steal foreground focus.
+            // Without this, Windows blocks SetForegroundWindow from background
+            // processes (our ShowAndActivate would silently fail).
+            NativeMethods.AllowSetForegroundWindow(NativeMethods.ASFW_ANY);
+
+            // Send WM_SHOWME directly to the found window. This works reliably
+            // for hidden windows, unlike HWND_BROADCAST which may not reach them.
             NativeMethods.PostMessage(
-                NativeMethods.HWND_BROADCAST,
+                hwnd,
                 MainForm.WM_SHOWME,
                 IntPtr.Zero,
                 IntPtr.Zero);
         }
+        // else: Window not found — first instance may have crashed.
+        //       The mutex will be released when this process exits, allowing
+        //       a clean start next time.
     }
 
     private static void OnThreadException(object sender, ThreadExceptionEventArgs e)
@@ -77,10 +74,11 @@ internal static partial class NativeMethods
 {
     public const int SW_SHOW = 5;
     public const int SW_RESTORE = 9;
+    public const int ASFW_ANY = -1;
     public static readonly IntPtr HWND_BROADCAST = new IntPtr(0xffff);
 
     [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
-    public static partial IntPtr FindWindow(string? lpClassName, string lpWindowName);
+    public static partial IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -97,6 +95,10 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool AllowSetForegroundWindow(int dwProcessId);
 
     [LibraryImport("user32.dll", EntryPoint = "RegisterWindowMessageW", StringMarshalling = StringMarshalling.Utf16)]
     public static partial int RegisterWindowMessage(string message);

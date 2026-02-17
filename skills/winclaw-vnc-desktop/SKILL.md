@@ -333,3 +333,20 @@ When the user asks to perform desktop tasks via VNC:
 3. **Click precisely** using coordinates from the screenshot
 4. **Verify result** with another screenshot
 5. **Report completion** or troubleshoot if needed
+
+### MCP Tool Integration
+
+When the user asks to perform desktop tasks (open apps, click buttons, type text, etc.):
+1. Ensure VNC infrastructure is running (check ports 5900 and 6080)
+2. Use `mcp__chrome_devtools__*` tools via the MCP Bridge plugin for actual desktop interaction
+3. The **desktop-app-control** skill provides the full MCP tool operation workflow, including:
+   - Prerequisites verification chain (MCP Bridge → Chrome → VNC → noVNC tab)
+   - Complete tool reference (`mcp__chrome_devtools__click`, `take_screenshot`, `press_key`, etc.)
+   - Common operation patterns for Windows and macOS
+
+**⛔ CRITICAL: Tab Safety & Chrome Protection**
+- **`close_page` is BLOCKED at code level** — calling it will return an error, do NOT attempt it
+- **NEVER use `exec` to kill, restart, or launch Chrome** — no `taskkill`, `Stop-Process`, `Start-Process chrome`, etc.
+- Only create a NEW tab for noVNC (`mcp__chrome_devtools__new_page`) — never reuse existing tabs
+- Only operate on the noVNC tab — never select or interact with the user's other tabs
+- **If Chrome needs reconfiguration**, ask the USER to restart it manually
