@@ -335,10 +335,11 @@ MCP 兼容的工具服务器，通过自然对话直接使用。
 - 启用 MCP Bridge 插件并配置 `chrome-devtools` 服务器
 - VNC 服务器运行中（Windows: TightVNC，macOS: 屏幕共享）
 - websockify + noVNC（基于浏览器的 VNC 访问）
-- Chrome 以 `--remote-debugging-port=9222` 启动
+- Chrome 以 `--remote-debugging-port` 启动（端口自动选择）
 
 **安全的 Chrome 调试：** 使用随附的 `scripts/ensure-chrome-debug.ps1` 脚本，
-可在不中断现有浏览器会话的情况下安全启用 Chrome 远程调试。
+可在不中断现有浏览器会话的情况下安全启用 Chrome 远程调试。脚本自动扫描端口
+**9222-9229**，使用第一个可用端口，无需担心端口冲突。
 
 ---
 

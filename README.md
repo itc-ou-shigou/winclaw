@@ -360,11 +360,12 @@ Desktop
 - MCP Bridge plugin enabled with `chrome-devtools` server configured
 - VNC server running (TightVNC on Windows, Screen Sharing on macOS)
 - websockify + noVNC for browser-based VNC access
-- Chrome launched with `--remote-debugging-port=9222`
+- Chrome launched with `--remote-debugging-port` (port auto-selected)
 
 **Safe Chrome debugging:** Use the bundled `scripts/ensure-chrome-debug.ps1`
 script to safely enable Chrome remote debugging without disrupting existing
-browser sessions.
+browser sessions. The script automatically scans ports **9222-9229** and uses
+the first available one — no need to worry about port conflicts.
 
 ---
 

@@ -343,10 +343,12 @@ WinClaw エージェントのツールとして統合します。ブラウザ自
 - MCP Bridge プラグインが有効（`chrome-devtools` サーバーを設定）
 - VNC サーバーが稼働中（Windows: TightVNC、macOS: 画面共有）
 - websockify + noVNC（ブラウザベースの VNC アクセス用）
-- Chrome を `--remote-debugging-port=9222` で起動
+- Chrome を `--remote-debugging-port` 付きで起動（ポートは自動選択）
 
 **安全な Chrome デバッグ:** 同梱の `scripts/ensure-chrome-debug.ps1` スクリプトで、
 既存のブラウザセッションを中断せずに Chrome リモートデバッグを安全に有効化できます。
+スクリプトはポート **9222-9229** を自動スキャンし、最初の空きポートを使用するため、
+ポート競合を気にする必要はありません。
 
 ---
 
