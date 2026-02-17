@@ -26,7 +26,7 @@ Operate native desktop applications (Windows/macOS) via VNC desktop streaming + 
 > 2. **NEVER call `mcp__chrome_devtools__navigate_page`** on any existing user tab — ONLY on the noVNC tab you created
 > 3. **NEVER use `exec` to run `taskkill`, `Stop-Process`, `kill`, or any command that terminates Chrome** — this closes ALL user tabs (BLOCKED at code level)
 > 4. **NEVER use `exec` to run `Start-Process chrome` or launch Chrome directly** — this may replace the running session (BLOCKED at code level)
-> 5. **To start/check Chrome debugging**, use ONLY: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-chrome-debug.ps1`
+> 5. **To start/check Chrome debugging**, use ONLY: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-chrome-debug.ps1` — parse its `CHROME_DEBUG_PORT=<port>` output to get the actual port (may be 9222-9229)
 > 6. **ONLY create NEW tabs** using `mcp__chrome_devtools__new_page` — never modify existing tabs
 > 7. If `mcp__chrome_devtools__list_pages` shows existing tabs, **leave them all untouched**
 >
@@ -63,7 +63,8 @@ Call `mcp__bridge_status` tool. Look for `chrome-devtools` server status.
 
 ### 2. Ensure Chrome has remote debugging enabled
 
-Chrome must be running with `--remote-debugging-port=9222` for the MCP Bridge to connect.
+Chrome must be running with `--remote-debugging-port` for the MCP Bridge to connect.
+The script automatically scans ports **9222-9229** and uses the first available one.
 
 > **⛔ NEVER use `exec` to directly kill Chrome, restart Chrome, or launch Chrome with custom flags.**
 > Always use the safe launcher script below. It protects user tabs.
@@ -74,15 +75,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\ensure-chrome-debug.ps1
 ```
 
 The script handles all cases automatically and NEVER kills Chrome:
-- **Port 9222 already listening** → prints "OK", proceed to step 3
-- **Port 9222 not listening** → launches a SEPARATE dedicated WinClaw Chrome instance with its own profile (`--user-data-dir`), alongside any existing Chrome. User tabs are NEVER affected.
+- **Scans ports 9222-9229** for an existing Chrome debugging instance
+- If a port is already listening → prints `CHROME_DEBUG_PORT=<port>` and "OK", proceed to step 3
+- If no port is listening → finds the first free port in 9222-9229, launches a SEPARATE dedicated WinClaw Chrome instance with its own profile (`--user-data-dir`), alongside any existing Chrome. User tabs are NEVER affected.
+- **Parse the output** to get the actual port: look for the `CHROME_DEBUG_PORT=<port>` line
 - Wait for "OK" output before proceeding
 
 **macOS:**
 ```bash
-# READ-ONLY check
-lsof -i :9222 >/dev/null 2>&1 && echo "Active" || echo "Not active"
-# If not active, ask user to restart Chrome with: open -a "Google Chrome" --args --remote-debugging-port=9222
+# Scan ports 9222-9229
+for port in 9222 9223 9224 9225 9226 9227 9228 9229; do
+  lsof -i :$port >/dev/null 2>&1 && echo "CHROME_DEBUG_PORT=$port" && break
+done
+# If none active, ask user to restart Chrome with:
+# open -a "Google Chrome" --args --remote-debugging-port=9222
 ```
 
 ### 3. Verify VNC + websockify is running
