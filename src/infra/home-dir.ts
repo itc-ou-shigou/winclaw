@@ -53,7 +53,46 @@ export function resolveRequiredHomeDir(
   env: NodeJS.ProcessEnv = process.env,
   homedir: () => string = os.homedir,
 ): string {
-  return resolveEffectiveHomeDir(env, homedir) ?? path.resolve(process.cwd());
+  return resolveEffectiveHomeDir(env, homedir) ?? resolveSafeFallbackDir(env);
+}
+
+/**
+ * Last-resort fallback when no home directory can be resolved from
+ * WINCLAW_HOME / HOME / USERPROFILE / os.homedir().
+ *
+ * On Windows the working directory may be `C:\Program Files\WinClaw`
+ * (or another read-only location) when running from an installed binary,
+ * so we prefer writable per-user directories before falling back to cwd().
+ */
+function resolveSafeFallbackDir(env: NodeJS.ProcessEnv): string {
+  // Windows-specific writable directories
+  if (process.platform === "win32") {
+    const localAppData = normalize(env.LOCALAPPDATA);
+    if (localAppData) return path.resolve(localAppData);
+
+    const appData = normalize(env.APPDATA);
+    if (appData) return path.resolve(appData);
+  }
+
+  // Cross-platform: reject cwd if it is under a known read-only system path
+  const cwd = path.resolve(process.cwd());
+  const readOnlyPrefixes = [
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\Windows",
+    "/usr",
+    "/opt",
+    "/System",
+  ];
+  const isReadOnly = readOnlyPrefixes.some((prefix) =>
+    cwd.toLowerCase().startsWith(prefix.toLowerCase()),
+  );
+  if (!isReadOnly) {
+    return cwd;
+  }
+
+  // Final fallback: OS temp directory
+  return os.tmpdir();
 }
 
 export function expandHomePrefix(
