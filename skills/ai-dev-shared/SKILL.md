@@ -24,7 +24,7 @@ Common references for `ai-dev-legacy-modernization`, `ai-dev-new-project`, and `
 |----------|----------|-------------|---------|
 | `AIDEV_WORKSPACE` | **Yes** | Project root directory | Ask user |
 | `AUTOPROJECT_REPO` | No | GitHub repo for `.claude` prompts templates | `ITC-cloud-soft/autoproject` |
-| `GITHUB_TOKEN` | No | GitHub PAT for private repo / push access | None |
+| `GITHUB_TOKEN` | No | GitHub PAT for private repo / push access | `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` |
 | `GITHUB_REPO` | No | `owner/repo` format for push | Skip push |
 | `GITHUB_BRANCH` | No | Target branch | Current branch |
 | `DATABASE_URL` | No | DB connection string | Auto-detect from .env |
