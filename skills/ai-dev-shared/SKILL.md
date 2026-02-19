@@ -68,6 +68,12 @@ if (Test-Path "$AIDEV_WORKSPACE\.claude\prompts") {
   Write-Host "✓ .claude/prompts already exists, skipping download"
 } else {
   Write-Host "Downloading .claude from $AUTOPROJECT_REPO..."
+
+  # Remove existing incomplete .claude directory
+  if (Test-Path "$AIDEV_WORKSPACE\.claude") {
+    Remove-Item -Recurse -Force "$AIDEV_WORKSPACE\.claude" -ErrorAction SilentlyContinue
+  }
+
   $tempDir = "$env:TEMP\autoproject-$(Get-Date -Format 'yyyyMMddHHmmss')"
 
   # Build clone URL with optional token
@@ -79,7 +85,7 @@ if (Test-Path "$AIDEV_WORKSPACE\.claude\prompts") {
   }
 
   # Clone and copy
-  git clone --depth 1 --branch main $cloneUrl $tempDir 2>&1
+  git clone --depth 1 --branch main $cloneUrl $tempDir 2>&1 | Out-Null
   if ($LASTEXITCODE -eq 0) {
     Copy-Item -Recurse -Force "$tempDir\.claude" "$AIDEV_WORKSPACE\.claude"
     Write-Host "✓ .claude directory copied to workspace"
