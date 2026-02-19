@@ -62,6 +62,7 @@ export async function sendChatMessage(
   state: ChatState,
   message: string,
   attachments?: ChatAttachment[],
+  opts?: { silent?: boolean },
 ): Promise<string | null> {
   if (!state.client || !state.connected) {
     return null;
@@ -89,14 +90,17 @@ export async function sendChatMessage(
     }
   }
 
-  state.chatMessages = [
-    ...state.chatMessages,
-    {
-      role: "user",
-      content: contentBlocks,
-      timestamp: now,
-    },
-  ];
+  // Skip adding to chatMessages for silent commands (e.g. /new, /reset)
+  if (!opts?.silent) {
+    state.chatMessages = [
+      ...state.chatMessages,
+      {
+        role: "user",
+        content: contentBlocks,
+        timestamp: now,
+      },
+    ];
+  }
 
   state.chatSending = true;
   state.lastError = null;

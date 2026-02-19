@@ -209,8 +209,20 @@ Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter "*.ts" -ErrorAc
 # Remove source maps
 Get-ChildItem "$STAGING\app\node_modules" -File -Recurse -Filter "*.map" -ErrorAction SilentlyContinue |
     ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
-# Remove app/docs (not needed at runtime)
-Remove-Item "$STAGING\app\docs" -Recurse -Force -ErrorAction SilentlyContinue
+# Remove app/docs EXCEPT docs/reference/templates (workspace templates needed at runtime)
+$appDocsRef = "$STAGING\app\docs\reference\templates"
+if (Test-Path $appDocsRef) {
+    # Preserve templates by moving them aside, deleting docs/, then restoring
+    $tmpTemplates = "$STAGING\_templates_preserve"
+    Copy-Item $appDocsRef $tmpTemplates -Recurse -Force
+    Remove-Item "$STAGING\app\docs" -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $appDocsRef -Force | Out-Null
+    Copy-Item "$tmpTemplates\*" $appDocsRef -Recurse -Force
+    Remove-Item $tmpTemplates -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "      Kept docs/reference/templates/ ($((Get-ChildItem $appDocsRef -File).Count) files)"
+} else {
+    Remove-Item "$STAGING\app\docs" -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 $appSizeMB = [math]::Round(((Get-ChildItem "$STAGING\app" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
 Write-Host "    App directory size after cleanup: $appSizeMB MB" -ForegroundColor Yellow

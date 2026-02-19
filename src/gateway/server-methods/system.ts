@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import type { GatewayRequestHandlers } from "./types.js";
 import { resolveMainSessionKeyFromConfig } from "../../config/sessions.js";
 import { getLastHeartbeatEvent } from "../../infra/heartbeat-events.js";
@@ -136,5 +137,70 @@ export const systemHandlers: GatewayRequestHandlers = {
       },
     );
     respond(true, { ok: true }, undefined);
+  },
+
+  /**
+   * Show a native OS folder selection dialog (Windows only).
+   * Falls back to a simple error on non-Windows platforms.
+   */
+  "system.showFolderDialog": ({ params, respond }) => {
+    const initialPath =
+      typeof params?.initialPath === "string" ? params.initialPath.trim() : "";
+
+    if (process.platform !== "win32") {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.UNAVAILABLE,
+          "Folder dialog is only supported on Windows",
+        ),
+      );
+      return;
+    }
+
+    // Use PowerShell to show the standard Windows folder picker dialog.
+    // -STA is required for WinForms dialogs.  We create a tiny owner Form
+    // with TopMost=true so the dialog appears in front of the browser window.
+    const psScript = [
+      "Add-Type -AssemblyName System.Windows.Forms",
+      "$d = New-Object System.Windows.Forms.FolderBrowserDialog",
+      "$d.Description = 'Select workspace folder'",
+      "$d.ShowNewFolderButton = $true",
+      initialPath
+        ? `$d.SelectedPath = '${initialPath.replace(/'/g, "''")}'`
+        : "",
+      // Create a tiny hidden owner window that is TopMost so the dialog
+      // appears in front of any browser/WebView2 window.
+      "$owner = New-Object System.Windows.Forms.Form",
+      "$owner.TopMost = $true",
+      "$owner.ShowInTaskbar = $false",
+      "$owner.WindowState = [System.Windows.Forms.FormWindowState]::Minimized",
+      "$owner.Show()",
+      "$owner.Hide()",
+      "$r = $d.ShowDialog($owner)",
+      "$owner.Dispose()",
+      "if ($r -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath } else { Write-Output '' }",
+    ]
+      .filter(Boolean)
+      .join("; ");
+
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-STA", "-NonInteractive", "-Command", psScript],
+      { timeout: 120_000, windowsHide: true },
+      (err, stdout) => {
+        if (err) {
+          respond(
+            false,
+            undefined,
+            errorShape(ErrorCodes.UNAVAILABLE, `Folder dialog failed: ${err.message}`),
+          );
+          return;
+        }
+        const selected = (stdout ?? "").trim();
+        respond(true, { path: selected || null }, undefined);
+      },
+    );
   },
 };

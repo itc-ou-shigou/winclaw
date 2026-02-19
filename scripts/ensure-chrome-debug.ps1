@@ -20,9 +20,12 @@
   port first, then fall back to 9223, 9224, ... up to 9229.
 
 .OUTPUTS
-  Writes structured output lines:
+  Writes to stdout (for caller to parse):
     CHROME_DEBUG_PORT=<port>   — the port where Chrome debugging is active
+  Writes to stderr (diagnostics only, safe for MCP stdio channel):
     OK: ...                    — human-readable success message
+    ERROR: ...                 — error conditions
+    WARNING: ...               — timeout warnings
 
 .EXAMPLE
   .\ensure-chrome-debug.ps1
@@ -34,6 +37,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# CRITICAL: This script's stdout may feed into the MCP stdio channel via
+# launch-chrome-devtools-mcp.ps1. ONLY the "CHROME_DEBUG_PORT=<port>" line
+# should go to stdout (Write-Host). ALL other diagnostic messages MUST use
+# [Console]::Error.WriteLine (stderr) to avoid polluting the JSON-RPC channel.
 
 # --- Configuration ---
 $ChromePath     = "C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -61,7 +69,7 @@ function Test-PortListening {
 }
 
 # --- Step 1: Scan port range for an existing Chrome debugging instance ---
-Write-Host "Scanning ports ${PortRangeStart}-${PortRangeEnd} for Chrome DevTools..."
+[Console]::Error.WriteLine("Scanning ports ${PortRangeStart}-${PortRangeEnd} for Chrome DevTools...")
 
 for ($port = $PortRangeStart; $port -le $PortRangeEnd; $port++) {
     if (Test-PortListening -Port $port) {
@@ -69,7 +77,7 @@ for ($port = $PortRangeStart; $port -le $PortRangeEnd; $port++) {
         $env:CHROME_DEBUG_PORT = $port
         [System.Environment]::SetEnvironmentVariable("CHROME_DEBUG_PORT", "$port", "User")
         Write-Host "CHROME_DEBUG_PORT=$port"
-        Write-Host "OK: Port $port is already listening. Chrome DevTools MCP can connect."
+        [Console]::Error.WriteLine("OK: Port $port is already listening. Chrome DevTools MCP can connect.")
         exit 0
     }
 }
@@ -87,21 +95,21 @@ for ($port = $PortRangeStart; $port -le $PortRangeEnd; $port++) {
 }
 
 if (-not $DebugPort) {
-    Write-Host "ERROR: All ports in range ${PortRangeStart}-${PortRangeEnd} are in use."
-    Write-Host "NEEDS_USER_ACTION: Free up a port in range ${PortRangeStart}-${PortRangeEnd} or close other debugging sessions."
+    [Console]::Error.WriteLine("ERROR: All ports in range ${PortRangeStart}-${PortRangeEnd} are in use.")
+    [Console]::Error.WriteLine("NEEDS_USER_ACTION: Free up a port in range ${PortRangeStart}-${PortRangeEnd} or close other debugging sessions.")
     exit 1
 }
 
 # Ensure WinClaw Chrome profile directory exists
 if (-not (Test-Path $WinClawDataDir)) {
     New-Item -ItemType Directory -Path $WinClawDataDir -Force | Out-Null
-    Write-Host "Created WinClaw Chrome profile at: $WinClawDataDir"
+    [Console]::Error.WriteLine("Created WinClaw Chrome profile at: $WinClawDataDir")
 }
 
 # Launch a dedicated Chrome instance for WinClaw with its own profile
 # This runs alongside any existing Chrome windows without affecting them
-Write-Host "Launching dedicated WinClaw Chrome instance with --remote-debugging-port=$DebugPort ..."
-Write-Host "  Profile: $WinClawDataDir"
+[Console]::Error.WriteLine("Launching dedicated WinClaw Chrome instance with --remote-debugging-port=$DebugPort ...")
+[Console]::Error.WriteLine("  Profile: $WinClawDataDir")
 $chromeArgs = @(
     "--remote-debugging-port=$DebugPort"
     "--user-data-dir=$WinClawDataDir"
@@ -122,11 +130,11 @@ while ($waited -lt $maxWait) {
         $env:CHROME_DEBUG_PORT = $DebugPort
         [System.Environment]::SetEnvironmentVariable("CHROME_DEBUG_PORT", "$DebugPort", "User")
         Write-Host "CHROME_DEBUG_PORT=$DebugPort"
-        Write-Host "OK: WinClaw Chrome started. Port $DebugPort is listening after ${waited}s."
+        [Console]::Error.WriteLine("OK: WinClaw Chrome started. Port $DebugPort is listening after ${waited}s.")
         exit 0
     }
 }
 
-Write-Host "WARNING: Chrome launched but port $DebugPort not listening after ${maxWait}s."
-Write-Host "Please check if another process is using port $DebugPort."
+[Console]::Error.WriteLine("WARNING: Chrome launched but port $DebugPort not listening after ${maxWait}s.")
+[Console]::Error.WriteLine("Please check if another process is using port $DebugPort.")
 exit 1

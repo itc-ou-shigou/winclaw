@@ -6,6 +6,7 @@ import { iconForTab, titleForTab, type Tab } from "../navigation.ts";
 export type SessionTabsProps = {
   activeTab: Tab;
   openTabs: Tab[];
+  chatSessionTitle?: string;
   onTabSelect: (tab: Tab) => void;
   onTabClose: (tab: Tab) => void;
   onAddTab: () => void;
@@ -27,7 +28,7 @@ export function renderSessionTabs(props: SessionTabsProps) {
               title=${titleForTab(tab)}
             >
               <span class="session-tabs__tab-icon">${icons[iconForTab(tab)]}</span>
-              <span class="session-tabs__tab-label">${isChat ? "New Chat" : titleForTab(tab)}</span>
+              <span class="session-tabs__tab-label">${isChat ? (props.chatSessionTitle || "New Chat") : titleForTab(tab)}</span>
               ${isChat
                 ? nothing
                 : html`

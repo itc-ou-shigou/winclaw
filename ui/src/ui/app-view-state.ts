@@ -22,6 +22,7 @@ import type {
   HealthSnapshot,
   LogEntry,
   LogLevel,
+  ModelCatalogEntry,
   NostrProfile,
   PresenceEntry,
   SessionsUsageResult,
@@ -197,6 +198,8 @@ export type AppViewState = {
   skillEdits: Record<string, string>;
   skillMessages: Record<string, SkillMessage>;
   skillsBusyKey: string | null;
+  modelCatalog: ModelCatalogEntry[] | null;
+  modelCatalogLoading: boolean;
   debugLoading: boolean;
   debugStatus: StatusSummary | null;
   debugHealth: HealthSnapshot | null;
@@ -285,10 +288,14 @@ export type AppViewState = {
   // Command palette & session tabs
   commandPaletteOpen: boolean;
   openTabs: Tab[];
+  openChatSessions: string[];
   statusBarExpanded: boolean;
   recentCommands: string[];
   toggleCommandPalette: () => void;
   openTabFromPalette: (tab: Tab) => void;
   closeTab: (tab: Tab) => void;
   addRecentCommand: (commandId: string) => void;
+  addChatSession: (key: string) => void;
+  removeChatSession: (key: string) => void;
+  switchChatSession: (key: string) => void;
 };

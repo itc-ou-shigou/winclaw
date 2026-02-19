@@ -86,28 +86,40 @@ export async function ensureWinClawModelsJson(
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveWinClawAgentDir();
 
   const explicitProviders = cfg.models?.providers ?? {};
-  const implicitProviders = await resolveImplicitProviders({ agentDir });
-  const providers: Record<string, ProviderConfig> = mergeProviders({
-    implicit: implicitProviders,
-    explicit: explicitProviders,
-  });
-  const implicitBedrock = await resolveImplicitBedrockProvider({ agentDir, config: cfg });
-  if (implicitBedrock) {
-    const existing = providers["amazon-bedrock"];
-    providers["amazon-bedrock"] = existing
-      ? mergeProviderModels(implicitBedrock, existing)
-      : implicitBedrock;
-  }
-  const implicitCopilot = await resolveImplicitCopilotProvider({ agentDir });
-  if (implicitCopilot && !providers["github-copilot"]) {
-    providers["github-copilot"] = implicitCopilot;
+  const mode = cfg.models?.mode ?? DEFAULT_MODE;
+
+  let providers: Record<string, ProviderConfig>;
+  if (mode === "replace") {
+    // replace mode: only use providers explicitly defined in winclaw.json,
+    // skip all implicit/auto-discovered providers (copilot, bedrock, etc.)
+    providers = {};
+    for (const [key, val] of Object.entries(explicitProviders)) {
+      const k = key.trim();
+      if (k) providers[k] = val;
+    }
+  } else {
+    // merge mode (default): combine implicit + explicit + bedrock + copilot
+    const implicitProviders = await resolveImplicitProviders({ agentDir });
+    providers = mergeProviders({
+      implicit: implicitProviders,
+      explicit: explicitProviders,
+    });
+    const implicitBedrock = await resolveImplicitBedrockProvider({ agentDir, config: cfg });
+    if (implicitBedrock) {
+      const existing = providers["amazon-bedrock"];
+      providers["amazon-bedrock"] = existing
+        ? mergeProviderModels(implicitBedrock, existing)
+        : implicitBedrock;
+    }
+    const implicitCopilot = await resolveImplicitCopilotProvider({ agentDir });
+    if (implicitCopilot && !providers["github-copilot"]) {
+      providers["github-copilot"] = implicitCopilot;
+    }
   }
 
   if (Object.keys(providers).length === 0) {
     return { agentDir, wrote: false };
   }
-
-  const mode = cfg.models?.mode ?? DEFAULT_MODE;
   const targetPath = path.join(agentDir, "models.json");
 
   let mergedProviders = providers;

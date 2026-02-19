@@ -58,6 +58,8 @@ public sealed class GatewayManager : IDisposable
     private CancellationTokenSource? _healthCheckCts;
     private GatewayStatus _status = GatewayStatus.Stopped;
     private readonly HttpClient _httpClient;
+    private Timer? _watchdogTimer;
+    private const int WatchdogIntervalMs = 10_000; // 10 seconds
 
     public event EventHandler<GatewayStatusEventArgs>? StatusChanged;
 
@@ -114,9 +116,9 @@ public sealed class GatewayManager : IDisposable
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore config parse errors, fall through to default
+            Logger.Warn($"Config parse error during port resolution: {ex.Message}");
         }
 
         Port = DefaultPort;
@@ -159,9 +161,9 @@ public sealed class GatewayManager : IDisposable
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore config parse errors
+            Logger.Warn($"Config parse error during token resolution: {ex.Message}");
         }
 
         Token = null;
@@ -424,6 +426,7 @@ public sealed class GatewayManager : IDisposable
                 if (response.IsSuccessStatusCode)
                 {
                     SetStatus(GatewayStatus.Running, $"pid {_gatewayProcess?.Id}");
+                    StartWatchdog();
                     return;
                 }
             }
@@ -458,6 +461,7 @@ public sealed class GatewayManager : IDisposable
 
     public void Stop()
     {
+        StopWatchdog();
         _healthCheckCts?.Cancel();
 
         if (_weSpawnedGateway && _gatewayProcess != null && !_gatewayProcess.HasExited)
@@ -466,9 +470,9 @@ public sealed class GatewayManager : IDisposable
             {
                 KillProcessTree(_gatewayProcess.Id);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort
+                Logger.Warn($"Failed to kill gateway process tree: {ex.Message}");
             }
         }
 
@@ -493,10 +497,12 @@ public sealed class GatewayManager : IDisposable
             using var proc = Process.Start(psi);
             proc?.WaitForExit(5000);
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warn($"taskkill failed for pid {pid}: {ex.Message}");
             // Last resort: direct kill
-            try { Process.GetProcessById(pid).Kill(true); } catch { }
+            try { Process.GetProcessById(pid).Kill(true); }
+            catch (Exception innerEx) { Logger.Warn($"Direct kill also failed: {innerEx.Message}"); }
         }
     }
 
@@ -516,8 +522,74 @@ public sealed class GatewayManager : IDisposable
 
     public void Dispose()
     {
+        StopWatchdog();
         Stop();
         _httpClient.Dispose();
         _healthCheckCts?.Dispose();
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Watchdog — monitors gateway process health after startup
+    // ──────────────────────────────────────────────────────────────────
+
+    private void StartWatchdog()
+    {
+        if (!_weSpawnedGateway || _gatewayProcess == null)
+            return;
+
+        StopWatchdog(); // Ensure no duplicate timers
+        Logger.Info($"Starting gateway watchdog (interval={WatchdogIntervalMs}ms)");
+        _watchdogTimer = new Timer(WatchdogCallback, null, WatchdogIntervalMs, WatchdogIntervalMs);
+    }
+
+    private void StopWatchdog()
+    {
+        var timer = _watchdogTimer;
+        _watchdogTimer = null;
+        timer?.Dispose();
+    }
+
+    private async void WatchdogCallback(object? state)
+    {
+        try
+        {
+            if (_gatewayProcess == null || !_weSpawnedGateway)
+            {
+                StopWatchdog();
+                return;
+            }
+
+            if (_gatewayProcess.HasExited)
+            {
+                Logger.Error($"Gateway process died unexpectedly (exitCode={_gatewayProcess.ExitCode})");
+                StopWatchdog();
+                SetStatus(GatewayStatus.Failed, $"Gateway process exited with code {_gatewayProcess.ExitCode}");
+
+                // Auto-restart after brief delay
+                await Task.Delay(2000);
+                Logger.Info("Attempting automatic gateway restart");
+                await RestartAsync();
+                return;
+            }
+
+            // Process is alive — optionally do a lightweight HTTP health check
+            try
+            {
+                var response = await _httpClient.GetAsync(GatewayUrl);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Warn($"Gateway health check returned {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Gateway health check failed: {ex.Message}");
+                // Don't restart — process is alive, might be temporarily busy
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Watchdog callback error", ex);
+        }
     }
 }

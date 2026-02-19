@@ -21,6 +21,7 @@ const createHost = (tab: Tab): SettingsHost => ({
     navGroupsCollapsed: {},
     openTabs: ["chat"],
     recentCommands: [],
+    openChatSessions: [],
   },
   theme: "system",
   themeResolved: "dark",

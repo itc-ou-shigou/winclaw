@@ -255,6 +255,7 @@ export const sessionsHandlers: GatewayRequestHandlers = {
         model: entry?.model,
         contextTokens: entry?.contextTokens,
         sendPolicy: entry?.sendPolicy,
+        workspace: entry?.workspace,
         label: entry?.label,
         origin: snapshotSessionOrigin(entry),
         lastChannel: entry?.lastChannel,

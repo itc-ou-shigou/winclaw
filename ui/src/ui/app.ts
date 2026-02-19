@@ -298,6 +298,9 @@ export class WinClawApp extends LitElement {
   @state() skillsBusyKey: string | null = null;
   @state() skillMessages: Record<string, SkillMessage> = {};
 
+  @state() modelCatalog: import("./types.js").ModelCatalogEntry[] | null = null;
+  @state() modelCatalogLoading = false;
+
   @state() debugLoading = false;
   @state() debugStatus: StatusSummary | null = null;
   @state() debugHealth: HealthSnapshot | null = null;
@@ -331,6 +334,15 @@ export class WinClawApp extends LitElement {
     : ["chat"];
   @state() statusBarExpanded = false;
   @state() recentCommands: string[] = this.settings.recentCommands ?? [];
+  @state() openChatSessions: string[] = (() => {
+    const saved = this.settings.openChatSessions;
+    const current = this.settings.sessionKey || "main";
+    if (saved && saved.length > 0) {
+      // Ensure current session is included
+      return saved.includes(current) ? saved : [current, ...saved];
+    }
+    return [current];
+  })();
 
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;
@@ -602,6 +614,61 @@ export class WinClawApp extends LitElement {
     const next = [commandId, ...this.recentCommands.filter((c) => c !== commandId)].slice(0, 5);
     this.recentCommands = next;
     this.applySettings({ ...this.settings, recentCommands: next });
+  }
+
+  addChatSession(key: string) {
+    if (this.openChatSessions.includes(key)) {
+      return;
+    }
+    this.openChatSessions = [...this.openChatSessions, key];
+    this.applySettings({ ...this.settings, openChatSessions: this.openChatSessions });
+  }
+
+  removeChatSession(key: string) {
+    // Cannot close the last tab
+    if (this.openChatSessions.length <= 1) {
+      return;
+    }
+    const idx = this.openChatSessions.indexOf(key);
+    if (idx === -1) {
+      return;
+    }
+    this.openChatSessions = this.openChatSessions.filter((k) => k !== key);
+    // If closing the active session, switch to the nearest neighbor
+    if (this.sessionKey === key) {
+      const nextIdx = Math.min(idx, this.openChatSessions.length - 1);
+      const nextKey = this.openChatSessions[nextIdx] ?? this.openChatSessions[0];
+      this.switchChatSession(nextKey);
+    }
+    this.applySettings({ ...this.settings, openChatSessions: this.openChatSessions });
+  }
+
+  switchChatSession(key: string) {
+    if (key === this.sessionKey) {
+      return;
+    }
+    this.sessionKey = key;
+    this.chatMessage = "";
+    this.chatAttachments = [];
+    this.chatStream = null;
+    this.chatStreamStartedAt = null;
+    this.chatRunId = null;
+    this.chatQueue = [];
+    this.resetToolStream();
+    this.resetChatScroll();
+    this.applySettings({
+      ...this.settings,
+      sessionKey: key,
+      lastActiveSessionKey: key,
+      openChatSessions: this.openChatSessions,
+    });
+    void this.loadAssistantIdentity();
+    void import("./controllers/chat.ts").then(({ loadChatHistory }) =>
+      loadChatHistory(this as unknown as AppViewState),
+    );
+    void import("./app-chat.ts").then(({ refreshChatAvatar }) =>
+      refreshChatAvatar(this as unknown as AppViewState),
+    );
   }
 
   render() {

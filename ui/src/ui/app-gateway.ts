@@ -25,6 +25,7 @@ import {
   removeExecApproval,
 } from "./controllers/exec-approval.ts";
 import { loadChannels } from "./controllers/channels.ts";
+import { loadModelCatalog } from "./controllers/models.ts";
 import { loadNodes } from "./controllers/nodes.ts";
 import { loadSessions } from "./controllers/sessions.ts";
 import { GatewayBrowserClient } from "./gateway.ts";
@@ -143,6 +144,7 @@ export function connectGateway(host: GatewayHost) {
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
       void loadAssistantIdentity(host as unknown as WinClawApp);
       void loadAgents(host as unknown as WinClawApp);
+      void loadModelCatalog(host as unknown as WinClawApp);
       void loadNodes(host as unknown as WinClawApp, { quiet: true });
       void loadDevices(host as unknown as WinClawApp, { quiet: true });
       void loadChannels(host as unknown as WinClawApp, false);

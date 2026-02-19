@@ -4,10 +4,10 @@ import type { AppViewState } from "./app-view-state.ts";
 import type { ThemeTransitionContext } from "./theme-transition.ts";
 import type { ThemeMode } from "./theme.ts";
 import type { SessionsListResult } from "./types.ts";
-import { refreshChat } from "./app-chat.ts";
-import { syncUrlWithSessionKey } from "./app-settings.ts";
 import { WinClawApp } from "./app.ts";
-import { ChatState, loadChatHistory } from "./controllers/chat.ts";
+import { renderChatSessionTabs } from "./components/chat-session-tabs.ts";
+import { loadAgents } from "./controllers/agents.ts";
+import { loadSessions, patchSession } from "./controllers/sessions.ts";
 import { icons } from "./icons.ts";
 import { iconForTab, pathForTab, titleForTab, type Tab } from "./navigation.ts";
 
@@ -39,184 +39,204 @@ export function renderTab(state: AppViewState, tab: Tab) {
   `;
 }
 
-export function renderChatControls(state: AppViewState) {
-  const mainSessionKey = resolveMainSessionKey(state.hello, state.sessionsResult);
-  const sessionOptions = resolveSessionOptions(
-    state.sessionKey,
-    state.sessionsResult,
-    mainSessionKey,
+function resolveCurrentWorkspace(state: AppViewState): string | undefined {
+  // 1. Per-session workspace (from sessionsResult)
+  const sessionRow = state.sessionsResult?.sessions?.find(
+    (s) => s.key === state.sessionKey,
   );
-  const disableThinkingToggle = state.onboarding;
-  const disableFocusToggle = state.onboarding;
-  const showThinking = state.onboarding ? false : state.settings.chatShowThinking;
-  const focusActive = state.onboarding ? true : state.settings.chatFocusMode;
-  // Refresh icon
-  const refreshIcon = html`
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
-      <path d="M21 3v5h-5"></path>
-    </svg>
-  `;
-  const focusIcon = html`
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M4 7V4h3"></path>
-      <path d="M20 7V4h-3"></path>
-      <path d="M4 17v3h3"></path>
-      <path d="M20 17v3h-3"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-  `;
+  if (sessionRow?.workspace) {
+    return sessionRow.workspace;
+  }
+  // 2. Fallback: agent-level workspace
+  const agents = state.agentsList?.agents;
+  if (!agents || agents.length === 0) {
+    return undefined;
+  }
+  const sessionKey = state.sessionKey ?? "";
+  const agentMatch = sessionKey.match(/^agent:([^:]+):/);
+  const agentId = agentMatch?.[1] ?? state.agentsList?.defaultId;
+  const agent = agents.find((a) => a.id === agentId) ?? agents[0];
+  return agent?.workspace;
+}
+
+function resolveCurrentAgentId(state: AppViewState): string {
+  const sessionKey = state.sessionKey ?? "";
+  const match = sessionKey.match(/^agent:([^:]+):/);
+  return match?.[1] ?? state.agentsList?.defaultId ?? "default";
+}
+
+function resolveCurrentModel(state: AppViewState): string {
+  const sessions = state.sessionsResult?.sessions;
+  const row = sessions?.find((s) => s.key === state.sessionKey);
+  if (row?.model && row?.modelProvider) {
+    return `${row.modelProvider}/${row.model}`;
+  }
+  if (row?.model) {
+    return row.model;
+  }
+  const defaults = state.sessionsResult?.defaults;
+  if (defaults?.model && defaults?.modelProvider) {
+    return `${defaults.modelProvider}/${defaults.model}`;
+  }
+  if (defaults?.model) {
+    return defaults.model;
+  }
+  return "";
+}
+
+export function renderChatControls(
+  state: AppViewState,
+  opts?: { onNewSession?: () => void },
+) {
   return html`
     <div class="chat-controls">
-      <label class="field chat-controls__session">
-        <select
-          .value=${state.sessionKey}
-          ?disabled=${!state.connected}
-          @change=${(e: Event) => {
-            const next = (e.target as HTMLSelectElement).value;
-            state.sessionKey = next;
-            state.chatMessage = "";
-            state.chatStream = null;
-            (state as unknown as WinClawApp).chatStreamStartedAt = null;
-            state.chatRunId = null;
-            (state as unknown as WinClawApp).resetToolStream();
-            (state as unknown as WinClawApp).resetChatScroll();
-            state.applySettings({
-              ...state.settings,
-              sessionKey: next,
-              lastActiveSessionKey: next,
-            });
-            void state.loadAssistantIdentity();
-            syncUrlWithSessionKey(
-              state as unknown as Parameters<typeof syncUrlWithSessionKey>[0],
-              next,
-              true,
-            );
-            void loadChatHistory(state as unknown as ChatState);
-          }}
-        >
-          ${repeat(
-            sessionOptions,
-            (entry) => entry.key,
-            (entry) =>
-              html`<option value=${entry.key}>
-                ${entry.displayName ?? entry.key}
-              </option>`,
-          )}
-        </select>
-      </label>
-      <button
-        class="btn btn--sm btn--icon"
-        ?disabled=${state.chatLoading || !state.connected}
-        @click=${async () => {
-          const app = state as unknown as WinClawApp;
-          app.chatManualRefreshInFlight = true;
-          app.chatNewMessagesBelow = false;
-          await app.updateComplete;
-          app.resetToolStream();
-          try {
-            await refreshChat(state as unknown as Parameters<typeof refreshChat>[0], {
-              scheduleScroll: false,
-            });
-            app.scrollToBottom({ smooth: true });
-          } finally {
-            requestAnimationFrame(() => {
-              app.chatManualRefreshInFlight = false;
-              app.chatNewMessagesBelow = false;
-            });
-          }
-        }}
-        title="Refresh chat data"
-      >
-        ${refreshIcon}
-      </button>
-      <span class="chat-controls__separator">|</span>
-      <button
-        class="btn btn--sm btn--icon ${showThinking ? "active" : ""}"
-        ?disabled=${disableThinkingToggle}
-        @click=${() => {
-          if (disableThinkingToggle) {
-            return;
-          }
-          state.applySettings({
-            ...state.settings,
-            chatShowThinking: !state.settings.chatShowThinking,
-          });
-        }}
-        aria-pressed=${showThinking}
-        title=${
-          disableThinkingToggle
-            ? "Disabled during onboarding"
-            : "Toggle assistant thinking/working output"
-        }
-      >
-        ${icons.brain}
-      </button>
-      <button
-        class="btn btn--sm btn--icon ${focusActive ? "active" : ""}"
-        ?disabled=${disableFocusToggle}
-        @click=${() => {
-          if (disableFocusToggle) {
-            return;
-          }
-          state.applySettings({
-            ...state.settings,
-            chatFocusMode: !state.settings.chatFocusMode,
-          });
-        }}
-        aria-pressed=${focusActive}
-        title=${
-          disableFocusToggle
-            ? "Disabled during onboarding"
-            : "Toggle focus mode (hide sidebar + page header)"
-        }
-      >
-        ${focusIcon}
-      </button>
+      ${renderChatSessionTabs({
+        activeSessionKey: state.sessionKey,
+        openSessions: state.openChatSessions,
+        sessionsResult: state.sessionsResult,
+        onSelect: (key) => state.switchChatSession(key),
+        onClose: (key) => state.removeChatSession(key),
+        onNew: () => opts?.onNewSession?.(),
+      })}
+      ${renderWorkspacePath(state)}
+      ${renderModelSelector(state)}
     </div>
   `;
 }
 
-type SessionDefaultsSnapshot = {
-  mainSessionKey?: string;
-  mainKey?: string;
-};
+async function changeWorkspace(state: AppViewState) {
+  const current = resolveCurrentWorkspace(state) ?? "";
+  let newPath: string | null = null;
 
-function resolveMainSessionKey(
-  hello: AppViewState["hello"],
-  sessions: SessionsListResult | null,
-): string | null {
-  const snapshot = hello?.snapshot as { sessionDefaults?: SessionDefaultsSnapshot } | undefined;
-  const mainSessionKey = snapshot?.sessionDefaults?.mainSessionKey?.trim();
-  if (mainSessionKey) {
-    return mainSessionKey;
+  // Strategy 1: WebView2 bridge (inside WinClawUI.exe)
+  const bridge = (window as unknown as Record<string, unknown>).chrome as
+    | { webview?: { hostObjects?: { winclawBridge?: { ShowFolderDialog(p: string): Promise<string> } } } }
+    | undefined;
+  if (bridge?.webview?.hostObjects?.winclawBridge) {
+    try {
+      const selected = await bridge.webview.hostObjects.winclawBridge.ShowFolderDialog(current);
+      newPath = typeof selected === "string" && selected.trim() ? selected.trim() : null;
+      if (!newPath) return; // user cancelled
+    } catch (err) {
+      console.warn("[workspace] WebView2 bridge failed:", err);
+    }
   }
-  const mainKey = snapshot?.sessionDefaults?.mainKey?.trim();
-  if (mainKey) {
-    return mainKey;
+
+  // Strategy 2: Gateway RPC — shows native Windows folder dialog via PowerShell
+  if (!newPath && state.client) {
+    try {
+      const result = await state.client.request("system.showFolderDialog", {
+        initialPath: current,
+      }) as { path: string | null };
+      if (result?.path) {
+        newPath = result.path;
+      } else if (result?.path === null) {
+        return; // user cancelled the dialog
+      }
+    } catch (err) {
+      console.warn("[workspace] Gateway folder dialog failed:", err);
+    }
   }
-  if (sessions?.sessions?.some((row) => row.key === "main")) {
-    return "main";
+
+  // Strategy 3: Fallback to window.prompt (plain text input)
+  if (!newPath) {
+    newPath = window.prompt("Enter workspace directory path:", current);
   }
-  return null;
+
+  if (!newPath || newPath.trim() === current) {
+    return;
+  }
+  const trimmedPath = newPath.trim();
+
+  // Optimistic update: immediately reflect in UI
+  const agents = state.agentsList?.agents;
+  if (agents) {
+    const agentId = resolveCurrentAgentId(state);
+    const agent = agents.find((a) => a.id === agentId);
+    if (agent) {
+      agent.workspace = trimmedPath;
+      state.agentsList = { ...state.agentsList! };
+    }
+  }
+
+  // Per-session workspace: patch the session entry
+  try {
+    await state.client?.request("sessions.patch", {
+      key: state.sessionKey,
+      workspace: trimmedPath,
+    });
+    await loadSessions(state as unknown as WinClawApp);
+  } catch {
+    // Fallback: update at agent level
+    try {
+      const agentId = resolveCurrentAgentId(state);
+      await state.client?.request("agents.update", {
+        agentId,
+        workspace: trimmedPath,
+      });
+      await loadAgents(state as unknown as WinClawApp, { force: true });
+    } catch (err) {
+      console.error("[workspace] change failed:", err);
+    }
+  }
+}
+
+function renderWorkspacePath(state: AppViewState) {
+  const workspace = resolveCurrentWorkspace(state);
+  if (!workspace) {
+    return html``;
+  }
+  return html`
+    <div
+      class="chat-controls__workspace"
+      title="Workspace: ${workspace} (click to change)"
+      @click=${() => changeWorkspace(state)}
+    >
+      <span class="chat-controls__workspace-icon">📁</span>
+      <span class="chat-controls__workspace-path">${workspace}</span>
+    </div>
+  `;
+}
+
+function renderModelSelector(state: AppViewState) {
+  const models = state.modelCatalog;
+  if (!models || models.length === 0) {
+    return html``;
+  }
+  const currentModel = resolveCurrentModel(state);
+  return html`
+    <span class="chat-controls__separator">|</span>
+    <label class="field chat-controls__model">
+      <select
+        .value=${currentModel}
+        ?disabled=${!state.connected}
+        @change=${async (e: Event) => {
+          const value = (e.target as HTMLSelectElement).value;
+          if (!value || value === currentModel) {
+            return;
+          }
+          await patchSession(state as unknown as WinClawApp, state.sessionKey, {
+            model: value,
+          });
+        }}
+        title="Switch model"
+      >
+        ${repeat(
+          models,
+          (m) => `${m.provider}/${m.id}`,
+          (m) => {
+            const val = `${m.provider}/${m.id}`;
+            return html`<option
+              value=${val}
+              ?selected=${val === currentModel}
+            >
+              ${m.name || m.id} (${m.provider})
+            </option>`;
+          },
+        )}
+      </select>
+    </label>
+  `;
 }
 
 export function resolveSessionDisplayName(
@@ -232,51 +252,6 @@ export function resolveSessionDisplayName(
     return `${label} (${key})`;
   }
   return key;
-}
-
-function resolveSessionOptions(
-  sessionKey: string,
-  sessions: SessionsListResult | null,
-  mainSessionKey?: string | null,
-) {
-  const seen = new Set<string>();
-  const options: Array<{ key: string; displayName?: string }> = [];
-
-  const resolvedMain = mainSessionKey && sessions?.sessions?.find((s) => s.key === mainSessionKey);
-  const resolvedCurrent = sessions?.sessions?.find((s) => s.key === sessionKey);
-
-  // Add main session key first
-  if (mainSessionKey) {
-    seen.add(mainSessionKey);
-    options.push({
-      key: mainSessionKey,
-      displayName: resolveSessionDisplayName(mainSessionKey, resolvedMain || undefined),
-    });
-  }
-
-  // Add current session key next
-  if (!seen.has(sessionKey)) {
-    seen.add(sessionKey);
-    options.push({
-      key: sessionKey,
-      displayName: resolveSessionDisplayName(sessionKey, resolvedCurrent),
-    });
-  }
-
-  // Add sessions from the result
-  if (sessions?.sessions) {
-    for (const s of sessions.sessions) {
-      if (!seen.has(s.key)) {
-        seen.add(s.key);
-        options.push({
-          key: s.key,
-          displayName: resolveSessionDisplayName(s.key, s),
-        });
-      }
-    }
-  }
-
-  return options;
 }
 
 const THEME_ORDER: ThemeMode[] = ["system", "light", "dark"];

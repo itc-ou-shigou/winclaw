@@ -16,6 +16,7 @@ export const AgentSummarySchema = Type.Object(
   {
     id: NonEmptyString,
     name: Type.Optional(NonEmptyString),
+    workspace: Type.Optional(NonEmptyString),
     identity: Type.Optional(
       Type.Object(
         {

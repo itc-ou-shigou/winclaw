@@ -1,9 +1,29 @@
 import os from "node:os";
 import path from "node:path";
 
+/** Prefixes of known read-only / system-owned directories. */
+const READ_ONLY_PREFIXES = [
+  "C:\\Program Files",
+  "C:\\Program Files (x86)",
+  "C:\\Windows",
+  "/usr",
+  "/opt",
+  "/System",
+];
+
 function normalize(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+/**
+ * Returns `true` when the given *resolved* path sits under a known
+ * read-only / system-owned prefix (e.g. `C:\Program Files\…`).
+ */
+function isReadOnlyPath(resolved: string): boolean {
+  return READ_ONLY_PREFIXES.some((prefix) =>
+    resolved.toLowerCase().startsWith(prefix.toLowerCase()),
+  );
 }
 
 export function resolveEffectiveHomeDir(
@@ -25,7 +45,13 @@ function resolveRawHomeDir(env: NodeJS.ProcessEnv, homedir: () => string): strin
       }
       return undefined;
     }
-    return explicitHome;
+    // Guard: reject WINCLAW_HOME when it points to a read-only system path
+    // (e.g. "C:\Program Files\WinClaw" left over from a stale env).
+    const resolved = path.resolve(explicitHome);
+    if (!isReadOnlyPath(resolved)) {
+      return explicitHome;
+    }
+    // Fall through to HOME / USERPROFILE / os.homedir()
   }
 
   const envHome = normalize(env.HOME);
@@ -76,18 +102,7 @@ function resolveSafeFallbackDir(env: NodeJS.ProcessEnv): string {
 
   // Cross-platform: reject cwd if it is under a known read-only system path
   const cwd = path.resolve(process.cwd());
-  const readOnlyPrefixes = [
-    "C:\\Program Files",
-    "C:\\Program Files (x86)",
-    "C:\\Windows",
-    "/usr",
-    "/opt",
-    "/System",
-  ];
-  const isReadOnly = readOnlyPrefixes.some((prefix) =>
-    cwd.toLowerCase().startsWith(prefix.toLowerCase()),
-  );
-  if (!isReadOnly) {
+  if (!isReadOnlyPath(cwd)) {
     return cwd;
   }
 
