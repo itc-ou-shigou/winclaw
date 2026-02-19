@@ -10,11 +10,11 @@ export type AgentsState = {
   agentsSelectedId: string | null;
 };
 
-export async function loadAgents(state: AgentsState) {
+export async function loadAgents(state: AgentsState, opts?: { force?: boolean }) {
   if (!state.client || !state.connected) {
     return;
   }
-  if (state.agentsLoading) {
+  if (state.agentsLoading && !opts?.force) {
     return;
   }
   state.agentsLoading = true;

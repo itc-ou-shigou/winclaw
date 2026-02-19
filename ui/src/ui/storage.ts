@@ -15,6 +15,7 @@ export type UiSettings = {
   navGroupsCollapsed: Record<string, boolean>; // Legacy – kept for compat
   openTabs: string[]; // Session tabs (Notion-style layout)
   recentCommands: string[]; // Command palette recent commands
+  openChatSessions: string[]; // Open chat session keys (multi-session tabs)
 };
 
 export function loadSettings(): UiSettings {
@@ -36,6 +37,7 @@ export function loadSettings(): UiSettings {
     navGroupsCollapsed: {},
     openTabs: ["chat"],
     recentCommands: [],
+    openChatSessions: [],
   };
 
   try {
@@ -90,6 +92,11 @@ export function loadSettings(): UiSettings {
         parsed.recentCommands.every((c) => typeof c === "string")
           ? parsed.recentCommands
           : defaults.recentCommands,
+      openChatSessions:
+        Array.isArray(parsed.openChatSessions) &&
+        parsed.openChatSessions.every((s) => typeof s === "string")
+          ? parsed.openChatSessions
+          : defaults.openChatSessions,
     };
   } catch {
     return defaults;

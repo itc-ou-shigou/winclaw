@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
@@ -12,14 +13,6 @@ public sealed class MainForm : Form
 {
     public const string WindowTitle = "WinClaw";
 
-    /// <summary>
-    /// Fixed window class name for FindWindow. The default WinForms class name
-    /// is auto-generated and unreliable for cross-process lookup. Using a fixed
-    /// name lets the second instance find this window even when the title has
-    /// changed (e.g. "Dashboard — WinClaw") or the window is hidden (tray).
-    /// </summary>
-    public const string WindowClassName = "WinClawUI_MainWindow";
-
     /// <summary>Custom window message for single-instance activation.</summary>
     public static readonly int WM_SHOWME =
         NativeMethods.RegisterWindowMessage("WinClawUI_WM_SHOWME");
@@ -31,6 +24,9 @@ public sealed class MainForm : Form
     private readonly GatewayManager _gateway;
     private bool _isExiting;
     private bool _webViewReady;
+    private int _navigationRetryCount;
+    private const int MaxNavigationRetries = 10;
+    private System.Threading.Timer? _heartbeatTimer;
 
     public MainForm()
     {
@@ -103,6 +99,9 @@ public sealed class MainForm : Form
         // Start gateway first (needed for both WebView2 and browser fallback)
         _ = _gateway.StartAsync();
 
+        // Start heartbeat timer — logs uptime, memory, gateway status every 5 minutes
+        _heartbeatTimer = new System.Threading.Timer(HeartbeatCallback, null, 300_000, 300_000);
+
         // Check WebView2 availability — seamless browser fallback if missing
         if (!IsWebView2Available())
         {
@@ -130,6 +129,10 @@ public sealed class MainForm : Form
             await _webView.EnsureCoreWebView2Async(env);
             _webViewReady = true;
 
+            // Expose native OS dialogs to the web UI via JS interop
+            _webView.CoreWebView2.AddHostObjectToScript(
+                "winclawBridge", new WinClawBridge(this));
+
             // Configure WebView2 settings
             var settings = _webView.CoreWebView2.Settings;
             settings.IsStatusBarEnabled = false;
@@ -147,6 +150,9 @@ public sealed class MainForm : Form
             // Handle navigation failures
             _webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
+            // Handle WebView2 renderer/browser process crashes
+            _webView.CoreWebView2.ProcessFailed += OnWebView2ProcessFailed;
+
             // Open external links in system browser
             _webView.CoreWebView2.NewWindowRequested += (_, args) =>
             {
@@ -157,9 +163,9 @@ public sealed class MainForm : Form
             // Navigate to gateway (may not be ready yet — will retry)
             NavigateToGateway();
         }
-        catch
+        catch (Exception ex)
         {
-            // WebView2 init failed — seamless browser fallback
+            Logger.Error("WebView2 initialization failed, falling back to browser", ex);
             await WaitForGatewayAndOpenBrowser();
             _webView.Visible = false;
         }
@@ -172,8 +178,9 @@ public sealed class MainForm : Form
             var version = CoreWebView2Environment.GetAvailableBrowserVersionString();
             return !string.IsNullOrEmpty(version);
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warn($"WebView2 availability check failed: {ex.Message}");
             return false;
         }
     }
@@ -192,11 +199,25 @@ public sealed class MainForm : Form
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs args)
     {
-        if (!args.IsSuccess && !_isExiting &&
-            _gateway.Status != GatewayStatus.Failed)
+        if (args.IsSuccess)
         {
-            _ = RetryNavigationAsync();
+            _navigationRetryCount = 0;
+            return;
         }
+
+        if (_isExiting || _gateway.Status == GatewayStatus.Failed)
+            return;
+
+        _navigationRetryCount++;
+        Logger.Warn($"Navigation failed (attempt {_navigationRetryCount}/{MaxNavigationRetries}): status={args.WebErrorStatus}");
+
+        if (_navigationRetryCount >= MaxNavigationRetries)
+        {
+            FallbackToBrowser("navigation failed after max retries");
+            return;
+        }
+
+        _ = RetryNavigationAsync();
     }
 
     private async Task RetryNavigationAsync()
@@ -209,17 +230,126 @@ public sealed class MainForm : Form
     }
 
     // ═════════════════════════════════════════════════════════════════
+    //  WebView2 Process Crash Recovery
+    // ═════════════════════════════════════════════════════════════════
+
+    private async void OnWebView2ProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs args)
+    {
+        Logger.Error($"WebView2 process failed: kind={args.ProcessFailedKind}, reason={args.Reason}, exitCode={args.ExitCode}");
+
+        switch (args.ProcessFailedKind)
+        {
+            case CoreWebView2ProcessFailedKind.BrowserProcessExited:
+                // The browser process itself exited — WebView2 cannot recover.
+                FallbackToBrowser("browser process exited");
+                break;
+
+            case CoreWebView2ProcessFailedKind.RenderProcessExited:
+            case CoreWebView2ProcessFailedKind.RenderProcessUnresponsive:
+                // Renderer crash — attempt reload after a brief delay.
+                Logger.Info("Attempting WebView2 reload after renderer failure");
+                await Task.Delay(500);
+                if (!_isExiting && _webViewReady && _webView?.CoreWebView2 != null)
+                {
+                    try
+                    {
+                        _webView.CoreWebView2.Reload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("WebView2 reload failed, falling back to browser", ex);
+                        FallbackToBrowser("reload failed after renderer crash");
+                    }
+                }
+                break;
+
+            default:
+                // Other sub-process failures (GPU, utility, etc.) — try reload.
+                Logger.Warn($"WebView2 sub-process failed ({args.ProcessFailedKind}), attempting reload");
+                await Task.Delay(500);
+                if (!_isExiting && _webViewReady && _webView?.CoreWebView2 != null)
+                {
+                    try
+                    {
+                        _webView.CoreWebView2.Reload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn($"Reload after sub-process failure failed: {ex.Message}");
+                    }
+                }
+                break;
+        }
+    }
+
+    private void FallbackToBrowser(string reason)
+    {
+        Logger.Warn($"Falling back to system browser: {reason}");
+        _webViewReady = false;
+        _webView.Visible = false;
+        OpenUrl(_gateway.GatewayUrlWithToken);
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    //  Heartbeat — periodic liveness & resource logging
+    // ═════════════════════════════════════════════════════════════════
+
+    private void HeartbeatCallback(object? state)
+    {
+        try
+        {
+            using var proc = Process.GetCurrentProcess();
+            var memMb = proc.WorkingSet64 / (1024 * 1024);
+            var uptime = DateTime.Now - proc.StartTime;
+            Logger.Info($"Heartbeat: uptime={uptime:hh\\:mm\\:ss}, mem={memMb}MB, gateway={_gateway.Status}, webViewReady={_webViewReady}");
+
+            if (memMb > 500)
+            {
+                Logger.Warn($"High memory usage: {memMb} MB");
+            }
+        }
+        catch
+        {
+            // Heartbeat must never crash the app
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════
     //  Close-to-Tray
     // ═════════════════════════════════════════════════════════════════
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
-        if (!_isExiting && e.CloseReason == CloseReason.UserClosing)
+        Logger.Info($"FormClosing fired: reason={e.CloseReason}, isExiting={_isExiting}");
+
+        if (!_isExiting)
         {
-            // Minimize to tray instead of closing
-            e.Cancel = true;
-            Hide();
-            return;
+            switch (e.CloseReason)
+            {
+                case CloseReason.UserClosing:
+                case CloseReason.None:           // Win32 WM_CLOSE from external source
+                case CloseReason.FormOwnerClosing:
+                    // Minimize to tray instead of closing
+                    e.Cancel = true;
+                    Hide();
+                    return;
+
+                case CloseReason.WindowsShutDown:
+                    Logger.Info("Windows shutdown detected, exiting gracefully");
+                    break;
+
+                case CloseReason.TaskManagerClosing:
+                    Logger.Info("Task manager close detected");
+                    break;
+
+                case CloseReason.ApplicationExitCall:
+                    Logger.Info("Application.Exit() called from external source");
+                    break;
+
+                default:
+                    Logger.Warn($"Unexpected close reason: {e.CloseReason}");
+                    break;
+            }
         }
 
         // Real exit — cleanup
@@ -292,7 +422,9 @@ public sealed class MainForm : Form
     {
         if (InvokeRequired)
         {
-            try { Invoke(() => OnGatewayStatusChanged(sender, e)); } catch { }
+            try { Invoke(() => OnGatewayStatusChanged(sender, e)); }
+            catch (ObjectDisposedException) { /* Form disposed during shutdown */ }
+            catch (InvalidOperationException) { /* Handle not yet created or already destroyed */ }
             return;
         }
 
@@ -316,20 +448,6 @@ public sealed class MainForm : Form
                     NavigateToGateway();
                 }
             }
-        }
-    }
-
-    // ═════════════════════════════════════════════════════════════════
-    //  Fixed Window Class Name (for single-instance FindWindow lookup)
-    // ═════════════════════════════════════════════════════════════════
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ClassName = WindowClassName;
-            return cp;
         }
     }
 
@@ -422,9 +540,9 @@ public sealed class MainForm : Form
             var proc = System.Diagnostics.Process.Start(psi);
             proc?.WaitForExit(120_000); // Wait up to 2 minutes
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently ignore — browser fallback is already working
+            Logger.Warn($"WebView2 background install failed: {ex.Message}");
         }
     }
 
@@ -439,9 +557,9 @@ public sealed class MainForm : Form
             };
             System.Diagnostics.Process.Start(psi);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore if browser can't be opened
+            Logger.Error($"Failed to open URL in browser: {ex.Message}");
         }
     }
 
@@ -449,6 +567,15 @@ public sealed class MainForm : Form
     {
         if (disposing)
         {
+            Logger.Info("MainForm disposing");
+            _heartbeatTimer?.Dispose();
+            _heartbeatTimer = null;
+            if (_webViewReady && _webView?.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
+                _webView.CoreWebView2.ProcessFailed -= OnWebView2ProcessFailed;
+            }
+            _gateway.StatusChanged -= OnGatewayStatusChanged;
             _webView?.Dispose();
             _trayIcon?.Dispose();
             _trayMenu?.Dispose();

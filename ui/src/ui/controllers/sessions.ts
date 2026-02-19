@@ -39,6 +39,7 @@ export async function loadSessions(
     const params: Record<string, unknown> = {
       includeGlobal,
       includeUnknown,
+      includeDerivedTitles: true,
     };
     if (activeMinutes > 0) {
       params.activeMinutes = activeMinutes;
@@ -65,6 +66,8 @@ export async function patchSession(
     thinkingLevel?: string | null;
     verboseLevel?: string | null;
     reasoningLevel?: string | null;
+    model?: string | null;
+    workspace?: string | null;
   },
 ) {
   if (!state.client || !state.connected) {
@@ -82,6 +85,12 @@ export async function patchSession(
   }
   if ("reasoningLevel" in patch) {
     params.reasoningLevel = patch.reasoningLevel;
+  }
+  if ("model" in patch) {
+    params.model = patch.model;
+  }
+  if ("workspace" in patch) {
+    params.workspace = patch.workspace;
   }
   try {
     await state.client.request("sessions.patch", params);

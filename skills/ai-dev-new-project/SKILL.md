@@ -75,9 +75,10 @@ Automates a 7-phase pipeline to build a new web application from requirements.
 $ws = $env:AIDEV_WORKSPACE; $repo = $env:AUTOPROJECT_REPO
 if (-not $repo) { $repo = "ITC-cloud-soft/autoproject" }
 if (-not (Test-Path "$ws\.claude\prompts")) {
+  if (Test-Path "$ws\.claude") { Remove-Item -Recurse -Force "$ws\.claude" }
   $tmp = "$env:TEMP\autop-$(Get-Date -Format 'yyyyMMddHHmmss')"
   $url = if ($env:GITHUB_TOKEN) { "https://$($env:GITHUB_TOKEN)@github.com/$repo.git" } else { "https://github.com/$repo.git" }
-  git clone --depth 1 $url $tmp; Copy-Item -Recurse -Force "$tmp\.claude" "$ws\.claude"; Remove-Item -Recurse -Force $tmp
+  git clone --depth 1 $url $tmp 2>$null; Copy-Item -Recurse -Force "$tmp\.claude" "$ws\.claude"; Remove-Item -Recurse -Force $tmp
   Write-Host "✓ Downloaded .claude from $repo"
 }
 ```

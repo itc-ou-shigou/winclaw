@@ -91,6 +91,7 @@ export type SessionEntry = {
   lastTo?: string;
   lastAccountId?: string;
   lastThreadId?: string | number;
+  workspace?: string;
   skillsSnapshot?: SessionSkillSnapshot;
   systemPromptReport?: SessionSystemPromptReport;
 };

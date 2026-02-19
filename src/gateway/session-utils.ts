@@ -326,6 +326,7 @@ export function listAgentsForGateway(cfg: WinClawConfig): {
     return {
       id,
       name: meta?.name,
+      workspace: resolveAgentWorkspaceDir(cfg, id),
       identity: meta?.identity,
     };
   });
@@ -670,6 +671,7 @@ export function listSessionsFromStore(params: {
         lastChannel: deliveryFields.lastChannel ?? entry?.lastChannel,
         lastTo: deliveryFields.lastTo ?? entry?.lastTo,
         lastAccountId: deliveryFields.lastAccountId ?? entry?.lastAccountId,
+        workspace: entry?.workspace,
       };
     })
     .toSorted((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));

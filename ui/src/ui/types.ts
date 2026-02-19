@@ -319,6 +319,7 @@ export type PresenceEntry = {
 };
 
 export type GatewaySessionsDefaults = {
+  modelProvider: string | null;
   model: string | null;
   contextTokens: number | null;
 };
@@ -326,6 +327,7 @@ export type GatewaySessionsDefaults = {
 export type GatewayAgentRow = {
   id: string;
   name?: string;
+  workspace?: string;
   identity?: {
     name?: string;
     theme?: string;
@@ -400,6 +402,8 @@ export type GatewaySessionRow = {
   model?: string;
   modelProvider?: string;
   contextTokens?: number;
+  derivedTitle?: string;
+  workspace?: string;
 };
 
 export type SessionsListResult = {
@@ -771,4 +775,17 @@ export type LogEntry = {
   subsystem?: string | null;
   message?: string | null;
   meta?: Record<string, unknown> | null;
+};
+
+export type ModelCatalogEntry = {
+  id: string;
+  name: string;
+  provider: string;
+  contextWindow?: number;
+  reasoning?: boolean;
+  input?: Array<"text" | "image">;
+};
+
+export type ModelsListResult = {
+  models: ModelCatalogEntry[];
 };

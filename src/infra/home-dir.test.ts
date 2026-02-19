@@ -99,6 +99,26 @@ describe("resolveRequiredHomeDir", () => {
     expect(result).toBe(path.resolve("/custom/home"));
   });
 
+  it("ignores WINCLAW_HOME pointing to a read-only system path", () => {
+    // Simulate a stale WINCLAW_HOME pointing to the install directory
+    const env = {
+      WINCLAW_HOME: "C:\\Program Files\\WinClaw",
+      HOME: "/home/alice",
+    } as NodeJS.ProcessEnv;
+    // Should fall through to HOME instead of using Program Files
+    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(path.resolve("/home/alice"));
+  });
+
+  it("ignores WINCLAW_HOME under Program Files (x86)", () => {
+    const env = {
+      WINCLAW_HOME: "C:\\Program Files (x86)\\SomeApp",
+      USERPROFILE: "C:\\Users\\test",
+    } as NodeJS.ProcessEnv;
+    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(
+      path.resolve("C:\\Users\\test"),
+    );
+  });
+
   it("falls back to safe dir when WINCLAW_HOME is tilde-only and no home exists", () => {
     // When no home exists at all, the function should return a writable fallback
     // (LOCALAPPDATA/APPDATA on Windows, cwd or tmpdir otherwise)

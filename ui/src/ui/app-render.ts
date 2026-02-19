@@ -4,6 +4,7 @@ import type { UsageState } from "./controllers/usage.ts";
 import { parseAgentSessionKey } from "../../../src/routing/session-key.js";
 import { refreshChatAvatar } from "./app-chat.ts";
 import { renderChatControls } from "./app-render.helpers.ts";
+import { generateUUID } from "./uuid.ts";
 import { renderCommandPalette } from "./components/command-palette.ts";
 import { renderSessionTabs } from "./components/session-tabs.ts";
 import { renderStatusBar } from "./components/status-bar.ts";
@@ -84,6 +85,41 @@ import { renderUsage } from "./views/usage.ts";
 const AVATAR_DATA_RE = /^data:/i;
 const AVATAR_HTTP_RE = /^https?:\/\//i;
 
+/** Create a new chat session with a unique UUID-based key and add it to open tabs. */
+async function createNewChatSession(state: AppViewState) {
+  const parsed = parseAgentSessionKey(state.sessionKey);
+  const agentId = parsed?.agentId ?? "main";
+  const newKey = `agent:${agentId}:${generateUUID()}`;
+
+  // Add to open sessions
+  state.addChatSession(newKey);
+
+  // Clear chat UI for instant feedback
+  state.chatMessages = [];
+  state.chatToolMessages = [];
+  state.chatStream = null;
+  state.chatStreamStartedAt = null;
+  state.chatRunId = null;
+  state.chatQueue = [];
+  state.chatMessage = "";
+  state.chatAttachments = [];
+  state.resetToolStream();
+  state.resetChatScroll();
+
+  // Switch to the new session
+  state.sessionKey = newKey;
+  state.applySettings({
+    ...state.settings,
+    sessionKey: newKey,
+    lastActiveSessionKey: newKey,
+    openChatSessions: state.openChatSessions,
+  });
+
+  void state.loadAssistantIdentity();
+  await loadChatHistory(state);
+  void refreshChatAvatar(state);
+}
+
 function resolveAssistantAvatarUrl(state: AppViewState): string | undefined {
   const list = state.agentsList?.agents ?? [];
   const parsed = parseAgentSessionKey(state.sessionKey);
@@ -98,6 +134,15 @@ function resolveAssistantAvatarUrl(state: AppViewState): string | undefined {
     return candidate;
   }
   return identity?.avatarUrl;
+}
+
+function resolveChatSessionTitle(state: AppViewState): string | undefined {
+  const sessions = state.sessionsResult?.sessions;
+  if (!sessions) {
+    return undefined;
+  }
+  const row = sessions.find((s) => s.key === state.sessionKey);
+  return row?.derivedTitle || row?.displayName || row?.label || undefined;
 }
 
 export function renderApp(state: AppViewState) {
@@ -147,6 +192,7 @@ export function renderApp(state: AppViewState) {
         ${renderSessionTabs({
           activeTab: state.tab,
           openTabs: state.openTabs,
+          chatSessionTitle: resolveChatSessionTitle(state),
           onTabSelect: (tab) => state.openTabFromPalette(tab),
           onTabClose: (tab) => state.closeTab(tab),
           onAddTab: () => state.toggleCommandPalette(),
@@ -1011,7 +1057,9 @@ export function renderApp(state: AppViewState) {
 
         ${
           state.tab === "chat"
-            ? renderChat({
+            ? html`${renderChatControls(state, {
+                onNewSession: () => void createNewChatSession(state),
+              })}${renderChat({
                 sessionKey: state.sessionKey,
                 onSessionKeyChange: (next) => {
                   state.sessionKey = next;
@@ -1071,7 +1119,7 @@ export function renderApp(state: AppViewState) {
                 canAbort: Boolean(state.chatRunId),
                 onAbort: () => void state.handleAbortChat(),
                 onQueueRemove: (id) => state.removeQueuedMessage(id),
-                onNewSession: () => state.handleSendChat("/new", { restoreDraft: true }),
+                onNewSession: () => void createNewChatSession(state),
                 showNewMessages: state.chatNewMessagesBelow && !state.chatManualRefreshInFlight,
                 onScrollToBottom: () => state.scrollToBottom(),
                 // Sidebar props for tool output viewing
@@ -1084,7 +1132,7 @@ export function renderApp(state: AppViewState) {
                 onSplitRatioChange: (ratio: number) => state.handleSplitRatioChange(ratio),
                 assistantName: state.assistantName,
                 assistantAvatar: state.assistantAvatar,
-              })
+              })}`
             : nothing
         }
 
@@ -1190,7 +1238,7 @@ export function renderApp(state: AppViewState) {
           state.addRecentCommand(cmd.id);
           if (cmd.id === "new-chat") {
             state.openTabFromPalette("chat");
-            void state.handleSendChat("/new", { restoreDraft: true });
+            void createNewChatSession(state);
           } else if (cmd.tab) {
             state.openTabFromPalette(cmd.tab);
           }
