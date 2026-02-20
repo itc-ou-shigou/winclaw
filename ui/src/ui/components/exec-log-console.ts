@@ -1,4 +1,4 @@
-import { html, nothing } from "lit";
+import { html } from "lit";
 import { ref } from "lit/directives/ref.js";
 import { icons } from "../icons.ts";
 
