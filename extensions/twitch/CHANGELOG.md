@@ -3,11 +3,13 @@
 ## 2026.2.20
 
 ### Changes
+
 - Version alignment with core WinClaw release numbers.
 
 ## 2026.2.17
 
 ### Changes
+
 - Version alignment with core WinClaw release numbers.
 
 ## 2026.2.6-3

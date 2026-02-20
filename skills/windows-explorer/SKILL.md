@@ -30,6 +30,7 @@ Browse, manage, and organize files by operating Windows File Explorer via VNC + 
 ```
 
 Alternative — open a specific folder:
+
 ```
 1. mcp__chrome_devtools__press_key  key: "Meta+r"     # Open Run dialog
 2. (wait 0.5s)

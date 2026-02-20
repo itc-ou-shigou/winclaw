@@ -34,6 +34,7 @@ Create, edit, format, and manage Microsoft Office documents (Word, Excel, PowerP
 ```
 
 To open a specific file:
+
 ```
 1. mcp__chrome_devtools__press_key  key: "Control+o"  # File > Open
 2. (wait 1s)

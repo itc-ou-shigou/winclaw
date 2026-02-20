@@ -3,11 +3,8 @@ name: ai-dev-new-project
 description: "Build a new web application from requirements. Takes user requirements and optional sample code, generates INITIAL.md specification, creates modular PRPs, implements via TDD, tests APIs and UI, generates documentation, and deploys to Azure. Use when user asks to create a new app, build from scratch, or develop a greenfield project."
 metadata:
   {
-    "winclaw": {
-      "emoji": "🆕",
-      "os": ["win32", "darwin", "linux"],
-      "requires": { "bins": ["claude"] }
-    }
+    "winclaw":
+      { "emoji": "🆕", "os": ["win32", "darwin", "linux"], "requires": { "bins": ["claude"] } },
   }
 ---
 
@@ -17,40 +14,42 @@ Automates a 7-phase pipeline to build a new web application from requirements.
 
 ## Phase Overview
 
-| Phase | What It Does | Output | Timeout |
-|-------|-------------|--------|---------|
-| 1 | Setup & validation | Environment ready | — |
-| 2 | Requirements → INITIAL.md | `INITIAL.md` | 30min |
-| 3 | Generate modular PRPs | `PRPs/*.md` | 60min |
-| 4 | Execute PRPs (TDD code gen) | `backend/`, `frontend/` | 4h/PRP |
-| 5 | Test & debug (API + UI) | `test-logs/` | 2h/each |
-| 6 | Documentation + PDF | `docs/` | 30min |
-| 7 | Azure deploy (optional) | `deployment-logs/` | 60min |
+| Phase | What It Does                | Output                  | Timeout |
+| ----- | --------------------------- | ----------------------- | ------- |
+| 1     | Setup & validation          | Environment ready       | —       |
+| 2     | Requirements → INITIAL.md   | `INITIAL.md`            | 30min   |
+| 3     | Generate modular PRPs       | `PRPs/*.md`             | 60min   |
+| 4     | Execute PRPs (TDD code gen) | `backend/`, `frontend/` | 4h/PRP  |
+| 5     | Test & debug (API + UI)     | `test-logs/`            | 2h/each |
+| 6     | Documentation + PDF         | `docs/`                 | 30min   |
+| 7     | Azure deploy (optional)     | `deployment-logs/`      | 60min   |
 
 ## Configuration
 
 ### Required
+
 - `AIDEV_WORKSPACE` — Path to project directory (will be created if needed)
 - User requirements (provided via chat or file)
 
 ### Optional (in `~/.winclaw/winclaw.json`)
+
 ```json5
 {
-  "skills": {
-    "entries": {
+  skills: {
+    entries: {
       "ai-dev-new-project": {
-        "env": {
-          "AIDEV_WORKSPACE": "C:\\work\\new-app",  // Mac/Linux: "/home/user/new-app"
-          "GITHUB_TOKEN": "ghp_xxxxxxxxxxxx",
-          "GITHUB_REPO": "myorg/new-app",
-          "GITHUB_BRANCH": "develop",
-          "DATABASE_URL": "mysql+pymysql://root:pass@localhost/newapp",
-          "AIDEV_DOC_LANGUAGE": "ja",
-          "AIDEV_TEST_MODE": "standard"
-        }
-      }
-    }
-  }
+        env: {
+          AIDEV_WORKSPACE: "C:\\work\\new-app", // Mac/Linux: "/home/user/new-app"
+          GITHUB_TOKEN: "ghp_xxxxxxxxxxxx",
+          GITHUB_REPO: "myorg/new-app",
+          GITHUB_BRANCH: "develop",
+          DATABASE_URL: "mysql+pymysql://root:pass@localhost/newapp",
+          AIDEV_DOC_LANGUAGE: "ja",
+          AIDEV_TEST_MODE: "standard",
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -71,6 +70,7 @@ Automates a 7-phase pipeline to build a new web application from requirements.
 ```
 
 **Auto-download command (PowerShell):**
+
 ```powershell
 $ws = $env:AIDEV_WORKSPACE; $repo = $env:AUTOPROJECT_REPO
 if (-not $repo) { $repo = "ITC-cloud-soft/autoproject" }
@@ -131,16 +131,17 @@ See `ai-dev-shared/references/phase7-deployment.md`.
 
 ## Difference from Legacy Modernization
 
-| Aspect | Legacy Modernization | New Project |
-|--------|---------------------|-------------|
-| Phase 2 prompt | `create-initail.md` | `create-initial-new-project.md` |
-| Input | Existing legacy code | User requirements text |
-| Phase 2 skip | INITIAL.md exists | INITIAL.md exists AND approved |
-| Pre-approved spec | Not applicable | User can provide INITIAL.md directly |
+| Aspect            | Legacy Modernization | New Project                          |
+| ----------------- | -------------------- | ------------------------------------ |
+| Phase 2 prompt    | `create-initail.md`  | `create-initial-new-project.md`      |
+| Input             | Existing legacy code | User requirements text               |
+| Phase 2 skip      | INITIAL.md exists    | INITIAL.md exists AND approved       |
+| Pre-approved spec | Not applicable       | User can provide INITIAL.md directly |
 
 ## Smart Resume
 
 Same completion markers as legacy modernization. On re-invocation:
+
 ```
 Phase 1: ✓ Complete
 Phase 2: ✓ INITIAL.md exists (8,200 bytes)
@@ -151,9 +152,9 @@ Phase 5: ⏳ 5B complete, starting 5C...
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Requirements unclear | Ask user for more detail before Phase 2 |
-| INITIAL.md too vague | Re-run Phase 2 with refined requirements |
-| PRP too large | Split into smaller modules manually |
-| Tests failing | Check `test-logs/` for details, run Phase 5 again |
+| Problem              | Solution                                          |
+| -------------------- | ------------------------------------------------- |
+| Requirements unclear | Ask user for more detail before Phase 2           |
+| INITIAL.md too vague | Re-run Phase 2 with refined requirements          |
+| PRP too large        | Split into smaller modules manually               |
+| Tests failing        | Check `test-logs/` for details, run Phase 5 again |

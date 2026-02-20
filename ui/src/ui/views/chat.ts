@@ -10,9 +10,9 @@ import {
   renderStreamingGroup,
 } from "../chat/grouped-render.ts";
 import { normalizeMessage, normalizeRoleForGrouping } from "../chat/message-normalizer.ts";
+import { renderExecLogConsole, type ExecLogEntry } from "../components/exec-log-console.ts";
 import { icons } from "../icons.ts";
 import { renderMarkdownSidebar } from "./markdown-sidebar.ts";
-import { renderExecLogConsole, type ExecLogEntry } from "../components/exec-log-console.ts";
 import "../components/resizable-divider.ts";
 
 export type CompactionIndicatorStatus = {

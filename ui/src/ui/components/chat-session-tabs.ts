@@ -11,10 +11,7 @@ export type ChatSessionTabsProps = {
   onNew: () => void;
 };
 
-function sessionTitle(
-  key: string,
-  sessionsResult: SessionsListResult | null,
-): string {
+function sessionTitle(key: string, sessionsResult: SessionsListResult | null): string {
   const row = sessionsResult?.sessions?.find((s) => s.key === key);
   if (row?.derivedTitle?.trim()) {
     return row.derivedTitle.trim();
@@ -63,9 +60,7 @@ export function renderChatSessionTabs(props: ChatSessionTabsProps) {
             const title = sessionTitle(key, props.sessionsResult);
             return html`
               <button
-                class="chat-session-tabs__tab ${isActive
-                  ? "chat-session-tabs__tab--active"
-                  : ""}"
+                class="chat-session-tabs__tab ${isActive ? "chat-session-tabs__tab--active" : ""}"
                 @click=${() => props.onSelect(key)}
                 title=${key}
               >

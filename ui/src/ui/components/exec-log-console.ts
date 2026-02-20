@@ -46,7 +46,13 @@ function renderLogLine(entry: ExecLogEntry) {
   return lines.map(
     (line, i) => html`
       <div class="exec-log__line ${streamClass}">
-        ${i === 0 ? html`<span class="exec-log__timestamp">${ts}</span>` : html`<span class="exec-log__timestamp-pad"></span>`}
+        ${
+          i === 0
+            ? html`<span class="exec-log__timestamp">${ts}</span>`
+            : html`
+                <span class="exec-log__timestamp-pad"></span>
+              `
+        }
         <span class="exec-log__text">${line || " "}</span>
       </div>
     `,
@@ -59,10 +65,7 @@ export function renderExecLogConsole(props: ExecLogConsoleProps) {
       ? props.entries.slice(-MAX_VISIBLE_LINES)
       : props.entries;
 
-  const lineCount = visibleEntries.reduce(
-    (acc, e) => acc + e.text.split("\n").length,
-    0,
-  );
+  const lineCount = visibleEntries.reduce((acc, e) => acc + e.text.split("\n").length, 0);
 
   return html`
     <div class="exec-log">
@@ -103,7 +106,9 @@ export function renderExecLogConsole(props: ExecLogConsoleProps) {
       >
         ${
           visibleEntries.length === 0
-            ? html`<div class="exec-log__empty">Waiting for execution output…</div>`
+            ? html`
+                <div class="exec-log__empty">Waiting for execution output…</div>
+              `
             : visibleEntries.map((entry) => renderLogLine(entry))
         }
       </div>

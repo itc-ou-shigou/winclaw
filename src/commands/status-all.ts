@@ -11,7 +11,6 @@ import { buildGatewayConnectionDetails, callGateway } from "../gateway/call.js";
 import { normalizeControlUiBasePath } from "../gateway/control-ui-shared.js";
 import { probeGateway } from "../gateway/probe.js";
 import { collectChannelStatusIssues } from "../infra/channels-status-issues.js";
-import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { resolveOsSummary } from "../infra/os-summary.js";
 import { inspectPortUsage } from "../infra/ports.js";
 import { readRestartSentinel } from "../infra/restart-sentinel.js";
@@ -23,6 +22,7 @@ import {
   resolveEffectiveUpdateChannel,
 } from "../infra/update-channels.js";
 import { checkUpdateStatus, compareSemverStrings } from "../infra/update-check.js";
+import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { runExec } from "../process/exec.js";
 import { VERSION } from "../version.js";
 import { resolveControlUiLinks } from "./onboard-helpers.js";

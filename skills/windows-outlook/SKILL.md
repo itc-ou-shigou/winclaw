@@ -34,6 +34,7 @@ Read, send, search, and manage emails by operating the Microsoft Outlook desktop
 ```
 
 If Outlook is already open but not visible, use Alt+Tab:
+
 ```
 mcp__chrome_devtools__press_key  key: "Alt+Tab"
 mcp__chrome_devtools__take_screenshot
@@ -57,6 +58,7 @@ mcp__chrome_devtools__take_screenshot
 ```
 
 To scroll through more emails:
+
 ```
 mcp__chrome_devtools__press_key  key: "PageDown"
 mcp__chrome_devtools__take_screenshot

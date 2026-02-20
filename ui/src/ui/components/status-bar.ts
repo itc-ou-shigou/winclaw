@@ -50,19 +50,24 @@ export function renderStatusBar(props: StatusBarProps) {
       </div>
       <span class="statusbar__sep"></span>
       <div class="statusbar__section">
-        ${connectedChannels.length > 0
-          ? connectedChannels.map(
-              (ch) => html`<span class="statusbar__channel">${ch} &#10003;</span>`,
-            )
-          : html`<span class="statusbar__muted">No channels</span>`}
+        ${
+          connectedChannels.length > 0
+            ? connectedChannels.map(
+                (ch) => html`<span class="statusbar__channel">${ch} &#10003;</span>`,
+              )
+            : html`
+                <span class="statusbar__muted">No channels</span>
+              `
+        }
       </div>
       <span class="statusbar__sep"></span>
       <div class="statusbar__section">
         <span>${formatCost(props.totalCost)} this month</span>
       </div>
     </div>
-    ${props.expanded
-      ? html`
+    ${
+      props.expanded
+        ? html`
           <div class="statusbar__expanded">
             <div class="statusbar__panel">
               <div class="statusbar__panel-title">Gateway</div>
@@ -70,9 +75,13 @@ export function renderStatusBar(props: StatusBarProps) {
             </div>
             <div class="statusbar__panel">
               <div class="statusbar__panel-title">Channels</div>
-              ${connectedChannels.length > 0
-                ? connectedChannels.map((ch) => html`<div>${ch}: connected</div>`)
-                : html`<div class="statusbar__muted">None connected</div>`}
+              ${
+                connectedChannels.length > 0
+                  ? connectedChannels.map((ch) => html`<div>${ch}: connected</div>`)
+                  : html`
+                      <div class="statusbar__muted">None connected</div>
+                    `
+              }
             </div>
             <div class="statusbar__panel">
               <div class="statusbar__panel-title">Cost</div>
@@ -80,6 +89,7 @@ export function renderStatusBar(props: StatusBarProps) {
             </div>
           </div>
         `
-      : nothing}
+        : nothing
+    }
   `;
 }

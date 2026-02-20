@@ -32,7 +32,11 @@
  * ```
  */
 import type { WinClawPluginApi, AnyAgentTool } from "winclaw/plugin-sdk";
-import { McpBridgeManager, type McpBridgeConfig, type McpServerConfig } from "./mcp-bridge-manager.js";
+import {
+  McpBridgeManager,
+  type McpBridgeConfig,
+  type McpServerConfig,
+} from "./mcp-bridge-manager.js";
 
 // ---------------------------------------------------------------------------
 // Config type
@@ -170,9 +174,10 @@ const mcpBridgePlugin = {
         return [createMcpStatusTool(api)];
       },
       {
-        names: staticServers.length > 0
-          ? staticServers.map((s) => `mcp__${s.name.replace(/[^a-zA-Z0-9_]/g, "_")}`)
-          : ["mcp__bridge_status"],
+        names:
+          staticServers.length > 0
+            ? staticServers.map((s) => `mcp__${s.name.replace(/[^a-zA-Z0-9_]/g, "_")}`)
+            : ["mcp__bridge_status"],
       },
     );
 
@@ -214,9 +219,9 @@ const mcpBridgePlugin = {
             return {
               block: true,
               blockReason:
-                `Command BLOCKED: "${command.slice(0, 80)}" would kill Chrome and destroy all open tabs. `
-                + `NEVER kill Chrome. Use the safe launcher script instead: `
-                + `exec powershell .\\scripts\\ensure-chrome-debug.ps1`,
+                `Command BLOCKED: "${command.slice(0, 80)}" would kill Chrome and destroy all open tabs. ` +
+                `NEVER kill Chrome. Use the safe launcher script instead: ` +
+                `exec powershell .\\scripts\\ensure-chrome-debug.ps1`,
             };
           }
         }
@@ -237,10 +242,10 @@ const mcpBridgePlugin = {
             return {
               block: true,
               blockReason:
-                `Command BLOCKED: "${command.slice(0, 80)}" launches Chrome directly, which may `
-                + `replace the running session and destroy all open tabs. `
-                + `Use the safe launcher script instead: `
-                + `exec powershell .\\scripts\\ensure-chrome-debug.ps1`,
+                `Command BLOCKED: "${command.slice(0, 80)}" launches Chrome directly, which may ` +
+                `replace the running session and destroy all open tabs. ` +
+                `Use the safe launcher script instead: ` +
+                `exec powershell .\\scripts\\ensure-chrome-debug.ps1`,
             };
           }
         }
@@ -351,7 +356,8 @@ function createMcpStatusTool(api: WinClawPluginApi): AnyAgentTool {
       // Reconnect if requested
       if (args.reconnect && globalManager) {
         const ideServers = getIdeMcpServersSync();
-        const staticServers = (api.pluginConfig as McpBridgePluginConfig | undefined)?.servers ?? [];
+        const staticServers =
+          (api.pluginConfig as McpBridgePluginConfig | undefined)?.servers ?? [];
         const allServers = mergeServerConfigs(staticServers, ideServers);
 
         await globalManager.dispose();

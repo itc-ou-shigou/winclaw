@@ -5,8 +5,8 @@
  * Supports stdio and SSE transports with automatic reconnection and lifecycle management.
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { AnyAgentTool } from "../../src/agents/tools/common.js";
 
 // ---------------------------------------------------------------------------
@@ -152,7 +152,9 @@ export class McpBridgeManager {
 
     const timeoutMs = config.timeoutMs ?? 30_000;
 
-    this.logger.info(`[mcp-bridge] Connecting to MCP server "${config.name}" (${config.transport})...`);
+    this.logger.info(
+      `[mcp-bridge] Connecting to MCP server "${config.name}" (${config.transport})...`,
+    );
 
     const client = new Client(
       { name: `winclaw-mcp-bridge/${config.name}`, version: "1.0.0" },
@@ -168,7 +170,7 @@ export class McpBridgeManager {
       transport = new StdioClientTransport({
         command: config.command,
         args: config.args ?? [],
-        env: config.env ? { ...process.env, ...config.env } as Record<string, string> : undefined,
+        env: config.env ? ({ ...process.env, ...config.env } as Record<string, string>) : undefined,
       });
     } else if (config.transport === "sse") {
       if (!config.url) {
@@ -269,7 +271,7 @@ export class McpBridgeManager {
     // Append safety notice to description for blocked tools
     const description = isBlocked
       ? `${mcpTool.description ?? `MCP tool from ${serverName}`} [BLOCKED: This tool is disabled for safety. Do NOT attempt to call it.]`
-      : mcpTool.description ?? `MCP tool from ${serverName}`;
+      : (mcpTool.description ?? `MCP tool from ${serverName}`);
 
     return {
       name: toolName,
@@ -294,9 +296,10 @@ export class McpBridgeManager {
                 text: JSON.stringify({
                   status: "error",
                   tool: toolName,
-                  error: `Tool "${originalName}" is blocked for safety. `
-                    + `You must NOT close browser tabs/pages. `
-                    + `Use "new_page" to create new tabs instead.`,
+                  error:
+                    `Tool "${originalName}" is blocked for safety. ` +
+                    `You must NOT close browser tabs/pages. ` +
+                    `Use "new_page" to create new tabs instead.`,
                   blocked: true,
                 }),
               },
@@ -357,7 +360,9 @@ export class McpBridgeManager {
    * Returns content typed as (TextContent | ImageContent)[].
    */
   private convertMcpResult(result: unknown): {
-    content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
+    content: Array<
+      { type: "text"; text: string } | { type: "image"; data: string; mimeType: string }
+    >;
     details: unknown;
   } {
     type TextItem = { type: "text"; text: string };
@@ -403,10 +408,7 @@ export class McpBridgeManager {
         });
       } else if (item.type === "resource") {
         // Flatten resource content to text
-        const resourceText =
-          typeof item.text === "string"
-            ? item.text
-            : JSON.stringify(item);
+        const resourceText = typeof item.text === "string" ? item.text : JSON.stringify(item);
         content.push({ type: "text" as const, text: resourceText });
       } else {
         // Fallback: serialize unknown content types
@@ -447,13 +449,13 @@ export class McpBridgeManager {
         );
         setTimeout(() => {
           this.reconnectServer(serverName).catch((err) => {
-            this.logger.error(`[mcp-bridge] Reconnection failed for "${serverName}": ${String(err)}`);
+            this.logger.error(
+              `[mcp-bridge] Reconnection failed for "${serverName}": ${String(err)}`,
+            );
           });
         }, delay);
       } else {
-        this.logger.error(
-          `[mcp-bridge] Max reconnection attempts reached for "${serverName}"`,
-        );
+        this.logger.error(`[mcp-bridge] Max reconnection attempts reached for "${serverName}"`);
       }
     }
   }

@@ -24,7 +24,6 @@ import { randomUUID } from "node:crypto";
 import type { GatewayClient } from "../gateway/client.js";
 import type { EventFrame } from "../gateway/protocol/index.js";
 import type { SessionsListResult } from "../gateway/session-utils.js";
-import { applyIdeMcpServersToConfig } from "./mcp-config-bridge.js";
 import { getAvailableCommands } from "./commands.js";
 import {
   extractAttachmentsFromPrompt,
@@ -32,6 +31,7 @@ import {
   formatToolTitle,
   inferToolKind,
 } from "./event-mapper.js";
+import { applyIdeMcpServersToConfig } from "./mcp-config-bridge.js";
 import { readBool, readNumber, readString } from "./meta.js";
 import { parseSessionMeta, resetSessionIfNeeded, resolveSessionKey } from "./session-mapper.js";
 import { defaultAcpSessionStore, type AcpSessionStore } from "./session.js";

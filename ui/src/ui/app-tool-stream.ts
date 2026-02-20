@@ -1,5 +1,5 @@
-import { truncateText } from "./format.ts";
 import type { ExecLogEntry } from "./components/exec-log-console.ts";
+import { truncateText } from "./format.ts";
 
 const TOOL_STREAM_LIMIT = 50;
 const TOOL_STREAM_THROTTLE_MS = 80;
@@ -371,7 +371,12 @@ function handleExecLogFromToolEvent(
     const status = typeof exitCode === "number" && exitCode !== 0 ? "✗ Failed" : "✓ Done";
     host.execLogEntries = trimExecLog([
       ...host.execLogEntries,
-      { ts, stream: exitCode !== 0 ? "stderr" : "system", text: `${status} (exit ${exitCode ?? "?"})`, toolCallId },
+      {
+        ts,
+        stream: exitCode !== 0 ? "stderr" : "system",
+        text: `${status} (exit ${exitCode ?? "?"})`,
+        toolCallId,
+      },
     ]);
   }
 }

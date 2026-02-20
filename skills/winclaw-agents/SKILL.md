@@ -80,47 +80,47 @@ These live at `agents.defaults` and apply to all agents unless overridden per-ag
 
 ### Model settings
 
-| Setting | Path | Default |
-|---------|------|---------|
-| Primary model | `agents.defaults.model.primary` | claude-opus-4-6 |
-| Fallbacks | `agents.defaults.model.fallbacks` | [] |
-| Image model | `agents.defaults.imageModel` | — |
-| Streaming | `agents.defaults.streaming` | true |
+| Setting       | Path                              | Default         |
+| ------------- | --------------------------------- | --------------- |
+| Primary model | `agents.defaults.model.primary`   | claude-opus-4-6 |
+| Fallbacks     | `agents.defaults.model.fallbacks` | []              |
+| Image model   | `agents.defaults.imageModel`      | —               |
+| Streaming     | `agents.defaults.streaming`       | true            |
 
 ### Reasoning & behavior
 
-| Setting | Path | Default | Options |
-|---------|------|---------|---------|
-| Thinking level | `agents.defaults.thinkingDefault` | — | off, minimal, low, medium, high, xhigh |
-| Verbose mode | `agents.defaults.verboseDefault` | "off" | off, on, full |
-| Timeout | `agents.defaults.timeoutSeconds` | — | seconds |
-| Max concurrent | `agents.defaults.maxConcurrent` | 1 | parallel requests |
+| Setting        | Path                              | Default | Options                                |
+| -------------- | --------------------------------- | ------- | -------------------------------------- |
+| Thinking level | `agents.defaults.thinkingDefault` | —       | off, minimal, low, medium, high, xhigh |
+| Verbose mode   | `agents.defaults.verboseDefault`  | "off"   | off, on, full                          |
+| Timeout        | `agents.defaults.timeoutSeconds`  | —       | seconds                                |
+| Max concurrent | `agents.defaults.maxConcurrent`   | 1       | parallel requests                      |
 
 ### Heartbeat
 
-| Setting | Path | Default |
-|---------|------|---------|
-| Interval | `agents.defaults.heartbeat.every` | "30m" |
-| Active hours start | `agents.defaults.heartbeat.activeHours.start` | — |
-| Active hours end | `agents.defaults.heartbeat.activeHours.end` | — |
-| Active hours timezone | `agents.defaults.heartbeat.activeHours.tz` | — |
-| Prompt | `agents.defaults.heartbeat.prompt` | — |
-| Model override | `agents.defaults.heartbeat.model` | — |
+| Setting               | Path                                          | Default |
+| --------------------- | --------------------------------------------- | ------- |
+| Interval              | `agents.defaults.heartbeat.every`             | "30m"   |
+| Active hours start    | `agents.defaults.heartbeat.activeHours.start` | —       |
+| Active hours end      | `agents.defaults.heartbeat.activeHours.end`   | —       |
+| Active hours timezone | `agents.defaults.heartbeat.activeHours.tz`    | —       |
+| Prompt                | `agents.defaults.heartbeat.prompt`            | —       |
+| Model override        | `agents.defaults.heartbeat.model`             | —       |
 
 ### Context management
 
-| Setting | Path | Default |
-|---------|------|---------|
-| Context token cap | `agents.defaults.contextTokens` | — |
-| Context pruning | `agents.defaults.contextPruning` | — |
-| Compaction mode | `agents.defaults.compaction` | — |
+| Setting           | Path                             | Default |
+| ----------------- | -------------------------------- | ------- |
+| Context token cap | `agents.defaults.contextTokens`  | —       |
+| Context pruning   | `agents.defaults.contextPruning` | —       |
+| Compaction mode   | `agents.defaults.compaction`     | —       |
 
 ### Typing indicator
 
-| Setting | Path | Default |
-|---------|------|---------|
-| Typing mode | `agents.defaults.typingMode` | "thinking" |
-| Typing interval | `agents.defaults.typingIntervalSeconds` | — |
+| Setting         | Path                                    | Default    |
+| --------------- | --------------------------------------- | ---------- |
+| Typing mode     | `agents.defaults.typingMode`            | "thinking" |
+| Typing interval | `agents.defaults.typingIntervalSeconds` | —          |
 
 Options: never, instant, thinking, message.
 
@@ -150,6 +150,7 @@ Bind agents to specific channels or accounts via config:
 ## Per-agent overrides
 
 In `agents.list[]`, each agent can override defaults:
+
 ```json
 {
   "agents": {
@@ -178,6 +179,7 @@ In `agents.list[]`, each agent can override defaults:
 ## Examples
 
 **"Create a coding agent that uses Sonnet"**
+
 1. `agents.create` name="Coding Agent", workspace auto-assigned.
 2. `agents.update` model="anthropic/claude-sonnet-4-5".
 3. Write IDENTITY.md with coding-focused instructions.
@@ -187,6 +189,7 @@ In `agents.list[]`, each agent can override defaults:
 
 **"Set heartbeat to every hour during business hours"**
 → Patch:
+
 ```json
 {
   "agents": {

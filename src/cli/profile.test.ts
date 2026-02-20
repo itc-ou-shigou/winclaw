@@ -96,9 +96,7 @@ describe("applyCliProfileEnv", () => {
 
     const resolvedHome = path.resolve("/srv/winclaw-home");
     expect(env.WINCLAW_STATE_DIR).toBe(path.join(resolvedHome, ".winclaw-work"));
-    expect(env.WINCLAW_CONFIG_PATH).toBe(
-      path.join(resolvedHome, ".winclaw-work", "winclaw.json"),
-    );
+    expect(env.WINCLAW_CONFIG_PATH).toBe(path.join(resolvedHome, ".winclaw-work", "winclaw.json"));
   });
 });
 
@@ -150,9 +148,7 @@ describe("formatCliCommand", () => {
   });
 
   it("handles command with no args after winclaw", () => {
-    expect(formatCliCommand("winclaw", { WINCLAW_PROFILE: "test" })).toBe(
-      "winclaw --profile test",
-    );
+    expect(formatCliCommand("winclaw", { WINCLAW_PROFILE: "test" })).toBe("winclaw --profile test");
   });
 
   it("handles pnpm wrapper", () => {

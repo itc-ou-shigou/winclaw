@@ -200,29 +200,118 @@ export type CommandDefinition = {
   keywords: string[];
 };
 
-export const COMMAND_CATEGORIES = [
-  "チャット",
-  "接続・サービス",
-  "システム",
-] as const;
+export const COMMAND_CATEGORIES = ["チャット", "接続・サービス", "システム"] as const;
 
 export const COMMANDS: CommandDefinition[] = [
   // チャット
-  { id: "new-chat", label: "新しい会話", category: "チャット", icon: "messageSquare", shortcut: "Ctrl+N", keywords: ["new", "chat", "会話", "新規"] },
-  { id: "history", label: "会話履歴", category: "チャット", icon: "fileText", tab: "sessions", shortcut: "Ctrl+H", keywords: ["history", "履歴", "sessions"] },
+  {
+    id: "new-chat",
+    label: "新しい会話",
+    category: "チャット",
+    icon: "messageSquare",
+    shortcut: "Ctrl+N",
+    keywords: ["new", "chat", "会話", "新規"],
+  },
+  {
+    id: "history",
+    label: "会話履歴",
+    category: "チャット",
+    icon: "fileText",
+    tab: "sessions",
+    shortcut: "Ctrl+H",
+    keywords: ["history", "履歴", "sessions"],
+  },
   // 接続・サービス
-  { id: "channels", label: "チャネル管理", category: "接続・サービス", icon: "link", tab: "channels", keywords: ["channels", "チャネル", "slack", "discord", "telegram"] },
-  { id: "agents", label: "エージェント設定", category: "接続・サービス", icon: "folder", tab: "agents", keywords: ["agents", "エージェント"] },
-  { id: "cron", label: "スケジュール管理", category: "接続・サービス", icon: "loader", tab: "cron", keywords: ["cron", "schedule", "スケジュール"] },
+  {
+    id: "channels",
+    label: "チャネル管理",
+    category: "接続・サービス",
+    icon: "link",
+    tab: "channels",
+    keywords: ["channels", "チャネル", "slack", "discord", "telegram"],
+  },
+  {
+    id: "agents",
+    label: "エージェント設定",
+    category: "接続・サービス",
+    icon: "folder",
+    tab: "agents",
+    keywords: ["agents", "エージェント"],
+  },
+  {
+    id: "cron",
+    label: "スケジュール管理",
+    category: "接続・サービス",
+    icon: "loader",
+    tab: "cron",
+    keywords: ["cron", "schedule", "スケジュール"],
+  },
   // システム
-  { id: "settings", label: "設定", category: "システム", icon: "settings", tab: "config", shortcut: "Ctrl+,", keywords: ["config", "設定", "settings"] },
-  { id: "overview", label: "ダッシュボード", category: "システム", icon: "barChart", tab: "overview", keywords: ["overview", "ダッシュボード", "dashboard"] },
-  { id: "usage", label: "使用量を確認", category: "システム", icon: "barChart", tab: "usage", keywords: ["usage", "使用量", "cost", "コスト"] },
-  { id: "skills", label: "スキル管理", category: "システム", icon: "zap", tab: "skills", keywords: ["skills", "スキル"] },
-  { id: "logs", label: "ログ表示", category: "システム", icon: "scrollText", tab: "logs", keywords: ["logs", "ログ"] },
-  { id: "debug", label: "デバッグ", category: "システム", icon: "bug", tab: "debug", keywords: ["debug", "デバッグ"] },
-  { id: "nodes", label: "ノード管理", category: "システム", icon: "monitor", tab: "nodes", keywords: ["nodes", "ノード"] },
-  { id: "instances", label: "インスタンス", category: "システム", icon: "radio", tab: "instances", keywords: ["instances", "インスタンス"] },
+  {
+    id: "settings",
+    label: "設定",
+    category: "システム",
+    icon: "settings",
+    tab: "config",
+    shortcut: "Ctrl+,",
+    keywords: ["config", "設定", "settings"],
+  },
+  {
+    id: "overview",
+    label: "ダッシュボード",
+    category: "システム",
+    icon: "barChart",
+    tab: "overview",
+    keywords: ["overview", "ダッシュボード", "dashboard"],
+  },
+  {
+    id: "usage",
+    label: "使用量を確認",
+    category: "システム",
+    icon: "barChart",
+    tab: "usage",
+    keywords: ["usage", "使用量", "cost", "コスト"],
+  },
+  {
+    id: "skills",
+    label: "スキル管理",
+    category: "システム",
+    icon: "zap",
+    tab: "skills",
+    keywords: ["skills", "スキル"],
+  },
+  {
+    id: "logs",
+    label: "ログ表示",
+    category: "システム",
+    icon: "scrollText",
+    tab: "logs",
+    keywords: ["logs", "ログ"],
+  },
+  {
+    id: "debug",
+    label: "デバッグ",
+    category: "システム",
+    icon: "bug",
+    tab: "debug",
+    keywords: ["debug", "デバッグ"],
+  },
+  {
+    id: "nodes",
+    label: "ノード管理",
+    category: "システム",
+    icon: "monitor",
+    tab: "nodes",
+    keywords: ["nodes", "ノード"],
+  },
+  {
+    id: "instances",
+    label: "インスタンス",
+    category: "システム",
+    icon: "radio",
+    tab: "instances",
+    keywords: ["instances", "インスタンス"],
+  },
 ];
 
 export function subtitleForTab(tab: Tab) {

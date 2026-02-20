@@ -7,9 +7,10 @@
 **Max Iterations**: 15 (configurable via BUGFIX_MAX_ITERATIONS)
 **Early Exit**: 3 consecutive iterations without improvement
 **Mandatory References**:
-  - `.claude/prompts/react-spa-common-issues.md` - React/Frontend bug fixes (MUST READ)
-  - `.claude/prompts/api-backend-common-issues.md` - API/Backend bug fixes (MUST READ)
-**Execution Mode**: `claude --dangerously-skip-permissions` (uses Claude In Chrome MCP server)
+
+- `.claude/prompts/react-spa-common-issues.md` - React/Frontend bug fixes (MUST READ)
+- `.claude/prompts/api-backend-common-issues.md` - API/Backend bug fixes (MUST READ)
+  **Execution Mode**: `claude --dangerously-skip-permissions` (uses Claude In Chrome MCP server)
 
 ---
 
@@ -224,12 +225,12 @@ echo "Early exit threshold: $EARLY_EXIT_THRESHOLD"
 
 For EACH page, execute these MCP tool calls:
 
-| # | Test Category | MCP Tool Calls | Pass Criteria |
-|---|---------------|----------------|---------------|
-| 1 | **Form Test** | `find(query="form")` → `form_input(ref, value)` → `computer(action="left_click", ref=submit)` → `read_network_requests()` | API returns 200/201 or validation error displayed |
-| 2 | **Button Test** | `find(query="button")` → `computer(action="left_click", ref)` → `computer(action="screenshot")` | Expected action occurs (modal/navigation/API call) |
-| 3 | **Link Test** | `javascript_tool(text="document.querySelectorAll('a')")` → `computer(action="left_click", ref)` → `javascript_tool(text="window.location.href")` | Correct page loads, no errors |
-| 4 | **CSS Test** | `javascript_tool(text="getComputedStyle(button).backgroundColor")` → `computer(action="screenshot")` | Background not transparent, layout not broken |
+| #   | Test Category   | MCP Tool Calls                                                                                                                                   | Pass Criteria                                      |
+| --- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| 1   | **Form Test**   | `find(query="form")` → `form_input(ref, value)` → `computer(action="left_click", ref=submit)` → `read_network_requests()`                        | API returns 200/201 or validation error displayed  |
+| 2   | **Button Test** | `find(query="button")` → `computer(action="left_click", ref)` → `computer(action="screenshot")`                                                  | Expected action occurs (modal/navigation/API call) |
+| 3   | **Link Test**   | `javascript_tool(text="document.querySelectorAll('a')")` → `computer(action="left_click", ref)` → `javascript_tool(text="window.location.href")` | Correct page loads, no errors                      |
+| 4   | **CSS Test**    | `javascript_tool(text="getComputedStyle(button).backgroundColor")` → `computer(action="screenshot")`                                             | Background not transparent, layout not broken      |
 
 ### MANDATORY TEST COUNT VERIFICATION (v3.0 - EVIDENCE-BOUND)
 
@@ -258,7 +259,11 @@ Every count MUST be backed by raw evidence collected via MCP tools. Self-reporte
       {
         "page_url": "/dashboard",
         "gate1_css": {
-          "raw_computed_styles": {"buttons_with_bg": 5, "flex_computed": 3, "font_family": "Inter, sans-serif"},
+          "raw_computed_styles": {
+            "buttons_with_bg": 5,
+            "flex_computed": 3,
+            "font_family": "Inter, sans-serif"
+          },
           "verdict": "STYLED",
           "verdict_derivation": "buttons_with_bg > 0 AND flex_computed > 0 AND font_family != Times"
         },
@@ -270,7 +275,7 @@ Every count MUST be backed by raw evidence collected via MCP tools. Self-reporte
           "verdict_derivation": "dom_depth >= 3 AND visible_text_length >= 50 AND loading_elements == 0"
         },
         "gate3_loop": {
-          "raw_request_counts": {"GET /api/users": 1, "GET /api/stats": 1},
+          "raw_request_counts": { "GET /api/users": 1, "GET /api/stats": 1 },
           "max_single_endpoint_calls": 1,
           "verdict": "NO_LOOP",
           "verdict_derivation": "max_single_endpoint_calls < 50"
@@ -289,6 +294,7 @@ Every count MUST be backed by raw evidence collected via MCP tools. Self-reporte
 ```
 
 **EVIDENCE VALIDATION RULES:**
+
 - **IF `screenshots_taken` > 0 BUT no `screenshot_imageId` in evidence_chain = FORGERY DETECTED = AUTOMATIC FAILURE**
 - **IF `pages_css_verified` > 0 BUT no `raw_computed_styles` in evidence_chain = FORGERY DETECTED = AUTOMATIC FAILURE**
 - **IF forms_filled_submitted < forms_discovered = TEST FAILURE**
@@ -324,10 +330,12 @@ Every count MUST be backed by raw evidence collected via MCP tools. Self-reporte
 ## ⛔ CRITICAL: BASH TEMPLATE LITERAL SAFETY
 
 When writing or executing JavaScript code within bash commands:
+
 - **NEVER** use JavaScript template literals `${...}` inside bash commands or heredocs
 - Bash interprets `${variable.method()}` as shell variable substitution, causing "Bad substitution" errors
 - **ALWAYS** write JavaScript code to a `.js` file first, then execute with `node script.js`
 - If you must embed JavaScript inline, use **single quotes** to prevent bash expansion:
+
   ```bash
   # WRONG - bash will try to expand ${pageData.path}
   node -e "const url = \`${pageData.path.replace(/\\//g, '_')}\`"
@@ -433,39 +441,38 @@ When writing or executing JavaScript code within bash commands:
 
 ### MANDATORY TEST CHECKLIST (Every Page)
 
-| Test Category | Required Actions | Pass Criteria |
-|--------------|------------------|---------------|
-| **Forms** | Fill ALL fields, Submit | Success message OR valid error |
-| **Links** | Click ALL links | Correct page loads |
-| **Buttons** | Click ALL buttons | Expected action occurs |
-| **Inputs** | Type in ALL text fields | Value accepted |
-| **Selects** | Select option in ALL dropdowns | Option selected |
-| **Modals** | Open/Close ALL modals | Modal behaves correctly |
-| **Tables** | Click rows if clickable | Detail view opens |
-| **Pagination** | Click ALL page numbers | Correct data loads |
-
+| Test Category  | Required Actions               | Pass Criteria                  |
+| -------------- | ------------------------------ | ------------------------------ |
+| **Forms**      | Fill ALL fields, Submit        | Success message OR valid error |
+| **Links**      | Click ALL links                | Correct page loads             |
+| **Buttons**    | Click ALL buttons              | Expected action occurs         |
+| **Inputs**     | Type in ALL text fields        | Value accepted                 |
+| **Selects**    | Select option in ALL dropdowns | Option selected                |
+| **Modals**     | Open/Close ALL modals          | Modal behaves correctly        |
+| **Tables**     | Click rows if clickable        | Detail view opens              |
+| **Pagination** | Click ALL page numbers         | Correct data loads             |
 
 ## P0 Judgment Criteria
 
 Each page test must satisfy ALL of these criteria:
 
-| # | Criteria | Description | Check Method |
-|---|----------|-------------|--------------|
-| 1 | **Screen Display OK** | No visible error messages on page | Visual inspection + DOM check |
-| 2 | **Network No Errors** | No 4xx/5xx responses in Network panel | `read_network_requests` |
-| 3 | **Console No Errors** | No JavaScript errors in browser console | `read_console_messages` (ENHANCED - see below) |
-| 4 | **No Infinite Loops** | No API endpoint called >= 50 times (HARD BLOCK) | `performance.getEntriesByType('resource')` + GATE 3 |
-| 5 | **Empty Data Handled** | Page handles null/undefined gracefully | Fresh user test |
-| 6 | **GATE 1: CSS Computed** | CSS styles actually rendered (not just class attributes) | `getComputedStyle()` verification (NOT `[class*=]` selectors) |
-| 7 | **GATE 2: Content Rendered** | Page content actually visible (not loading/blank) | DOM depth + visible text + loading state check |
-| 8 | **GATE 3: No Infinite Loops** | No endpoint called >= 50 times (HARD BLOCK) | `performance.getEntriesByType('resource')` frequency analysis |
-| 9 | **GATE 4: Screenshot Proof** | Screenshot captured with valid imageId | `computer(action="screenshot")` returns imageId |
-| 10 | **Forms Tested** | ALL forms filled & submitted successfully | Form submission test |
-| 11 | **Navigation Tested** | ALL links clicked & destination verified | Link click test |
-| 12 | **Buttons Tested** | ALL buttons clicked & action verified | Button click test |
-| 13 | **CRUD Tested** | Create/Read/Update/Delete operations work | CRUD operation test |
-| 14 | **Runtime Error Free** | No TypeError/ReferenceError in console | Enhanced console monitoring |
-| 15 | **API Response Valid** | API responses match expected format | Response format validation |
+| #   | Criteria                      | Description                                              | Check Method                                                  |
+| --- | ----------------------------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | **Screen Display OK**         | No visible error messages on page                        | Visual inspection + DOM check                                 |
+| 2   | **Network No Errors**         | No 4xx/5xx responses in Network panel                    | `read_network_requests`                                       |
+| 3   | **Console No Errors**         | No JavaScript errors in browser console                  | `read_console_messages` (ENHANCED - see below)                |
+| 4   | **No Infinite Loops**         | No API endpoint called >= 50 times (HARD BLOCK)          | `performance.getEntriesByType('resource')` + GATE 3           |
+| 5   | **Empty Data Handled**        | Page handles null/undefined gracefully                   | Fresh user test                                               |
+| 6   | **GATE 1: CSS Computed**      | CSS styles actually rendered (not just class attributes) | `getComputedStyle()` verification (NOT `[class*=]` selectors) |
+| 7   | **GATE 2: Content Rendered**  | Page content actually visible (not loading/blank)        | DOM depth + visible text + loading state check                |
+| 8   | **GATE 3: No Infinite Loops** | No endpoint called >= 50 times (HARD BLOCK)              | `performance.getEntriesByType('resource')` frequency analysis |
+| 9   | **GATE 4: Screenshot Proof**  | Screenshot captured with valid imageId                   | `computer(action="screenshot")` returns imageId               |
+| 10  | **Forms Tested**              | ALL forms filled & submitted successfully                | Form submission test                                          |
+| 11  | **Navigation Tested**         | ALL links clicked & destination verified                 | Link click test                                               |
+| 12  | **Buttons Tested**            | ALL buttons clicked & action verified                    | Button click test                                             |
+| 13  | **CRUD Tested**               | Create/Read/Update/Delete operations work                | CRUD operation test                                           |
+| 14  | **Runtime Error Free**        | No TypeError/ReferenceError in console                   | Enhanced console monitoring                                   |
+| 15  | **API Response Valid**        | API responses match expected format                      | Response format validation                                    |
 
 ---
 
@@ -575,16 +582,16 @@ STEP 4: Take screenshot to verify
 
 For EACH page you test, you MUST call these MCP tools:
 
-| Step | MCP Tool Call | Purpose |
-|------|--------------|---------|
-| 1 | `mcp__claude-in-chrome__navigate(url=..., tabId=...)` | Navigate to page |
-| 2 | `mcp__claude-in-chrome__computer(action="screenshot", tabId=...)` | Take screenshot |
-| 3 | `mcp__claude-in-chrome__read_page(tabId=...)` | Get page elements |
-| 4 | `mcp__claude-in-chrome__find(query="login button", tabId=...)` | Find elements |
-| 5 | `mcp__claude-in-chrome__form_input(ref=..., value=..., tabId=...)` | Fill forms |
-| 6 | `mcp__claude-in-chrome__computer(action="left_click", ref=..., tabId=...)` | Click buttons |
-| 7 | `mcp__claude-in-chrome__read_network_requests(tabId=...)` | Check API calls |
-| 8 | `mcp__claude-in-chrome__read_console_messages(tabId=...)` | Check JS errors |
+| Step | MCP Tool Call                                                              | Purpose           |
+| ---- | -------------------------------------------------------------------------- | ----------------- |
+| 1    | `mcp__claude-in-chrome__navigate(url=..., tabId=...)`                      | Navigate to page  |
+| 2    | `mcp__claude-in-chrome__computer(action="screenshot", tabId=...)`          | Take screenshot   |
+| 3    | `mcp__claude-in-chrome__read_page(tabId=...)`                              | Get page elements |
+| 4    | `mcp__claude-in-chrome__find(query="login button", tabId=...)`             | Find elements     |
+| 5    | `mcp__claude-in-chrome__form_input(ref=..., value=..., tabId=...)`         | Fill forms        |
+| 6    | `mcp__claude-in-chrome__computer(action="left_click", ref=..., tabId=...)` | Click buttons     |
+| 7    | `mcp__claude-in-chrome__read_network_requests(tabId=...)`                  | Check API calls   |
+| 8    | `mcp__claude-in-chrome__read_console_messages(tabId=...)`                  | Check JS errors   |
 
 ```
 +================================================================+
@@ -604,21 +611,22 @@ For EACH page you test, you MUST call these MCP tools:
 
 Use these MCP tools for browser interaction:
 
-| Tool | Usage |
-|------|-------|
-| `mcp__claude-in-chrome__tabs_context_mcp` | Get current browser tabs |
-| `mcp__claude-in-chrome__tabs_create_mcp` | Create new browser tab |
-| `mcp__claude-in-chrome__navigate` | Navigate to page URL |
-| `mcp__claude-in-chrome__read_page` | Read page content (accessibility tree) |
-| `mcp__claude-in-chrome__find` | Find elements by natural language |
-| `mcp__claude-in-chrome__computer` | Click, type, screenshot, scroll actions |
-| `mcp__claude-in-chrome__form_input` | Fill form fields |
-| `mcp__claude-in-chrome__javascript_tool` | Execute JavaScript on page |
-| `mcp__claude-in-chrome__read_network_requests` | Monitor API responses |
-| `mcp__claude-in-chrome__read_console_messages` | Check for JS errors |
-| `mcp__claude-in-chrome__get_page_text` | Extract text content from page |
+| Tool                                           | Usage                                   |
+| ---------------------------------------------- | --------------------------------------- |
+| `mcp__claude-in-chrome__tabs_context_mcp`      | Get current browser tabs                |
+| `mcp__claude-in-chrome__tabs_create_mcp`       | Create new browser tab                  |
+| `mcp__claude-in-chrome__navigate`              | Navigate to page URL                    |
+| `mcp__claude-in-chrome__read_page`             | Read page content (accessibility tree)  |
+| `mcp__claude-in-chrome__find`                  | Find elements by natural language       |
+| `mcp__claude-in-chrome__computer`              | Click, type, screenshot, scroll actions |
+| `mcp__claude-in-chrome__form_input`            | Fill form fields                        |
+| `mcp__claude-in-chrome__javascript_tool`       | Execute JavaScript on page              |
+| `mcp__claude-in-chrome__read_network_requests` | Monitor API responses                   |
+| `mcp__claude-in-chrome__read_console_messages` | Check for JS errors                     |
+| `mcp__claude-in-chrome__get_page_text`         | Extract text content from page          |
 
 **Advantages of Claude In Chrome**:
+
 - Full context sharing across entire session
 - Real-time bug fixing without context loss
 - No need for separate bug collection phase
@@ -936,6 +944,7 @@ echo ""
 ```
 
 **IF VALIDATION FAILS:**
+
 1. Run `python3 .claude/scripts/update_env_from_database_info.py`
 2. Edit `backend/.env` and change `mysql+pymysql://` to `mysql+aiomysql://`
 3. Re-run validation until it passes
@@ -1020,7 +1029,6 @@ IF test_data.json doesn't exist:
 - Test create forms (will create new data)
 - Skip detail/edit/delete tests that require existing IDs
 ```
-
 
 ### Step 1.5: Middleware Cookie Sync Verification (2026-01-21)
 
@@ -2257,7 +2265,6 @@ FINAL STATS:
 
 ---
 
-
 ---
 
 ## Step 4.8: IMMEDIATE BUG FIX PROTOCOL (MANDATORY)
@@ -2352,8 +2359,6 @@ TEST FAILED
   "fixed_at": "2024-01-21T10:35:00Z"
 }
 ```
-
-
 
 ---
 
@@ -2504,7 +2509,6 @@ CRUD TEST RESULTS:
 }
 ```
 
-
 ---
 
 ## Step 4.6: MANDATORY Navigation Testing (100% Coverage)
@@ -2630,8 +2634,6 @@ TASK: Test ALL Menu Items
      })()"
    )
 ```
-
-
 
 ---
 
@@ -2871,7 +2873,6 @@ FOR EACH page that passed basic tests:
 ```
 
 ---
-
 
 ### ⛔ NO SHORTCUTS ALLOWED
 

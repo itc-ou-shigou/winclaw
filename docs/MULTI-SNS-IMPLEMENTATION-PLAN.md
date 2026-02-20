@@ -9,6 +9,7 @@
 ## UPDATE NOTE
 
 After further review, the implementation plan has been revised:
+
 - **Phase 0 (Completed)**: `winclaw-sns-wizard` skill created — AI can now guide users through connecting any of the 19 supported platforms via chat, without ANY code changes
 - **Phases 1-3 below are FUTURE reference only** — code changes require separate review and approval
 - WhatsApp's QR login works through `web.login.start`/`web.login.wait` API, which is specifically designed for the Baileys protocol — this must NOT be modified
@@ -20,6 +21,7 @@ After further review, the implementation plan has been revised:
 Based on thorough code analysis, this document specifies the exact files to modify, new files to create, and the implementation approach for Plan C (Hybrid: QR + AI Chat Guide).
 
 **Important constraints discovered during analysis:**
+
 - Only WhatsApp and Zalo Personal support QR code login (via `loginWithQrStart`/`loginWithQrWait`)
 - This is by design — each platform's authentication protocol is fundamentally different
 - The existing code architecture is well-designed and should not be modified without careful review
@@ -45,6 +47,7 @@ ui/src/ui/                              src/gateway/                     extensi
 ```
 
 **Key Discovery: The platform already has:**
+
 - `ChannelGatewayAdapter.loginWithQrStart/loginWithQrWait` interface (but only WhatsApp implements it)
 - `web.login.start` / `web.login.wait` API methods (generic, finds QR-capable plugin)
 - `channels.status` with `probe` parameter for health checks
@@ -73,6 +76,7 @@ Methods:
 ```
 
 **Logic flow:**
+
 ```
 channels.wizard.catalog
   → listChannelPlugins()
@@ -111,9 +115,9 @@ channels.wizard.complete({platform, accountId, config})
 
 **Changes to existing file:**
 
-| File | Change |
-|------|--------|
-| `src/gateway/server-methods.ts` | Import and spread `channelWizardHandlers` |
+| File                            | Change                                                   |
+| ------------------------------- | -------------------------------------------------------- |
+| `src/gateway/server-methods.ts` | Import and spread `channelWizardHandlers`                |
 | `src/gateway/server-methods.ts` | Add new methods to `READ_METHODS` / `WRITE_METHODS` sets |
 
 ### 1.2 New File: `src/gateway/protocol/schema/channel-wizard.ts`
@@ -131,8 +135,8 @@ ChannelWizardCompleteParamsSchema  → {platform: string, accountId: string, con
 
 **Changes to existing file:**
 
-| File | Change |
-|------|--------|
+| File                            | Change                |
+| ------------------------------- | --------------------- |
 | `src/gateway/protocol/index.ts` | Export new validators |
 
 ### 1.3 Modify: Channel Plugin Type Extensions
@@ -158,26 +162,26 @@ validateCredentials?: (params: {
 
 **Files to modify:**
 
-| File | Change |
-|------|--------|
+| File                                     | Change                                                          |
+| ---------------------------------------- | --------------------------------------------------------------- |
 | `src/channels/plugins/types.adapters.ts` | Add `connectionInfo` and `validateCredentials` to adapter types |
-| `src/channels/plugins/types.plugin.ts` | Add `connectionInfo` to `ChannelPlugin` interface |
+| `src/channels/plugins/types.plugin.ts`   | Add `connectionInfo` to `ChannelPlugin` interface               |
 
 ### 1.4 Modify: Channel Plugin Implementations
 
 Add `connectionInfo` and `validateCredentials` to each extension:
 
-| Extension File | connectionType | Changes |
-|---------------|---------------|---------|
-| `extensions/whatsapp/src/channel.ts` | `"qr"` | Add `connectionInfo: {type: "qr", setupSteps: [...]}` |
-| `extensions/telegram/src/channel.ts` | `"token"` | Add `connectionInfo`, `validateCredentials` (call Telegram API `getMe`) |
-| `extensions/discord/src/channel.ts` | `"token"` | Add `connectionInfo`, `validateCredentials` (call Discord `GET /users/@me`) |
-| `extensions/slack/src/channel.ts` | `"token"` | Add `connectionInfo`, `validateCredentials` (call Slack `auth.test`) |
-| `extensions/signal/src/channel.ts` | `"qr"` | Add `connectionInfo: {type: "qr"}` (signal-cli linking QR) |
-| `extensions/line/src/channel.ts` | `"token"` | Add `connectionInfo`, `validateCredentials` |
-| `extensions/googlechat/src/channel.ts` | `"oauth"` | Add `connectionInfo: {type: "oauth"}` |
-| `extensions/msteams/src/channel.ts` | `"oauth"` | Add `connectionInfo: {type: "oauth"}` |
-| Others (feishu, matrix, mattermost, etc.) | `"manual"` | Add `connectionInfo: {type: "manual"}` |
+| Extension File                            | connectionType | Changes                                                                     |
+| ----------------------------------------- | -------------- | --------------------------------------------------------------------------- |
+| `extensions/whatsapp/src/channel.ts`      | `"qr"`         | Add `connectionInfo: {type: "qr", setupSteps: [...]}`                       |
+| `extensions/telegram/src/channel.ts`      | `"token"`      | Add `connectionInfo`, `validateCredentials` (call Telegram API `getMe`)     |
+| `extensions/discord/src/channel.ts`       | `"token"`      | Add `connectionInfo`, `validateCredentials` (call Discord `GET /users/@me`) |
+| `extensions/slack/src/channel.ts`         | `"token"`      | Add `connectionInfo`, `validateCredentials` (call Slack `auth.test`)        |
+| `extensions/signal/src/channel.ts`        | `"qr"`         | Add `connectionInfo: {type: "qr"}` (signal-cli linking QR)                  |
+| `extensions/line/src/channel.ts`          | `"token"`      | Add `connectionInfo`, `validateCredentials`                                 |
+| `extensions/googlechat/src/channel.ts`    | `"oauth"`      | Add `connectionInfo: {type: "oauth"}`                                       |
+| `extensions/msteams/src/channel.ts`       | `"oauth"`      | Add `connectionInfo: {type: "oauth"}`                                       |
+| Others (feishu, matrix, mattermost, etc.) | `"manual"`     | Add `connectionInfo: {type: "manual"}`                                      |
 
 ---
 
@@ -339,12 +343,12 @@ ${props.wizardOpen ? renderChannelWizard(props.wizardProps) : nothing}
 
 Each channel-specific view gets account management:
 
-| File | Changes |
-|------|---------|
+| File                   | Changes                                            |
+| ---------------------- | -------------------------------------------------- |
 | `channels.telegram.ts` | Add per-account status cards, "Add Account" button |
-| `channels.discord.ts` | Add per-account status cards, "Add Account" button |
-| `channels.slack.ts` | Add per-account status cards, "Add Account" button |
-| `channels.signal.ts` | Add QR-based linking flow (similar to WhatsApp) |
+| `channels.discord.ts`  | Add per-account status cards, "Add Account" button |
+| `channels.slack.ts`    | Add per-account status cards, "Add Account" button |
+| `channels.signal.ts`   | Add QR-based linking flow (similar to WhatsApp)    |
 
 ### 3.3 Modify: `ui/src/ui/controllers/channels.ts`
 
@@ -393,37 +397,37 @@ AI: "Done! Your bot @xxx is connected."
 
 ### New Files (8 files)
 
-| # | File Path | Purpose | Lines (est.) |
-|---|-----------|---------|--------------|
-| 1 | `src/gateway/server-methods/channel-wizard.ts` | Wizard API handlers | ~300 |
-| 2 | `src/gateway/protocol/schema/channel-wizard.ts` | Validation schemas | ~80 |
-| 3 | `ui/src/ui/views/channel-wizard.ts` | Wizard UI component | ~250 |
-| 4 | `ui/src/ui/controllers/channel-wizard.ts` | Wizard state/logic | ~200 |
-| 5 | `ui/src/ui/app-channel-wizard.ts` | App-wizard glue | ~100 |
-| 6 | `ui/src/styles/channel-wizard.css` | Wizard styles | ~150 |
-| 7 | `skills/winclaw-sns-wizard/SKILL.md` | Chat-driven SNS setup | ~200 |
-| 8 | `ui/src/ui/views/channel-wizard.types.ts` | Wizard type definitions | ~60 |
+| #   | File Path                                       | Purpose                 | Lines (est.) |
+| --- | ----------------------------------------------- | ----------------------- | ------------ |
+| 1   | `src/gateway/server-methods/channel-wizard.ts`  | Wizard API handlers     | ~300         |
+| 2   | `src/gateway/protocol/schema/channel-wizard.ts` | Validation schemas      | ~80          |
+| 3   | `ui/src/ui/views/channel-wizard.ts`             | Wizard UI component     | ~250         |
+| 4   | `ui/src/ui/controllers/channel-wizard.ts`       | Wizard state/logic      | ~200         |
+| 5   | `ui/src/ui/app-channel-wizard.ts`               | App-wizard glue         | ~100         |
+| 6   | `ui/src/styles/channel-wizard.css`              | Wizard styles           | ~150         |
+| 7   | `skills/winclaw-sns-wizard/SKILL.md`            | Chat-driven SNS setup   | ~200         |
+| 8   | `ui/src/ui/views/channel-wizard.types.ts`       | Wizard type definitions | ~60          |
 
 ### Modified Files (16 files)
 
-| # | File Path | Change Description | Impact |
-|---|-----------|-------------------|--------|
-| 1 | `src/gateway/server-methods.ts` | Add channelWizardHandlers import + spread, update method scopes | Small |
-| 2 | `src/gateway/protocol/index.ts` | Export new validators | Small |
-| 3 | `src/channels/plugins/types.adapters.ts` | Add `connectionInfo`, `validateCredentials` types | Small |
-| 4 | `src/channels/plugins/types.plugin.ts` | Add `connectionInfo` to ChannelPlugin | Small |
-| 5 | `extensions/whatsapp/src/channel.ts` | Add `connectionInfo: {type: "qr"}` | Trivial |
-| 6 | `extensions/telegram/src/channel.ts` | Add `connectionInfo`, `validateCredentials` | Medium |
-| 7 | `extensions/discord/src/channel.ts` | Add `connectionInfo`, `validateCredentials` | Medium |
-| 8 | `extensions/slack/src/channel.ts` | Add `connectionInfo`, `validateCredentials` | Medium |
-| 9 | `extensions/signal/src/channel.ts` | Add `connectionInfo: {type: "qr"}` | Trivial |
-| 10 | `extensions/line/src/channel.ts` | Add `connectionInfo`, `validateCredentials` | Medium |
-| 11 | `ui/src/ui/app.ts` | Add wizard state properties | Small |
-| 12 | `ui/src/ui/app-render.ts` | Pass wizard props to channels view | Small |
-| 13 | `ui/src/ui/views/channels.ts` | Add "Add Channel" button + wizard mount | Small |
-| 14 | `ui/src/ui/views/channels.whatsapp.ts` | Multi-account support in QR flow | Medium |
-| 15 | `ui/src/ui/controllers/channels.ts` | Add multi-account login/logout functions | Medium |
-| 16 | `skills/winclaw-channels/SKILL.md` | Enhance with wizard API references | Small |
+| #   | File Path                                | Change Description                                              | Impact  |
+| --- | ---------------------------------------- | --------------------------------------------------------------- | ------- |
+| 1   | `src/gateway/server-methods.ts`          | Add channelWizardHandlers import + spread, update method scopes | Small   |
+| 2   | `src/gateway/protocol/index.ts`          | Export new validators                                           | Small   |
+| 3   | `src/channels/plugins/types.adapters.ts` | Add `connectionInfo`, `validateCredentials` types               | Small   |
+| 4   | `src/channels/plugins/types.plugin.ts`   | Add `connectionInfo` to ChannelPlugin                           | Small   |
+| 5   | `extensions/whatsapp/src/channel.ts`     | Add `connectionInfo: {type: "qr"}`                              | Trivial |
+| 6   | `extensions/telegram/src/channel.ts`     | Add `connectionInfo`, `validateCredentials`                     | Medium  |
+| 7   | `extensions/discord/src/channel.ts`      | Add `connectionInfo`, `validateCredentials`                     | Medium  |
+| 8   | `extensions/slack/src/channel.ts`        | Add `connectionInfo`, `validateCredentials`                     | Medium  |
+| 9   | `extensions/signal/src/channel.ts`       | Add `connectionInfo: {type: "qr"}`                              | Trivial |
+| 10  | `extensions/line/src/channel.ts`         | Add `connectionInfo`, `validateCredentials`                     | Medium  |
+| 11  | `ui/src/ui/app.ts`                       | Add wizard state properties                                     | Small   |
+| 12  | `ui/src/ui/app-render.ts`                | Pass wizard props to channels view                              | Small   |
+| 13  | `ui/src/ui/views/channels.ts`            | Add "Add Channel" button + wizard mount                         | Small   |
+| 14  | `ui/src/ui/views/channels.whatsapp.ts`   | Multi-account support in QR flow                                | Medium  |
+| 15  | `ui/src/ui/controllers/channels.ts`      | Add multi-account login/logout functions                        | Medium  |
+| 16  | `skills/winclaw-channels/SKILL.md`       | Enhance with wizard API references                              | Small   |
 
 ---
 
@@ -487,28 +491,28 @@ Week 6: Phase 4 (Skills)
 
 ## Risk Assessment
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Token validation API rate limits | Medium | Cache validation results, use reasonable timeouts |
-| QR code expiration during wizard | Low | Auto-refresh QR, clear status messaging |
-| Config patch conflicts during wizard | Medium | Use baseHash locking (already implemented) |
-| Signal QR linking complexity | High | Phase 3+ priority, document limitations |
-| Plugin type changes break existing code | Medium | All new fields are optional, backward compatible |
-| Large state addition to app.ts | Low | Keep wizard state in separate controller object |
+| Risk                                    | Impact | Mitigation                                        |
+| --------------------------------------- | ------ | ------------------------------------------------- |
+| Token validation API rate limits        | Medium | Cache validation results, use reasonable timeouts |
+| QR code expiration during wizard        | Low    | Auto-refresh QR, clear status messaging           |
+| Config patch conflicts during wizard    | Medium | Use baseHash locking (already implemented)        |
+| Signal QR linking complexity            | High   | Phase 3+ priority, document limitations           |
+| Plugin type changes break existing code | Medium | All new fields are optional, backward compatible  |
+| Large state addition to app.ts          | Low    | Keep wizard state in separate controller object   |
 
 ---
 
 ## Testing Strategy
 
-| Test | Method |
-|------|--------|
-| Wizard API unit tests | Mocha/Jest for each handler |
+| Test                     | Method                                    |
+| ------------------------ | ----------------------------------------- |
+| Wizard API unit tests    | Mocha/Jest for each handler               |
 | Token validation mocking | Mock HTTP responses for each platform API |
-| QR flow E2E | Manual test with real WhatsApp |
-| UI wizard flow | Manual test + screenshot verification |
-| Config persistence | Verify winclaw.json after wizard.complete |
-| Multi-account startup | Verify channels.status shows all accounts |
-| Skill-driven setup | Test via chat interface in debug tab |
+| QR flow E2E              | Manual test with real WhatsApp            |
+| UI wizard flow           | Manual test + screenshot verification     |
+| Config persistence       | Verify winclaw.json after wizard.complete |
+| Multi-account startup    | Verify channels.status shows all accounts |
+| Skill-driven setup       | Test via chat interface in debug tab      |
 
 ---
 

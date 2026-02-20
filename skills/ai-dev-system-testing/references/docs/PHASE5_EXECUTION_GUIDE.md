@@ -7,14 +7,17 @@ Phase 5B (API 测试) 和 Phase 5C (UI 测试) 使用 **Efficient Mode** 迭代�
 ## 关键组件
 
 ### 1. Prompt 文件
+
 - `references/prompts/phase5b-api-tests-efficient.md` - API 测试 prompt (v2.1)
 - `references/prompts/phase5c-ui-tests-efficient.md` - UI 测试 prompt (v3.1)
 
 ### 2. 循环控制脚本
+
 - `references/scripts/phase5b-efficient-loop.sh` - API 测试循环控制器
 - `references/scripts/phase5c-efficient-loop.sh` - UI 测试循环控制器
 
 ### 3. 配置文件
+
 - `references/config/phase5-loop-control.json` - 循环参数配置
 
 ## 执行流程
@@ -97,13 +100,13 @@ WORKSPACE_DIR=/path/to/project bash references/scripts/phase5c-efficient-loop.sh
 
 ## 循环参数
 
-| 参数 | 默认值 | 环境变量 | 说明 |
-|------|--------|----------|------|
-| MAX_ITERATIONS | 15 | BUGFIX_MAX_ITERATIONS | 最大迭代次数 |
-| TARGET_PASS_RATE (5B) | 95% | BUGFIX_TARGET_PASS_RATE | 目标通过率 |
-| TARGET_PASS_RATE (5C) | 100% | BUGFIX_TARGET_PASS_RATE | 目标通过率 |
-| EARLY_EXIT_THRESHOLD | 3 | BUGFIX_EARLY_EXIT_THRESHOLD | 无改进退出阈值 |
-| ITERATION_TIMEOUT | 1800s | BUGFIX_ITERATION_TIMEOUT | 单次迭代超时 |
+| 参数                  | 默认值 | 环境变量                    | 说明           |
+| --------------------- | ------ | --------------------------- | -------------- |
+| MAX_ITERATIONS        | 15     | BUGFIX_MAX_ITERATIONS       | 最大迭代次数   |
+| TARGET_PASS_RATE (5B) | 95%    | BUGFIX_TARGET_PASS_RATE     | 目标通过率     |
+| TARGET_PASS_RATE (5C) | 100%   | BUGFIX_TARGET_PASS_RATE     | 目标通过率     |
+| EARLY_EXIT_THRESHOLD  | 3      | BUGFIX_EARLY_EXIT_THRESHOLD | 无改进退出阈值 |
+| ITERATION_TIMEOUT     | 1800s  | BUGFIX_ITERATION_TIMEOUT    | 单次迭代超时   |
 
 ## 退出条件
 
@@ -114,11 +117,13 @@ WORKSPACE_DIR=/path/to/project bash references/scripts/phase5c-efficient-loop.sh
 ## 前置条件
 
 ### Phase 5B
+
 - [x] Backend 服务运行中
 - [x] Chrome 浏览器安装了 Claude In Chrome 插件
 - [x] Claude CLI 可用
 
 ### Phase 5C
+
 - [x] Phase 5B 已完成 (有测试用户)
 - [x] Frontend 服务运行中
 - [x] Backend 服务运行中
@@ -128,11 +133,13 @@ WORKSPACE_DIR=/path/to/project bash references/scripts/phase5c-efficient-loop.sh
 ## 结果文件
 
 ### Phase 5B
+
 - `test-logs/phase5b_efficient_test_results.json` - JSON 结果
 - `test-logs/PHASE5B_EFFICIENT_REPORT.md` - Markdown 报告
 - `test-logs/phase5b_test_user.json` - 测试用户凭证
 
 ### Phase 5C
+
 - `test-logs/phase5c_test_results.json` - JSON 结果 (含 evidence_chain)
 - `test-logs/PHASE5C_EFFICIENT_REPORT.md` - Markdown 报告
 - `test-logs/screenshots/` - 截图证据

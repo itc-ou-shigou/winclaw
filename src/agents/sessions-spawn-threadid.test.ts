@@ -22,11 +22,11 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 import "./test-helpers/fast-core-tools.js";
-import { createWinClawTools } from "./winclaw-tools.js";
 import {
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
 } from "./subagent-registry.js";
+import { createWinClawTools } from "./winclaw-tools.js";
 
 describe("sessions_spawn requesterOrigin threading", () => {
   beforeEach(() => {

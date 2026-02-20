@@ -100,8 +100,9 @@ curl -s http://127.0.0.1:18789/__winclaw__/api \
 ## Enable/disable cron globally
 
 Patch config:
+
 ```json
-{"cron": {"enabled": true}}
+{ "cron": { "enabled": true } }
 ```
 
 ## Wake / heartbeat trigger
@@ -128,13 +129,13 @@ Modes: `"now"` (immediate), `"next-heartbeat"` (piggyback on next heartbeat cycl
 ## Examples
 
 **"Send me a daily news summary every morning"**
-→ `cron.add` name="daily-news", schedule="0 8 * * *", prompt="Search for top tech news and send a brief summary."
+→ `cron.add` name="daily-news", schedule="0 8 \* \* \*", prompt="Search for top tech news and send a brief summary."
 
 **"Remind me to stand up every 2 hours during work"**
-→ `cron.add` name="stand-reminder", schedule="0 */2 * * 1-5", prompt="Send a friendly reminder to stand up and stretch."
+→ `cron.add` name="stand-reminder", schedule="0 _/2 _ \* 1-5", prompt="Send a friendly reminder to stand up and stretch."
 
 **"Run a weekly security audit on Mondays"**
-→ `cron.add` name="weekly-audit", schedule="0 10 * * 1", prompt="Run winclaw security audit --deep and report findings."
+→ `cron.add` name="weekly-audit", schedule="0 10 \* \* 1", prompt="Run winclaw security audit --deep and report findings."
 
 **"Disable my daily summary"**
 → `cron.list` to find the job ID, then `cron.update` with `enabled: false`.

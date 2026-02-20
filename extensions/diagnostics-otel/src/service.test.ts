@@ -193,14 +193,10 @@ describe("diagnostics-otel service", () => {
     });
 
     expect(telemetryState.counters.get("winclaw.webhook.received")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("winclaw.webhook.duration_ms")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("winclaw.webhook.duration_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.message.queued")?.add).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.message.processed")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("winclaw.message.duration_ms")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("winclaw.message.duration_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.histograms.get("winclaw.queue.wait_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.session.stuck")?.add).toHaveBeenCalled();
     expect(

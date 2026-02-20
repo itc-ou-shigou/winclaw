@@ -41,9 +41,7 @@ export function renderTab(state: AppViewState, tab: Tab) {
 
 function resolveCurrentWorkspace(state: AppViewState): string | undefined {
   // 1. Per-session workspace (from sessionsResult)
-  const sessionRow = state.sessionsResult?.sessions?.find(
-    (s) => s.key === state.sessionKey,
-  );
+  const sessionRow = state.sessionsResult?.sessions?.find((s) => s.key === state.sessionKey);
   if (sessionRow?.workspace) {
     return sessionRow.workspace;
   }
@@ -84,10 +82,7 @@ function resolveCurrentModel(state: AppViewState): string {
   return "";
 }
 
-export function renderChatControls(
-  state: AppViewState,
-  opts?: { onNewSession?: () => void },
-) {
+export function renderChatControls(state: AppViewState, opts?: { onNewSession?: () => void }) {
   return html`
     <div class="chat-controls">
       ${renderChatSessionTabs({
@@ -110,7 +105,11 @@ async function changeWorkspace(state: AppViewState) {
 
   // Strategy 1: WebView2 bridge (inside WinClawUI.exe)
   const bridge = (window as unknown as Record<string, unknown>).chrome as
-    | { webview?: { hostObjects?: { winclawBridge?: { ShowFolderDialog(p: string): Promise<string> } } } }
+    | {
+        webview?: {
+          hostObjects?: { winclawBridge?: { ShowFolderDialog(p: string): Promise<string> } };
+        };
+      }
     | undefined;
   if (bridge?.webview?.hostObjects?.winclawBridge) {
     try {
@@ -125,9 +124,9 @@ async function changeWorkspace(state: AppViewState) {
   // Strategy 2: Gateway RPC — shows native Windows folder dialog via PowerShell
   if (!newPath && state.client) {
     try {
-      const result = await state.client.request("system.showFolderDialog", {
+      const result = (await state.client.request("system.showFolderDialog", {
         initialPath: current,
-      }) as { path: string | null };
+      })) as { path: string | null };
       if (result?.path) {
         newPath = result.path;
       } else if (result?.path === null) {

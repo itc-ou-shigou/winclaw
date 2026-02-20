@@ -28,10 +28,11 @@ export function renderSessionTabs(props: SessionTabsProps) {
               title=${titleForTab(tab)}
             >
               <span class="session-tabs__tab-icon">${icons[iconForTab(tab)]}</span>
-              <span class="session-tabs__tab-label">${isChat ? (props.chatSessionTitle || "New Chat") : titleForTab(tab)}</span>
-              ${isChat
-                ? nothing
-                : html`
+              <span class="session-tabs__tab-label">${isChat ? props.chatSessionTitle || "New Chat" : titleForTab(tab)}</span>
+              ${
+                isChat
+                  ? nothing
+                  : html`
                     <button
                       class="session-tabs__tab-close"
                       @click=${(e: MouseEvent) => {
@@ -42,7 +43,8 @@ export function renderSessionTabs(props: SessionTabsProps) {
                     >
                       &times;
                     </button>
-                  `}
+                  `
+              }
             </button>
           `;
         },

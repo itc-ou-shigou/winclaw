@@ -87,7 +87,9 @@ export function renderCommandPalette(props: CommandPaletteProps) {
     const recentIds = props.recentCommandIds;
     const recentCmds = query.trim()
       ? []
-      : recentIds.map((id) => filtered.find((c) => c.id === id)).filter(Boolean) as CommandDefinition[];
+      : (recentIds
+          .map((id) => filtered.find((c) => c.id === id))
+          .filter(Boolean) as CommandDefinition[]);
     const nonRecentFiltered = query.trim()
       ? filtered
       : filtered.filter((c) => !recentIds.includes(c.id));
@@ -154,7 +156,15 @@ export function renderCommandPalette(props: CommandPaletteProps) {
     >
       <div class="command-palette">
         <div class="command-palette__search">
-          <span class="command-palette__search-icon">${icons.search ?? html`<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>`}</span>
+          <span class="command-palette__search-icon">${
+            icons.search ??
+            html`
+              <svg viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" x2="16.65" y1="21" y2="16.65" />
+              </svg>
+            `
+          }</span>
           <input
             type="text"
             class="command-palette__input"
@@ -169,8 +179,9 @@ export function renderCommandPalette(props: CommandPaletteProps) {
           />
         </div>
         <div class="command-palette__list">
-          ${recentCmds.length > 0
-            ? html`
+          ${
+            recentCmds.length > 0
+              ? html`
                 <div class="command-palette__category">最近のコマンド</div>
                 ${repeat(
                   recentCmds,
@@ -181,7 +192,8 @@ export function renderCommandPalette(props: CommandPaletteProps) {
                   },
                 )}
               `
-            : nothing}
+              : nothing
+          }
           ${repeat(
             COMMAND_CATEGORIES,
             (cat) => cat,
@@ -222,11 +234,13 @@ function renderCommandItem(
     >
       <span class="command-palette__item-icon">${icons[cmd.icon]}</span>
       <span class="command-palette__item-label">${cmd.label}</span>
-      ${cmd.shortcut
-        ? html`<span class="command-palette__item-shortcut">${cmd.shortcut}</span>`
-        : cmd.tab
-          ? html`<span class="command-palette__item-shortcut">${cmd.tab}</span>`
-          : nothing}
+      ${
+        cmd.shortcut
+          ? html`<span class="command-palette__item-shortcut">${cmd.shortcut}</span>`
+          : cmd.tab
+            ? html`<span class="command-palette__item-shortcut">${cmd.tab}</span>`
+            : nothing
+      }
     </button>
   `;
 }

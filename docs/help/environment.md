@@ -76,10 +76,10 @@ See [Configuration: Env var substitution](/gateway/configuration#env-var-substit
 
 ## Path-related env vars
 
-| Variable               | Purpose                                                                                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable              | Purpose                                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `WINCLAW_HOME`        | Override the home directory used for all internal path resolution (`~/.winclaw/`, agent dirs, sessions, credentials). Useful when running WinClaw as a dedicated service user. |
-| `WINCLAW_STATE_DIR`   | Override the state directory (default `~/.winclaw`).                                                                                                                            |
+| `WINCLAW_STATE_DIR`   | Override the state directory (default `~/.winclaw`).                                                                                                                           |
 | `WINCLAW_CONFIG_PATH` | Override the config file path (default `~/.winclaw/winclaw.json`).                                                                                                             |
 
 ### `WINCLAW_HOME`

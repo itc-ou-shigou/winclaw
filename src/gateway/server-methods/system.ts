@@ -144,17 +144,13 @@ export const systemHandlers: GatewayRequestHandlers = {
    * Falls back to a simple error on non-Windows platforms.
    */
   "system.showFolderDialog": ({ params, respond }) => {
-    const initialPath =
-      typeof params?.initialPath === "string" ? params.initialPath.trim() : "";
+    const initialPath = typeof params?.initialPath === "string" ? params.initialPath.trim() : "";
 
     if (process.platform !== "win32") {
       respond(
         false,
         undefined,
-        errorShape(
-          ErrorCodes.UNAVAILABLE,
-          "Folder dialog is only supported on Windows",
-        ),
+        errorShape(ErrorCodes.UNAVAILABLE, "Folder dialog is only supported on Windows"),
       );
       return;
     }
@@ -167,9 +163,7 @@ export const systemHandlers: GatewayRequestHandlers = {
       "$d = New-Object System.Windows.Forms.FolderBrowserDialog",
       "$d.Description = 'Select workspace folder'",
       "$d.ShowNewFolderButton = $true",
-      initialPath
-        ? `$d.SelectedPath = '${initialPath.replace(/'/g, "''")}'`
-        : "",
+      initialPath ? `$d.SelectedPath = '${initialPath.replace(/'/g, "''")}'` : "",
       // Create a tiny hidden owner window that is TopMost so the dialog
       // appears in front of any browser/WebView2 window.
       "$owner = New-Object System.Windows.Forms.Form",
