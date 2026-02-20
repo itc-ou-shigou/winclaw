@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/bluebubbles",
-  "version": "2026.2.17",
+  "version": "2026.2.20",
   "description": "WinClaw BlueBubbles channel plugin",
   "type": "module",
   "devDependencies": {

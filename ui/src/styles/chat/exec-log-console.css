@@ -1,0 +1,342 @@
+/* =============================================
+   EXECUTION LOG CONSOLE - Terminal-style log panel
+   ============================================= */
+
+.exec-log {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", var(--mono), monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Header bar */
+.exec-log__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+  background: #161b22;
+  gap: 8px;
+}
+
+.exec-log__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.exec-log__header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.exec-log__title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #e6edf3;
+  white-space: nowrap;
+}
+
+.exec-log__status {
+  font-size: 11px;
+  color: #484f58;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(110, 118, 129, 0.1);
+}
+
+.exec-log__status--active {
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.1);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Header buttons */
+.exec-log__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7d8590;
+  cursor: pointer;
+  transition: background 150ms ease-out, color 150ms ease-out;
+  font-size: 14px;
+}
+
+.exec-log__btn:hover {
+  background: rgba(110, 118, 129, 0.2);
+  color: #e6edf3;
+}
+
+.exec-log__btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Log body - scrollable */
+.exec-log__body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 8px 0;
+  min-height: 0;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+.exec-log__body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.exec-log__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.exec-log__body::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+.exec-log__body::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* Log lines */
+.exec-log__line {
+  display: flex;
+  align-items: baseline;
+  padding: 0 12px;
+  min-height: 18px;
+  white-space: pre;
+}
+
+.exec-log__line:hover {
+  background: rgba(110, 118, 129, 0.06);
+}
+
+.exec-log__line--stderr {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.04);
+}
+
+.exec-log__line--stderr:hover {
+  background: rgba(248, 81, 73, 0.08);
+}
+
+.exec-log__line--system {
+  color: #d29922;
+  background: rgba(210, 153, 34, 0.04);
+}
+
+.exec-log__line--system:hover {
+  background: rgba(210, 153, 34, 0.08);
+}
+
+.exec-log__timestamp {
+  color: #484f58;
+  margin-right: 10px;
+  flex-shrink: 0;
+  font-size: 11px;
+  user-select: none;
+}
+
+.exec-log__timestamp-pad {
+  display: inline-block;
+  width: calc(8ch + 10px); /* Same width as timestamp + margin */
+  flex-shrink: 0;
+}
+
+.exec-log__text {
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-width: 0;
+}
+
+/* Empty state */
+.exec-log__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #484f58;
+  font-size: 13px;
+  font-family: var(--font-body, system-ui);
+}
+
+/* Footer bar */
+.exec-log__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-top: 1px solid #21262d;
+  flex-shrink: 0;
+  background: #161b22;
+  gap: 8px;
+}
+
+.exec-log__line-count {
+  font-size: 11px;
+  color: #484f58;
+}
+
+.exec-log__auto-scroll {
+  font-size: 11px;
+  width: auto;
+  padding: 2px 10px;
+  gap: 4px;
+  color: #484f58;
+  font-family: inherit;
+}
+
+.exec-log__auto-scroll--on {
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.1);
+}
+
+/* =============================================
+   LIGHT THEME
+   ============================================= */
+:root[data-theme="light"] .exec-log {
+  background: #f6f8fa;
+  color: #1f2328;
+}
+
+:root[data-theme="light"] .exec-log__header {
+  background: #eaeef2;
+  border-bottom-color: #d0d7de;
+}
+
+:root[data-theme="light"] .exec-log__title {
+  color: #1f2328;
+}
+
+:root[data-theme="light"] .exec-log__status {
+  color: #656d76;
+  background: rgba(101, 109, 118, 0.1);
+}
+
+:root[data-theme="light"] .exec-log__status--active {
+  color: #1a7f37;
+  background: rgba(26, 127, 55, 0.1);
+}
+
+:root[data-theme="light"] .exec-log__btn {
+  color: #656d76;
+}
+
+:root[data-theme="light"] .exec-log__btn:hover {
+  background: rgba(101, 109, 118, 0.15);
+  color: #1f2328;
+}
+
+:root[data-theme="light"] .exec-log__line:hover {
+  background: rgba(101, 109, 118, 0.06);
+}
+
+:root[data-theme="light"] .exec-log__line--stderr {
+  color: #cf222e;
+  background: rgba(207, 34, 46, 0.04);
+}
+
+:root[data-theme="light"] .exec-log__line--stderr:hover {
+  background: rgba(207, 34, 46, 0.08);
+}
+
+:root[data-theme="light"] .exec-log__line--system {
+  color: #9a6700;
+  background: rgba(154, 103, 0, 0.04);
+}
+
+:root[data-theme="light"] .exec-log__line--system:hover {
+  background: rgba(154, 103, 0, 0.08);
+}
+
+:root[data-theme="light"] .exec-log__timestamp {
+  color: #656d76;
+}
+
+:root[data-theme="light"] .exec-log__empty {
+  color: #656d76;
+}
+
+:root[data-theme="light"] .exec-log__footer {
+  background: #eaeef2;
+  border-top-color: #d0d7de;
+}
+
+:root[data-theme="light"] .exec-log__line-count {
+  color: #656d76;
+}
+
+:root[data-theme="light"] .exec-log__auto-scroll {
+  color: #656d76;
+}
+
+:root[data-theme="light"] .exec-log__auto-scroll--on {
+  color: #1a7f37;
+  background: rgba(26, 127, 55, 0.1);
+}
+
+:root[data-theme="light"] .exec-log__body::-webkit-scrollbar-thumb {
+  background: #d0d7de;
+}
+
+:root[data-theme="light"] .exec-log__body::-webkit-scrollbar-thumb:hover {
+  background: #afb8c1;
+}
+
+/* =============================================
+   EXEC LOG TOGGLE BUTTON (in compose area)
+   ============================================= */
+.chat-compose__exec-log-btn {
+  font-size: 12px;
+  padding: 0 10px;
+  min-width: auto;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.chat-compose__exec-log-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.chat-compose__exec-log-btn--active {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.3);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+:root[data-theme="light"] .chat-compose__exec-log-btn--active {
+  color: #1a7f37;
+  border-color: rgba(26, 127, 55, 0.3);
+}

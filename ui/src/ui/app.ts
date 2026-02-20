@@ -1,6 +1,7 @@
 import { LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { EventLogEntry } from "./app-events.ts";
+import type { ExecLogEntry } from "./components/exec-log-console.ts";
 import type { AppViewState } from "./app-view-state.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
@@ -141,6 +142,11 @@ export class WinClawApp extends LitElement {
   @state() sidebarOpen = false;
   @state() sidebarContent: string | null = null;
   @state() sidebarError: string | null = null;
+  @state() sidebarMode: "markdown" | "exec-log" | null = null;
+  @state() execLogEntries: ExecLogEntry[] = [];
+  @state() execLogActive = false;
+  @state() execLogAutoScroll = true;
+  @state() execLogManuallyDismissed = false;
   @state() splitRatio = this.settings.splitRatio;
 
   @state() nodesLoading = false;
@@ -560,11 +566,13 @@ export class WinClawApp extends LitElement {
     }
     this.sidebarContent = content;
     this.sidebarError = null;
+    this.sidebarMode = "markdown";
     this.sidebarOpen = true;
   }
 
   handleCloseSidebar() {
     this.sidebarOpen = false;
+    this.sidebarMode = null;
     // Clear content after transition
     if (this.sidebarCloseTimer != null) {
       window.clearTimeout(this.sidebarCloseTimer);
@@ -583,6 +591,27 @@ export class WinClawApp extends LitElement {
     const newRatio = Math.max(0.4, Math.min(0.7, ratio));
     this.splitRatio = newRatio;
     this.applySettings({ ...this.settings, splitRatio: newRatio });
+  }
+
+  // Exec log console handlers
+  handleOpenExecLog() {
+    this.sidebarMode = "exec-log";
+    this.sidebarOpen = true;
+    this.execLogManuallyDismissed = false;
+  }
+
+  handleCloseExecLog() {
+    this.sidebarMode = null;
+    this.sidebarOpen = false;
+    this.execLogManuallyDismissed = true;
+  }
+
+  handleClearExecLog() {
+    this.execLogEntries = [];
+  }
+
+  handleToggleExecLogAutoScroll() {
+    this.execLogAutoScroll = !this.execLogAutoScroll;
   }
 
   // Command palette & session tabs

@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/google-gemini-cli-auth",
-  "version": "2026.2.17",
+  "version": "2026.2.20",
   "private": true,
   "description": "WinClaw Gemini CLI OAuth provider plugin",
   "type": "module",

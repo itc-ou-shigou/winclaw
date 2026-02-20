@@ -60,6 +60,7 @@ public sealed class GatewayManager : IDisposable
     private readonly HttpClient _httpClient;
     private Timer? _watchdogTimer;
     private const int WatchdogIntervalMs = 10_000; // 10 seconds
+    private volatile bool _disposed;
 
     public event EventHandler<GatewayStatusEventArgs>? StatusChanged;
 
@@ -450,8 +451,10 @@ public sealed class GatewayManager : IDisposable
 
     public async Task RestartAsync()
     {
+        if (_disposed) return;
         Stop();
         await Task.Delay(500); // Brief pause for port release
+        if (_disposed) return;
         await StartAsync();
     }
 
@@ -522,10 +525,14 @@ public sealed class GatewayManager : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        Logger.Info("GatewayManager disposing");
         StopWatchdog();
         Stop();
         _httpClient.Dispose();
         _healthCheckCts?.Dispose();
+        Logger.Info("GatewayManager dispose complete");
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -551,6 +558,8 @@ public sealed class GatewayManager : IDisposable
 
     private async void WatchdogCallback(object? state)
     {
+        if (_disposed) return;
+
         try
         {
             if (_gatewayProcess == null || !_weSpawnedGateway)
@@ -565,8 +574,9 @@ public sealed class GatewayManager : IDisposable
                 StopWatchdog();
                 SetStatus(GatewayStatus.Failed, $"Gateway process exited with code {_gatewayProcess.ExitCode}");
 
-                // Auto-restart after brief delay
+                // Auto-restart after brief delay (skip if disposed during shutdown)
                 await Task.Delay(2000);
+                if (_disposed) return;
                 Logger.Info("Attempting automatic gateway restart");
                 await RestartAsync();
                 return;

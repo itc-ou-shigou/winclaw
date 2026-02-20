@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/copilot-proxy",
-  "version": "2026.2.17",
+  "version": "2026.2.20",
   "private": true,
   "description": "WinClaw Copilot Proxy provider plugin",
   "type": "module",
