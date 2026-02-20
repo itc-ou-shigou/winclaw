@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
@@ -27,6 +28,7 @@ public sealed class MainForm : Form
     private int _navigationRetryCount;
     private const int MaxNavigationRetries = 10;
     private System.Threading.Timer? _heartbeatTimer;
+    private readonly CancellationTokenSource _shutdownCts = new();
 
     public MainForm()
     {
@@ -296,6 +298,8 @@ public sealed class MainForm : Form
 
     private void HeartbeatCallback(object? state)
     {
+        if (_shutdownCts.IsCancellationRequested) return;
+
         try
         {
             using var proc = Process.GetCurrentProcess();
@@ -352,10 +356,15 @@ public sealed class MainForm : Form
             }
         }
 
-        // Real exit — cleanup
+        // Real exit — cleanup (timer → tray → gateway)
+        Logger.Info("FormClosing: starting cleanup");
+        _shutdownCts.Cancel();
+        _heartbeatTimer?.Dispose();
+        _heartbeatTimer = null;
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
         _gateway.Dispose();
+        Logger.Info("FormClosing: cleanup complete");
     }
 
     private void MainForm_Resize(object? sender, EventArgs e)
@@ -402,9 +411,19 @@ public sealed class MainForm : Form
 
     private void ExitApplication()
     {
+        Logger.Info("ExitApplication called");
         _isExiting = true;
+        _shutdownCts.Cancel();
         _trayIcon.Visible = false;
         Application.Exit();
+
+        // Safety net: force-exit after 5s if async cleanup hangs
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(5000);
+            Logger.Warn("Forced exit — cleanup timed out after 5s");
+            Environment.Exit(0);
+        });
     }
 
     private async Task RestartGatewayAsync()
@@ -568,18 +587,23 @@ public sealed class MainForm : Form
         if (disposing)
         {
             Logger.Info("MainForm disposing");
+            _shutdownCts.Cancel();
+            _shutdownCts.Dispose();
             _heartbeatTimer?.Dispose();
             _heartbeatTimer = null;
+            // WebView2 を先に Dispose（ブラウザ子プロセス解放）
             if (_webViewReady && _webView?.CoreWebView2 != null)
             {
                 _webView.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
                 _webView.CoreWebView2.ProcessFailed -= OnWebView2ProcessFailed;
             }
-            _gateway.StatusChanged -= OnGatewayStatusChanged;
             _webView?.Dispose();
+            // Gateway を後に Dispose
+            _gateway.StatusChanged -= OnGatewayStatusChanged;
+            _gateway?.Dispose();
             _trayIcon?.Dispose();
             _trayMenu?.Dispose();
-            _gateway?.Dispose();
+            Logger.Info("MainForm dispose complete");
         }
         base.Dispose(disposing);
     }

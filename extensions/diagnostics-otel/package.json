@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/diagnostics-otel",
-  "version": "2026.2.17",
+  "version": "2026.2.20",
   "description": "WinClaw diagnostics OpenTelemetry exporter",
   "type": "module",
   "dependencies": {

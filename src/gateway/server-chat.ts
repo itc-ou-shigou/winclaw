@@ -330,6 +330,16 @@ export function createAgentEventHandler({
     const toolVerbose = isToolEvent ? resolveToolVerboseLevel(evt.runId, sessionKey) : "off";
     if (isToolEvent && toolVerbose === "off") {
       agentRunSeq.set(evt.runId, evt.seq);
+      // Even when verbose is "off", forward full tool events to registered
+      // tool-event recipients (e.g. Control UI) so the exec-log console can
+      // display real-time Bash output.
+      const recipients = toolEventRecipients.get(evt.runId);
+      if (recipients && recipients.size > 0) {
+        broadcastToConnIds("agent", agentPayload, recipients);
+      }
+      if (sessionKey) {
+        nodeSendToSession(sessionKey, "agent", agentPayload);
+      }
       return;
     }
     const toolPayload =

@@ -84,7 +84,7 @@ describe("agent event handler", () => {
     resetAgentRunContextForTest();
   });
 
-  it("suppresses tool events when verbose is off", () => {
+  it("forwards tool events to registered recipients even when verbose is off", () => {
     const broadcast = vi.fn();
     const broadcastToConnIds = vi.fn();
     const nodeSendToSession = vi.fn();
@@ -114,7 +114,11 @@ describe("agent event handler", () => {
       data: { phase: "start", name: "read", toolCallId: "t2" },
     });
 
-    expect(broadcastToConnIds).not.toHaveBeenCalled();
+    // Even with verbose "off", tool events are forwarded to registered recipients
+    // (e.g. Control UI with TOOL_EVENTS capability) for exec-log console support.
+    expect(broadcastToConnIds).toHaveBeenCalledTimes(1);
+    expect(broadcast).not.toHaveBeenCalled();
+    expect(nodeSendToSession).toHaveBeenCalledTimes(1);
     resetAgentRunContextForTest();
   });
 

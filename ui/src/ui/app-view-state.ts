@@ -1,5 +1,6 @@
 import type { EventLogEntry } from "./app-events.ts";
 import type { CompactionStatus } from "./app-tool-stream.ts";
+import type { ExecLogEntry } from "./components/exec-log-console.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
@@ -72,6 +73,11 @@ export type AppViewState = {
   sidebarOpen: boolean;
   sidebarContent: string | null;
   sidebarError: string | null;
+  sidebarMode: "markdown" | "exec-log" | null;
+  execLogEntries: ExecLogEntry[];
+  execLogActive: boolean;
+  execLogAutoScroll: boolean;
+  execLogManuallyDismissed: boolean;
   splitRatio: number;
   scrollToBottom: (opts?: { smooth?: boolean }) => void;
   devicesLoading: boolean;
@@ -285,6 +291,10 @@ export type AppViewState = {
   handleOpenSidebar: (content: string) => void;
   handleCloseSidebar: () => void;
   handleSplitRatioChange: (ratio: number) => void;
+  handleOpenExecLog: () => void;
+  handleCloseExecLog: () => void;
+  handleClearExecLog: () => void;
+  handleToggleExecLogAutoScroll: () => void;
   // Command palette & session tabs
   commandPaletteOpen: boolean;
   openTabs: Tab[];

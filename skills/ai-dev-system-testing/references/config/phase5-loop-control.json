@@ -1,0 +1,64 @@
+{
+  "_comment": "Phase 5 Loop Control Configuration",
+  "_version": "1.0.0",
+  "_description": "Controls iteration loop behavior for Phase 5B and Phase 5C testing",
+  
+  "global": {
+    "target_pass_rate_5b": 95,
+    "target_pass_rate_5c": 100,
+    "verbose_logging": true
+  },
+  
+  "iteration_control": {
+    "max_iterations": 15,
+    "early_exit_threshold": 3,
+    "iteration_timeout_seconds": 1800,
+    "enable_early_exit": true
+  },
+  
+  "phase5b_bugfix": {
+    "max_iterations": 15,
+    "iteration_timeout_seconds": 1800,
+    "early_exit_threshold": 3,
+    "hint_document": ".claude/prompts/api-backend-common-issues.md",
+    "dynamic_reseed_enabled": true,
+    "reseed_timeout_seconds": 600,
+    "test_results_file": "test-logs/phase5b_efficient_test_results.json"
+  },
+  
+  "phase5c_bugfix": {
+    "max_iterations": 15,
+    "iteration_timeout_seconds": 1800,
+    "early_exit_threshold": 3,
+    "hint_document": ".claude/prompts/react-spa-common-issues.md",
+    "frontend_rebuild_enabled": true,
+    "rebuild_timeout_seconds": 300,
+    "test_results_file": "test-logs/phase5c_test_results.json"
+  },
+  
+  "early_exit_conditions": {
+    "enabled": true,
+    "conditions": [
+      {
+        "name": "TARGET_ACHIEVED",
+        "description": "Pass rate >= target, exit with SUCCESS"
+      },
+      {
+        "name": "NO_IMPROVEMENT",
+        "description": "Consecutive iterations without pass rate improvement",
+        "threshold": 3
+      },
+      {
+        "name": "MAX_ITERATIONS",
+        "description": "Maximum iterations reached"
+      }
+    ]
+  },
+  
+  "environment_variables": {
+    "max_iterations": "BUGFIX_MAX_ITERATIONS",
+    "iteration_timeout": "BUGFIX_ITERATION_TIMEOUT",
+    "target_pass_rate": "BUGFIX_TARGET_PASS_RATE",
+    "early_exit_threshold": "BUGFIX_EARLY_EXIT_THRESHOLD"
+  }
+}

@@ -1,8 +1,10 @@
 import { truncateText } from "./format.ts";
+import type { ExecLogEntry } from "./components/exec-log-console.ts";
 
 const TOOL_STREAM_LIMIT = 50;
 const TOOL_STREAM_THROTTLE_MS = 80;
 const TOOL_OUTPUT_CHAR_LIMIT = 120_000;
+const EXEC_LOG_MAX_ENTRIES = 5000;
 
 export type AgentEventPayload = {
   runId: string;
@@ -278,4 +280,103 @@ export function handleAgentEvent(host: ToolStreamHost, payload?: AgentEventPaylo
   entry.message = buildToolStreamMessage(entry);
   trimToolStream(host);
   scheduleToolStreamSync(host, phase === "result");
+
+  // --- Exec Log: collect Bash tool output into log entries ---
+  handleExecLogFromToolEvent(host as unknown as ExecLogHost, payload, data, name, phase);
+}
+
+// ================================================================
+// Exec Log Console - Bash tool output collection
+// ================================================================
+
+type ExecLogHost = ToolStreamHost & {
+  execLogEntries: ExecLogEntry[];
+  execLogActive: boolean;
+  execLogAutoScroll: boolean;
+  execLogManuallyDismissed: boolean;
+  sidebarMode: "markdown" | "exec-log" | null;
+  sidebarOpen: boolean;
+};
+
+function isBashTool(name: string): boolean {
+  return name === "Bash" || name === "bash" || name === "execute_command";
+}
+
+function extractExecOutputText(data: Record<string, unknown>, phase: string): string | null {
+  if (phase === "update") {
+    return formatToolOutput(data.partialResult);
+  }
+  if (phase === "result") {
+    return formatToolOutput(data.result);
+  }
+  return null;
+}
+
+function trimExecLog(entries: ExecLogEntry[]): ExecLogEntry[] {
+  if (entries.length <= EXEC_LOG_MAX_ENTRIES) {
+    return entries;
+  }
+  return entries.slice(-EXEC_LOG_MAX_ENTRIES);
+}
+
+function handleExecLogFromToolEvent(
+  host: ExecLogHost,
+  payload: AgentEventPayload,
+  data: Record<string, unknown>,
+  name: string,
+  phase: string,
+) {
+  if (!isBashTool(name)) {
+    return;
+  }
+
+  const ts = typeof payload.ts === "number" ? payload.ts : Date.now();
+  const toolCallId = typeof data.toolCallId === "string" ? data.toolCallId : undefined;
+
+  if (phase === "start") {
+    // Bash command started — log the command and mark active
+    const args = data.args as Record<string, unknown> | undefined;
+    const command = typeof args?.command === "string" ? args.command : "";
+    const description = typeof args?.description === "string" ? args.description : "";
+    const label = description || command;
+
+    host.execLogActive = true;
+    host.execLogEntries = trimExecLog([
+      ...host.execLogEntries,
+      { ts, stream: "system", text: `▶ ${label}`, toolCallId },
+    ]);
+
+    // Auto-open exec log panel (unless user manually dismissed it)
+    if (!host.execLogManuallyDismissed && host.sidebarMode !== "exec-log") {
+      host.sidebarMode = "exec-log";
+      host.sidebarOpen = true;
+    }
+    return;
+  }
+
+  if (phase === "update" || phase === "result") {
+    const text = extractExecOutputText(data, phase);
+    if (text) {
+      host.execLogEntries = trimExecLog([
+        ...host.execLogEntries,
+        { ts, stream: "stdout", text, toolCallId },
+      ]);
+    }
+  }
+
+  if (phase === "result") {
+    // Bash command finished
+    host.execLogActive = false;
+    const exitCode = data.exitCode ?? data.exit_code;
+    const status = typeof exitCode === "number" && exitCode !== 0 ? "✗ Failed" : "✓ Done";
+    host.execLogEntries = trimExecLog([
+      ...host.execLogEntries,
+      { ts, stream: exitCode !== 0 ? "stderr" : "system", text: `${status} (exit ${exitCode ?? "?"})`, toolCallId },
+    ]);
+  }
+}
+
+export function resetExecLog(host: ExecLogHost) {
+  host.execLogEntries = [];
+  host.execLogActive = false;
 }

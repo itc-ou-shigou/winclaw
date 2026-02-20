@@ -12,6 +12,7 @@ import {
 import { normalizeMessage, normalizeRoleForGrouping } from "../chat/message-normalizer.ts";
 import { icons } from "../icons.ts";
 import { renderMarkdownSidebar } from "./markdown-sidebar.ts";
+import { renderExecLogConsole, type ExecLogEntry } from "../components/exec-log-console.ts";
 import "../components/resizable-divider.ts";
 
 export type CompactionIndicatorStatus = {
@@ -47,7 +48,12 @@ export type ChatProps = {
   sidebarOpen?: boolean;
   sidebarContent?: string | null;
   sidebarError?: string | null;
+  sidebarMode?: "markdown" | "exec-log" | null;
   splitRatio?: number;
+  // Exec log console state
+  execLogEntries?: ExecLogEntry[];
+  execLogActive?: boolean;
+  execLogAutoScroll?: boolean;
   assistantName: string;
   assistantAvatar: string | null;
   // Image attachments
@@ -68,6 +74,11 @@ export type ChatProps = {
   onCloseSidebar?: () => void;
   onSplitRatioChange?: (ratio: number) => void;
   onChatScroll?: (event: Event) => void;
+  // Exec log console handlers
+  onOpenExecLog?: () => void;
+  onCloseExecLog?: () => void;
+  onClearExecLog?: () => void;
+  onToggleExecLogAutoScroll?: () => void;
 };
 
 const COMPACTION_TOAST_DURATION_MS = 5000;
@@ -205,7 +216,9 @@ export function renderChat(props: ChatProps) {
     : "Connect to the gateway to start chatting…";
 
   const splitRatio = props.splitRatio ?? 0.6;
-  const sidebarOpen = Boolean(props.sidebarOpen && props.onCloseSidebar);
+  const sidebarMode = props.sidebarMode ?? (props.sidebarOpen ? "markdown" : null);
+  const sidebarOpen = Boolean(sidebarMode && props.sidebarOpen);
+  const hasExecLogEntries = (props.execLogEntries?.length ?? 0) > 0;
   const thread = html`
     <div
       class="chat-thread"
@@ -302,17 +315,28 @@ export function renderChat(props: ChatProps) {
                 @resize=${(e: CustomEvent) => props.onSplitRatioChange?.(e.detail.splitRatio)}
               ></resizable-divider>
               <div class="chat-sidebar">
-                ${renderMarkdownSidebar({
-                  content: props.sidebarContent ?? null,
-                  error: props.sidebarError ?? null,
-                  onClose: props.onCloseSidebar!,
-                  onViewRawText: () => {
-                    if (!props.sidebarContent || !props.onOpenSidebar) {
-                      return;
-                    }
-                    props.onOpenSidebar(`\`\`\`\n${props.sidebarContent}\n\`\`\``);
-                  },
-                })}
+                ${
+                  sidebarMode === "exec-log"
+                    ? renderExecLogConsole({
+                        entries: props.execLogEntries ?? [],
+                        isActive: props.execLogActive ?? false,
+                        autoScroll: props.execLogAutoScroll ?? true,
+                        onClose: () => props.onCloseExecLog?.(),
+                        onClear: () => props.onClearExecLog?.(),
+                        onToggleAutoScroll: () => props.onToggleExecLogAutoScroll?.(),
+                      })
+                    : renderMarkdownSidebar({
+                        content: props.sidebarContent ?? null,
+                        error: props.sidebarError ?? null,
+                        onClose: props.onCloseSidebar!,
+                        onViewRawText: () => {
+                          if (!props.sidebarContent || !props.onOpenSidebar) {
+                            return;
+                          }
+                          props.onOpenSidebar(`\`\`\`\n${props.sidebarContent}\n\`\`\``);
+                        },
+                      })
+                }
               </div>
             `
             : nothing
@@ -404,6 +428,19 @@ export function renderChat(props: ChatProps) {
             ></textarea>
           </label>
           <div class="chat-compose__actions">
+            ${
+              hasExecLogEntries && sidebarMode !== "exec-log"
+                ? html`
+                  <button
+                    class="btn chat-compose__exec-log-btn ${props.execLogActive ? "chat-compose__exec-log-btn--active" : ""}"
+                    title="Show execution log"
+                    @click=${() => props.onOpenExecLog?.()}
+                  >
+                    ▸ Log
+                  </button>
+                `
+                : nothing
+            }
             <button
               class="btn"
               ?disabled=${!props.connected || (!canAbort && props.sending)}
