@@ -17,7 +17,6 @@ import {
 import { readConfigFileSnapshot, writeConfigFile } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { formatDurationPrecise } from "../infra/format-time/format-duration.ts";
-import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { trimLogTail } from "../infra/restart-sentinel.js";
 import { parseSemver } from "../infra/runtime-guard.js";
 import {
@@ -49,6 +48,7 @@ import {
   type UpdateStepResult,
   type UpdateStepProgress,
 } from "../infra/update-runner.js";
+import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { syncPluginsForUpdateChannel, updateNpmInstalledPlugins } from "../plugins/update.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime } from "../runtime.js";

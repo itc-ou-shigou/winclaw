@@ -3,11 +3,8 @@ name: ai-dev-legacy-modernization
 description: "Modernize legacy systems (COBOL, Java, C#, etc.) into modern web applications. Analyzes legacy codebase, generates technical specs (INITIAL.md), creates modular PRPs, implements code via TDD, runs API/UI tests, generates documentation, and deploys to Azure. Use when user asks to refactor, rewrite, or modernize an old system."
 metadata:
   {
-    "winclaw": {
-      "emoji": "🔄",
-      "os": ["win32", "darwin", "linux"],
-      "requires": { "bins": ["claude"] }
-    }
+    "winclaw":
+      { "emoji": "🔄", "os": ["win32", "darwin", "linux"], "requires": { "bins": ["claude"] } },
   }
 ---
 
@@ -17,39 +14,41 @@ Automates a 7-phase pipeline to modernize legacy codebases into modern web appli
 
 ## Phase Overview
 
-| Phase | What It Does | Output | Timeout |
-|-------|-------------|--------|---------|
-| 1 | Setup & validation | Environment ready | — |
-| 2 | Legacy code analysis → INITIAL.md | `INITIAL.md` | 30min |
-| 3 | Generate modular PRPs | `PRPs/*.md` | 60min |
-| 4 | Execute PRPs (TDD code gen) | `backend/`, `frontend/` | 4h/PRP |
-| 5 | Test & debug (API + UI) | `test-logs/` | 2h/each |
-| 6 | Documentation + PDF | `docs/` | 30min |
-| 7 | Azure deploy (optional) | `deployment-logs/` | 60min |
+| Phase | What It Does                      | Output                  | Timeout |
+| ----- | --------------------------------- | ----------------------- | ------- |
+| 1     | Setup & validation                | Environment ready       | —       |
+| 2     | Legacy code analysis → INITIAL.md | `INITIAL.md`            | 30min   |
+| 3     | Generate modular PRPs             | `PRPs/*.md`             | 60min   |
+| 4     | Execute PRPs (TDD code gen)       | `backend/`, `frontend/` | 4h/PRP  |
+| 5     | Test & debug (API + UI)           | `test-logs/`            | 2h/each |
+| 6     | Documentation + PDF               | `docs/`                 | 30min   |
+| 7     | Azure deploy (optional)           | `deployment-logs/`      | 60min   |
 
 ## Configuration
 
 ### Required
+
 - `AIDEV_WORKSPACE` — Path to the legacy project (ask user if not set)
 
 ### Optional (in `~/.winclaw/winclaw.json`)
+
 ```json5
 {
-  "skills": {
-    "entries": {
+  skills: {
+    entries: {
       "ai-dev-legacy-modernization": {
-        "env": {
-          "AIDEV_WORKSPACE": "C:\\work\\my-legacy-project",  // Mac/Linux: "/home/user/my-legacy-project"
-          "GITHUB_TOKEN": "ghp_xxxxxxxxxxxx",
-          "GITHUB_REPO": "myorg/my-project",
-          "GITHUB_BRANCH": "feature/modernize",
-          "DATABASE_URL": "mysql+pymysql://user:pass@localhost:3306/mydb",
-          "AIDEV_DOC_LANGUAGE": "ja",
-          "AIDEV_TEST_MODE": "standard"
-        }
-      }
-    }
-  }
+        env: {
+          AIDEV_WORKSPACE: "C:\\work\\my-legacy-project", // Mac/Linux: "/home/user/my-legacy-project"
+          GITHUB_TOKEN: "ghp_xxxxxxxxxxxx",
+          GITHUB_REPO: "myorg/my-project",
+          GITHUB_BRANCH: "feature/modernize",
+          DATABASE_URL: "mysql+pymysql://user:pass@localhost:3306/mydb",
+          AIDEV_DOC_LANGUAGE: "ja",
+          AIDEV_TEST_MODE: "standard",
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -70,6 +69,7 @@ Or set via environment variables: `export AIDEV_WORKSPACE=/path/to/project`
 ```
 
 **Auto-download command (PowerShell):**
+
 ```powershell
 $ws = $env:AIDEV_WORKSPACE; $repo = $env:AUTOPROJECT_REPO
 if (-not $repo) { $repo = "ITC-cloud-soft/autoproject" }
@@ -145,6 +145,7 @@ See `ai-dev-shared/references/phase7-deployment.md`.
 ## Git Integration
 
 After each phase completion (if GITHUB_TOKEN + GITHUB_REPO set):
+
 ```bash
 git add -A && git commit -m "Phase $N: [description]" && git push origin $GITHUB_BRANCH
 ```
@@ -152,6 +153,7 @@ git add -A && git commit -m "Phase $N: [description]" && git push origin $GITHUB
 ## Smart Resume
 
 On re-invocation, check completion markers and skip completed phases. Report:
+
 ```
 Phase 1: ✓ Complete
 Phase 2: ✓ INITIAL.md exists (12,345 bytes)
@@ -161,10 +163,10 @@ Phase 4: ⏳ 3/5 PRPs completed, resuming from PRP 4...
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `claude` not found | Install Claude CLI: `npm i -g @anthropic-ai/claude-code` |
-| Prompt files missing | Copy `.claude/` from autoproject template |
-| Phase 2 timeout | Increase timeout or simplify legacy code analysis |
-| PRP execution fails | Check `.prp_status/<name>/debug.log` for details |
-| Backend won't start | See `ai-dev-shared/references/common-functions.md` repair steps |
+| Problem              | Solution                                                        |
+| -------------------- | --------------------------------------------------------------- |
+| `claude` not found   | Install Claude CLI: `npm i -g @anthropic-ai/claude-code`        |
+| Prompt files missing | Copy `.claude/` from autoproject template                       |
+| Phase 2 timeout      | Increase timeout or simplify legacy code analysis               |
+| PRP execution fails  | Check `.prp_status/<name>/debug.log` for details                |
+| Backend won't start  | See `ai-dev-shared/references/common-functions.md` repair steps |

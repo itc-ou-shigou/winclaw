@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GatewayRequestHandlers } from "./types.js";
+import { resolveWinClawAgentDir } from "../../agents/agent-paths.js";
 import {
   ErrorCodes,
   errorShape,
   formatValidationErrors,
   validateModelsListParams,
 } from "../protocol/index.js";
-import { resolveWinClawAgentDir } from "../../agents/agent-paths.js";
 
 /**
  * Read models.json and extract the set of explicitly configured model keys

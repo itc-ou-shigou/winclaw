@@ -11,6 +11,7 @@ Complete guided setup for connecting any messaging platform to WinClaw.
 ## Gateway API base
 
 All API calls target the local gateway:
+
 ```
 POST http://127.0.0.1:18789/__winclaw__/api
 Content-Type: application/json
@@ -39,27 +40,27 @@ Respond with a friendly summary of what's connected and what's available.
 
 ### All 19 supported platforms
 
-| Platform | Key | Connection Method | Difficulty |
-|----------|-----|-------------------|------------|
-| WhatsApp | `whatsapp` | QR scan (Gateway UI) | Easy |
-| Zalo Personal | `zalouser` | QR scan (Gateway UI) | Easy |
-| Telegram | `telegram` | Bot Token from @BotFather | Easy |
-| Discord | `discord` | Bot Token from Developer Portal | Easy-Medium |
-| Twitch | `twitch` | OAuth Token + Client ID | Easy-Medium |
-| Zalo Official | `zalo` | Bot Token from Zalo Dev Portal | Medium |
-| Mattermost | `mattermost` | Bot Token from server admin | Medium |
-| LINE | `line` | Channel Access Token + Secret | Medium |
-| Slack | `slack` | Bot Token + App Token (Socket Mode) | Medium |
-| Signal | `signal` | signal-cli setup (phone/HTTP) | Medium-Hard |
-| Matrix | `matrix` | Homeserver URL + Access Token | Medium |
-| Nextcloud Talk | `nextcloud-talk` | Bot Secret from admin | Medium |
-| BlueBubbles | `bluebubbles` | Server URL + Password (macOS) | Medium |
-| Nostr | `nostr` | Private Key (hex or nsec) | Medium |
-| Feishu/Lark | `feishu` | App ID + App Secret | Medium-Hard |
-| Google Chat | `googlechat` | Service Account JSON | Hard |
-| MS Teams | `msteams` | Bot Framework credentials | Hard |
-| Tlon (Urbit) | `tlon` | Ship + URL + Code | Hard |
-| iMessage | `imessage` | macOS native (Apple Script) | Platform-limited |
+| Platform       | Key              | Connection Method                   | Difficulty       |
+| -------------- | ---------------- | ----------------------------------- | ---------------- |
+| WhatsApp       | `whatsapp`       | QR scan (Gateway UI)                | Easy             |
+| Zalo Personal  | `zalouser`       | QR scan (Gateway UI)                | Easy             |
+| Telegram       | `telegram`       | Bot Token from @BotFather           | Easy             |
+| Discord        | `discord`        | Bot Token from Developer Portal     | Easy-Medium      |
+| Twitch         | `twitch`         | OAuth Token + Client ID             | Easy-Medium      |
+| Zalo Official  | `zalo`           | Bot Token from Zalo Dev Portal      | Medium           |
+| Mattermost     | `mattermost`     | Bot Token from server admin         | Medium           |
+| LINE           | `line`           | Channel Access Token + Secret       | Medium           |
+| Slack          | `slack`          | Bot Token + App Token (Socket Mode) | Medium           |
+| Signal         | `signal`         | signal-cli setup (phone/HTTP)       | Medium-Hard      |
+| Matrix         | `matrix`         | Homeserver URL + Access Token       | Medium           |
+| Nextcloud Talk | `nextcloud-talk` | Bot Secret from admin               | Medium           |
+| BlueBubbles    | `bluebubbles`    | Server URL + Password (macOS)       | Medium           |
+| Nostr          | `nostr`          | Private Key (hex or nsec)           | Medium           |
+| Feishu/Lark    | `feishu`         | App ID + App Secret                 | Medium-Hard      |
+| Google Chat    | `googlechat`     | Service Account JSON                | Hard             |
+| MS Teams       | `msteams`        | Bot Framework credentials           | Hard             |
+| Tlon (Urbit)   | `tlon`           | Ship + URL + Code                   | Hard             |
+| iMessage       | `imessage`       | macOS native (Apple Script)         | Platform-limited |
 
 ---
 
@@ -83,6 +84,7 @@ Extract `hash` from response — this is required as `baseHash` for all config p
 **Connection type**: QR code scan — user must use the Gateway Web UI.
 
 **AI guide steps:**
+
 1. Tell user: "WhatsApp uses QR code scanning. Please open the WinClaw control panel:"
    - URL: `http://127.0.0.1:18789` (or whatever the gateway URL is)
    - Navigate to **Channels** tab
@@ -92,6 +94,7 @@ Extract `hash` from response — this is required as `baseHash` for all config p
 4. Wait for connection confirmation
 
 **If config doesn't exist yet, add base config:**
+
 ```json
 {
   "channels": {
@@ -110,6 +113,7 @@ Extract `hash` from response — this is required as `baseHash` for all config p
 ```
 
 **For additional WhatsApp accounts:**
+
 ```json
 {
   "channels": {
@@ -126,17 +130,21 @@ Extract `hash` from response — this is required as `baseHash` for all config p
 ```
 
 **Start QR login via API (optional, same as UI button):**
+
 ```bash
 curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"web.login.start","params":{"force":false,"timeoutMs":30000}}'
 ```
+
 Returns `{qrDataUrl: "data:image/png;base64,..."}` if successful.
 
 **Wait for scan:**
+
 ```bash
 curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"web.login.wait","params":{"timeoutMs":120000}}'
 ```
+
 Returns `{connected: true}` when scan succeeds.
 
 **Important**: WhatsApp QR login ONLY works through the existing `web.login.start` / `web.login.wait` API. This is by design — the Baileys library handles the complex WhatsApp Web protocol handshake. Do NOT try to implement QR login differently.
@@ -148,11 +156,13 @@ Returns `{connected: true}` when scan succeeds.
 **Connection type**: QR code scan — similar to WhatsApp.
 
 **AI guide steps:**
+
 1. Tell user: "Zalo Personal uses QR code scanning. Open the WinClaw control panel → Channels tab"
 2. Tell user: "Click the QR login button on the Zalo Personal card"
 3. Tell user: "Open Zalo app on your phone and scan the QR code"
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -175,6 +185,7 @@ Returns `{connected: true}` when scan succeeds.
 ### Telegram (Bot Token)
 
 **AI guide steps:**
+
 1. Tell user: "Open Telegram, search for @BotFather and start a chat"
 2. Tell user: "Send `/newbot` to BotFather"
 3. Tell user: "Follow prompts to set bot name and username"
@@ -183,6 +194,7 @@ Returns `{connected: true}` when scan succeeds.
 6. Apply config and test
 
 **Config (default account):**
+
 ```json
 {
   "channels": {
@@ -195,6 +207,7 @@ Returns `{connected: true}` when scan succeeds.
 ```
 
 **Config (named account):**
+
 ```json
 {
   "channels": {
@@ -215,6 +228,7 @@ Returns `{connected: true}` when scan succeeds.
 Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config.
 
 **Optional settings:**
+
 - `webhookUrl` / `webhookSecret`: For webhook mode (default is polling)
 - `replyToMode`: `"first"` (default) or `"thread"`
 - `groups.<groupId>.requireMention`: Require @mention in groups
@@ -225,6 +239,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### Discord (Bot Token)
 
 **AI guide steps:**
+
 1. Tell user: "Go to https://discord.com/developers/applications"
 2. Tell user: "Click 'New Application', give it a name"
 3. Tell user: "Go to 'Bot' section in left sidebar, click 'Reset Token' to get a bot token"
@@ -235,6 +250,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 8. Apply config and test
 
 **Config (default account):**
+
 ```json
 {
   "channels": {
@@ -247,6 +263,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (named account):**
+
 ```json
 {
   "channels": {
@@ -266,6 +283,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 **Environment variable alternative:** `DISCORD_BOT_TOKEN`
 
 **Optional settings:**
+
 - `intents.presence`: Enable presence intent (privileged)
 - `intents.guildMembers`: Enable guild members intent (privileged)
 - `replyToMode`: `"off"` (default), `"first"`, `"thread"`
@@ -276,6 +294,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### Slack (Bot Token + App Token)
 
 **AI guide steps:**
+
 1. Tell user: "Go to https://api.slack.com/apps → 'Create New App' → 'From scratch'"
 2. Tell user: "Name your app and select your workspace"
 3. Tell user: "Go to 'Socket Mode' → Enable Socket Mode → Generate an App-Level Token with `connections:write` scope → Copy the `xapp-` token"
@@ -286,6 +305,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 8. Apply config and test
 
 **Config (default account):**
+
 ```json
 {
   "channels": {
@@ -299,6 +319,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (named account):**
+
 ```json
 {
   "channels": {
@@ -319,6 +340,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 **Environment variable alternative:** `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`
 
 **Optional settings:**
+
 - `mode`: `"socket"` (default, recommended) or `"http"`
 - `signingSecret`: Required only for HTTP mode
 - `userToken`: Optional `xoxp-` token for enhanced features
@@ -329,6 +351,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### LINE (Channel Access Token + Secret)
 
 **AI guide steps:**
+
 1. Tell user: "Go to https://developers.line.biz/ → LINE Developers Console"
 2. Tell user: "Create a Provider → Create a Messaging API channel"
 3. Tell user: "In channel settings, find 'Channel access token (long-lived)' → Issue/Copy"
@@ -339,6 +362,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 8. Apply config and test
 
 **Config (default account):**
+
 ```json
 {
   "channels": {
@@ -352,6 +376,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (named account):**
+
 ```json
 {
   "channels": {
@@ -380,17 +405,20 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 **AI guide steps:**
 
 **Option A: HTTP API (recommended if signal-cli is already running):**
+
 1. Tell user: "You need signal-cli running as HTTP daemon"
 2. Ask for HTTP URL (e.g., `http://localhost:8080`)
 3. Apply config
 
 **Option B: Phone number (direct signal-cli):**
+
 1. Tell user: "You need signal-cli installed: https://github.com/AsamK/signal-cli"
 2. Tell user: "Register or link to your Signal account with signal-cli"
 3. Ask for the phone number in E.164 format (e.g., `+1234567890`)
 4. Apply config
 
 **Config (HTTP API):**
+
 ```json
 {
   "channels": {
@@ -403,6 +431,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (phone number):**
+
 ```json
 {
   "channels": {
@@ -415,6 +444,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (named account):**
+
 ```json
 {
   "channels": {
@@ -436,6 +466,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### Google Chat (Service Account)
 
 **AI guide steps:**
+
 1. Tell user: "Go to Google Cloud Console → Create/select project"
 2. Tell user: "Enable 'Google Chat API'"
 3. Tell user: "Go to IAM & Admin → Service Accounts → Create Service Account"
@@ -445,6 +476,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 7. Apply config and test
 
 **Config (inline JSON):**
+
 ```json
 {
   "channels": {
@@ -457,6 +489,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ```
 
 **Config (file path):**
+
 ```json
 {
   "channels": {
@@ -475,6 +508,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### MS Teams (Bot Framework)
 
 **AI guide steps:**
+
 1. Tell user: "This requires Azure Bot Framework registration — it's complex"
 2. Tell user: "Go to Azure Portal → Create 'Azure Bot' resource"
 3. Tell user: "Get App ID and Password from bot registration"
@@ -482,6 +516,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 5. Help configure webhook settings
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -502,6 +537,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 ### Feishu/Lark (App ID + Secret)
 
 **AI guide steps:**
+
 1. Tell user: "Go to Feishu Open Platform (open.feishu.cn) or Lark Developer (open.larksuite.com)"
 2. Tell user: "Create an app → Get App ID and App Secret"
 3. Tell user: "Configure event subscription (WebSocket or webhook)"
@@ -509,6 +545,7 @@ Set `TELEGRAM_BOT_TOKEN` environment variable instead of putting token in config
 5. Apply config
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -530,12 +567,14 @@ Use `"domain": "lark"` for Lark (international version).
 ### Matrix (Homeserver + Token)
 
 **AI guide steps:**
+
 1. Ask if user has a Matrix account (on matrix.org or self-hosted)
 2. Tell user: "Get access token from Element: Settings → Help & About → Access Token"
 3. Or use userId + password authentication
 4. Ask for homeserver URL and credentials
 
 **Config (access token):**
+
 ```json
 {
   "channels": {
@@ -549,6 +588,7 @@ Use `"domain": "lark"` for Lark (international version).
 ```
 
 **Config (password):**
+
 ```json
 {
   "channels": {
@@ -567,11 +607,13 @@ Use `"domain": "lark"` for Lark (international version).
 ### Mattermost (Bot Token + URL)
 
 **AI guide steps:**
+
 1. Tell user: "Go to your Mattermost server → Integrations → Bot Accounts"
 2. Tell user: "Create a bot account, copy the token"
 3. Ask for Mattermost server URL and bot token
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -591,11 +633,13 @@ Use `"domain": "lark"` for Lark (international version).
 ### Nextcloud Talk (Bot Secret)
 
 **AI guide steps:**
+
 1. Tell user: "Go to Nextcloud admin → App settings → Webhook Bots"
 2. Tell user: "Create a bot and copy the secret"
 3. Ask for Nextcloud URL and bot secret
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -615,22 +659,21 @@ Use `"domain": "lark"` for Lark (international version).
 ### Nostr (Private Key)
 
 **AI guide steps:**
+
 1. Ask if user has an existing Nostr keypair
 2. If not, suggest generating one with a Nostr client (Damus, Amethyst, etc.)
 3. Ask for private key (hex format or nsec)
 4. Optionally configure relay list
 
 **Config:**
+
 ```json
 {
   "channels": {
     "nostr": {
       "enabled": true,
       "privateKey": "HEX_OR_NSEC_KEY",
-      "relays": [
-        "wss://relay.damus.io",
-        "wss://nos.lol"
-      ]
+      "relays": ["wss://relay.damus.io", "wss://nos.lol"]
     }
   }
 }
@@ -643,12 +686,14 @@ Use `"domain": "lark"` for Lark (international version).
 ### Zalo Official Bot (Bot Token)
 
 **AI guide steps:**
+
 1. Tell user: "Go to Zalo for Developers (developers.zalo.me)"
 2. Tell user: "Create a Zalo Official Account bot"
 3. Tell user: "Get the OA Token from app settings"
 4. Ask user to paste token
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -667,12 +712,14 @@ Use `"domain": "lark"` for Lark (international version).
 ### BlueBubbles (Server URL + Password)
 
 **AI guide steps:**
+
 1. Tell user: "BlueBubbles requires a Mac with iMessage configured"
 2. Tell user: "Install BlueBubbles app on your Mac"
 3. Tell user: "In BlueBubbles settings, find the server URL and encryption password"
 4. Ask for server URL and password
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -690,6 +737,7 @@ Use `"domain": "lark"` for Lark (international version).
 ### Tlon/Urbit (Ship + URL + Code)
 
 **AI guide steps:**
+
 1. Tell user: "You need a running Urbit ship"
 2. Tell user: "Get your ship name (e.g., ~sampel-palnet)"
 3. Tell user: "Get ship URL (e.g., http://localhost:8080)"
@@ -697,6 +745,7 @@ Use `"domain": "lark"` for Lark (international version).
 5. Ask for all three values
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -715,6 +764,7 @@ Use `"domain": "lark"` for Lark (international version).
 ### Twitch (OAuth Token + Client ID)
 
 **AI guide steps:**
+
 1. Tell user: "Go to https://dev.twitch.tv/console → Register Your Application"
 2. Tell user: "Set category to 'Chat Bot'"
 3. Tell user: "Copy Client ID"
@@ -722,6 +772,7 @@ Use `"domain": "lark"` for Lark (international version).
 5. Ask for username, access token, client ID, and channels to join
 
 **Config:**
+
 ```json
 {
   "channels": {
@@ -741,11 +792,13 @@ Use `"domain": "lark"` for Lark (international version).
 ### iMessage (macOS only)
 
 **AI guide steps:**
+
 1. Tell user: "iMessage integration only works on macOS"
 2. Tell user: "You need either the `imsg` CLI tool or direct database access"
 3. Help configure CLI path or database path
 
 **Config (CLI):**
+
 ```json
 {
   "channels": {
@@ -758,6 +811,7 @@ Use `"domain": "lark"` for Lark (international version).
 ```
 
 **Config (database):**
+
 ```json
 {
   "channels": {
@@ -802,6 +856,7 @@ curl -s http://127.0.0.1:18789/__winclaw__/api \
 ```
 
 Check the response for the newly added channel:
+
 - `configured: true` → Config is correct
 - `running: true` → Channel process started
 - `connected: true` → Successfully connected to platform
@@ -813,6 +868,7 @@ Check the response for the newly added channel:
 After connection is verified, ask user about access policies:
 
 **Options to present:**
+
 - `dmPolicy: "open"` — Anyone can DM the bot (use for public bots)
 - `dmPolicy: "pairing"` — Users must pair/register first (default, recommended for personal use)
 - `dmPolicy: "allowlist"` — Only specific users can DM (strictest)
@@ -824,18 +880,18 @@ After connection is verified, ask user about access policies:
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `configured: false` | Config patch didn't apply correctly. Re-read config and check JSON structure |
-| `running: false` | Channel failed to start. Check `lastError` in status response |
-| `connected: false` | Credentials may be invalid. Ask user to verify token/key |
-| WhatsApp QR expired | Click "Show QR" again or call `web.login.start` with `force: true` |
-| Telegram "Unauthorized" | Token is invalid or revoked. Get new token from @BotFather |
-| Discord "Missing Access" | Bot not invited to server, or missing Message Content Intent |
-| Slack "invalid_auth" | Bot token expired or app uninstalled. Regenerate tokens |
-| LINE "Invalid token" | Channel access token may have expired. Reissue from LINE Dev Console |
-| Signal "Connection refused" | signal-cli HTTP daemon not running. Start it first |
-| Matrix "M_UNKNOWN_TOKEN" | Access token invalid. Generate new one from Element settings |
+| Problem                     | Solution                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `configured: false`         | Config patch didn't apply correctly. Re-read config and check JSON structure |
+| `running: false`            | Channel failed to start. Check `lastError` in status response                |
+| `connected: false`          | Credentials may be invalid. Ask user to verify token/key                     |
+| WhatsApp QR expired         | Click "Show QR" again or call `web.login.start` with `force: true`           |
+| Telegram "Unauthorized"     | Token is invalid or revoked. Get new token from @BotFather                   |
+| Discord "Missing Access"    | Bot not invited to server, or missing Message Content Intent                 |
+| Slack "invalid_auth"        | Bot token expired or app uninstalled. Regenerate tokens                      |
+| LINE "Invalid token"        | Channel access token may have expired. Reissue from LINE Dev Console         |
+| Signal "Connection refused" | signal-cli HTTP daemon not running. Start it first                           |
+| Matrix "M_UNKNOWN_TOKEN"    | Access token invalid. Generate new one from Element settings                 |
 
 ## Multi-account pattern
 

@@ -11,9 +11,7 @@ describe("resolveEffectiveHomeDir", () => {
       USERPROFILE: "C:/Users/other",
     } as NodeJS.ProcessEnv;
 
-    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(
-      path.resolve("/srv/winclaw-home"),
-    );
+    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(path.resolve("/srv/winclaw-home"));
   });
 
   it("falls back to HOME then USERPROFILE then homedir", () => {
@@ -114,9 +112,7 @@ describe("resolveRequiredHomeDir", () => {
       WINCLAW_HOME: "C:\\Program Files (x86)\\SomeApp",
       USERPROFILE: "C:\\Users\\test",
     } as NodeJS.ProcessEnv;
-    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(
-      path.resolve("C:\\Users\\test"),
-    );
+    expect(resolveEffectiveHomeDir(env, () => "/fallback")).toBe(path.resolve("C:\\Users\\test"));
   });
 
   it("falls back to safe dir when WINCLAW_HOME is tilde-only and no home exists", () => {

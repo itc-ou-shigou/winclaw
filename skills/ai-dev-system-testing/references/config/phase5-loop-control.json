@@ -2,20 +2,20 @@
   "_comment": "Phase 5 Loop Control Configuration",
   "_version": "1.0.0",
   "_description": "Controls iteration loop behavior for Phase 5B and Phase 5C testing",
-  
+
   "global": {
     "target_pass_rate_5b": 95,
     "target_pass_rate_5c": 100,
     "verbose_logging": true
   },
-  
+
   "iteration_control": {
     "max_iterations": 15,
     "early_exit_threshold": 3,
     "iteration_timeout_seconds": 1800,
     "enable_early_exit": true
   },
-  
+
   "phase5b_bugfix": {
     "max_iterations": 15,
     "iteration_timeout_seconds": 1800,
@@ -25,7 +25,7 @@
     "reseed_timeout_seconds": 600,
     "test_results_file": "test-logs/phase5b_efficient_test_results.json"
   },
-  
+
   "phase5c_bugfix": {
     "max_iterations": 15,
     "iteration_timeout_seconds": 1800,
@@ -35,7 +35,7 @@
     "rebuild_timeout_seconds": 300,
     "test_results_file": "test-logs/phase5c_test_results.json"
   },
-  
+
   "early_exit_conditions": {
     "enabled": true,
     "conditions": [
@@ -54,7 +54,7 @@
       }
     ]
   },
-  
+
   "environment_variables": {
     "max_iterations": "BUGFIX_MAX_ITERATIONS",
     "iteration_timeout": "BUGFIX_ITERATION_TIMEOUT",

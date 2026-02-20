@@ -62,8 +62,13 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Header buttons */
@@ -79,7 +84,9 @@
   background: transparent;
   color: #7d8590;
   cursor: pointer;
-  transition: background 150ms ease-out, color 150ms ease-out;
+  transition:
+    background 150ms ease-out,
+    color 150ms ease-out;
   font-size: 14px;
 }
 
@@ -322,7 +329,9 @@
   color: var(--muted);
   border: 1px solid var(--border);
   background: transparent;
-  transition: color 150ms ease-out, border-color 150ms ease-out;
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out;
 }
 
 .chat-compose__exec-log-btn:hover {

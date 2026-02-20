@@ -4,7 +4,6 @@ import type { UsageState } from "./controllers/usage.ts";
 import { parseAgentSessionKey } from "../../../src/routing/session-key.js";
 import { refreshChatAvatar } from "./app-chat.ts";
 import { renderChatControls } from "./app-render.helpers.ts";
-import { generateUUID } from "./uuid.ts";
 import { renderCommandPalette } from "./components/command-palette.ts";
 import { renderSessionTabs } from "./components/session-tabs.ts";
 import { renderStatusBar } from "./components/status-bar.ts";
@@ -57,6 +56,7 @@ import {
 import { loadUsage, loadSessionTimeSeries, loadSessionLogs } from "./controllers/usage.ts";
 import { icons } from "./icons.ts";
 import { COMMANDS, normalizeBasePath, subtitleForTab, titleForTab } from "./navigation.ts";
+import { generateUUID } from "./uuid.ts";
 
 // Module-scope debounce for usage date changes (avoids type-unsafe hacks on state object)
 let usageDateDebounceTimeout: number | null = null;
@@ -197,9 +197,10 @@ export function renderApp(state: AppViewState) {
           onTabClose: (tab) => state.closeTab(tab),
           onAddTab: () => state.toggleCommandPalette(),
         })}
-        ${isChat
-          ? nothing
-          : html`
+        ${
+          isChat
+            ? nothing
+            : html`
               <section class="content-header">
                 <div>
                   ${state.tab === "usage" ? nothing : html`<div class="page-title">${titleForTab(state.tab)}</div>`}
@@ -209,7 +210,8 @@ export function renderApp(state: AppViewState) {
                   ${state.lastError ? html`<div class="pill danger">${state.lastError}</div>` : nothing}
                 </div>
               </section>
-            `}
+            `
+        }
 
         ${
           state.tab === "overview"

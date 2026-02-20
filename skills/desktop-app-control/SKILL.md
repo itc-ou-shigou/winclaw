@@ -70,11 +70,13 @@ The script automatically scans ports **9222-9229** and uses the first available 
 > Always use the safe launcher script below. It protects user tabs.
 
 **Use this safe script via `exec`:**
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\ensure-chrome-debug.ps1
 ```
 
 The script handles all cases automatically and NEVER kills Chrome:
+
 - **Scans ports 9222-9229** for an existing Chrome debugging instance
 - If a port is already listening → prints `CHROME_DEBUG_PORT=<port>` and "OK", proceed to step 3
 - If no port is listening → finds the first free port in 9222-9229, launches a SEPARATE dedicated WinClaw Chrome instance with its own profile (`--user-data-dir`), alongside any existing Chrome. User tabs are NEVER affected.
@@ -82,6 +84,7 @@ The script handles all cases automatically and NEVER kills Chrome:
 - Wait for "OK" output before proceeding
 
 **macOS:**
+
 ```bash
 # Scan ports 9222-9229
 for port in 9222 9223 9224 9225 9226 9227 9228 9229; do
@@ -94,6 +97,7 @@ done
 ### 3. Verify VNC + websockify is running
 
 **Windows:**
+
 ```powershell
 .\scripts\vnc-check-status.ps1
 # If not running:
@@ -133,6 +137,7 @@ Step 4d: If noVNC tab NOT FOUND:
 Every desktop interaction follows a 4-step loop:
 
 ### Step 1: Select noVNC tab
+
 ```
 mcp__chrome_devtools__list_pages   (find the noVNC tab)
 mcp__chrome_devtools__select_page  (select the noVNC tab by its index)
@@ -141,15 +146,19 @@ mcp__chrome_devtools__select_page  (select the noVNC tab by its index)
 **IMPORTANT:** Always re-select the noVNC tab before operations. If the user's Chrome has many tabs, the active tab may have changed. Only select the noVNC tab — never select any other tab.
 
 ### Step 2: Take screenshot
+
 ```
 mcp__chrome_devtools__take_screenshot
 ```
+
 Analyze the returned screenshot to understand the current desktop state.
 
 ### Step 3: Interact
+
 Choose the appropriate tool based on the desired action (see Tool Reference below).
 
 ### Step 4: Verify
+
 Wait 1-2 seconds for UI update, then take another screenshot to confirm the action succeeded.
 
 Repeat steps 2-4 as needed until the task is complete.
@@ -162,52 +171,52 @@ All tools are prefixed with `mcp__chrome_devtools__`:
 
 ### Input Tools
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `click` | Click at coordinates or on element | `selector`, `x`, `y`, `button` (left/right/middle) |
-| `drag` | Drag from one point to another | `startX`, `startY`, `endX`, `endY` |
-| `fill` | Type text into focused element | `selector`, `value` |
-| `fill_form` | Fill multiple form fields at once | `fields` (array of {selector, value}) |
-| `hover` | Hover over element/coordinates | `selector`, `x`, `y` |
-| `press_key` | Press keyboard key or shortcut | `key` (e.g. "Enter", "Tab", "Control+c") |
-| `handle_dialog` | Accept or dismiss dialogs | `accept` (boolean), `promptText` |
-| `upload_file` | Upload file to input element | `selector`, `filePath` |
+| Tool            | Description                        | Key Parameters                                     |
+| --------------- | ---------------------------------- | -------------------------------------------------- |
+| `click`         | Click at coordinates or on element | `selector`, `x`, `y`, `button` (left/right/middle) |
+| `drag`          | Drag from one point to another     | `startX`, `startY`, `endX`, `endY`                 |
+| `fill`          | Type text into focused element     | `selector`, `value`                                |
+| `fill_form`     | Fill multiple form fields at once  | `fields` (array of {selector, value})              |
+| `hover`         | Hover over element/coordinates     | `selector`, `x`, `y`                               |
+| `press_key`     | Press keyboard key or shortcut     | `key` (e.g. "Enter", "Tab", "Control+c")           |
+| `handle_dialog` | Accept or dismiss dialogs          | `accept` (boolean), `promptText`                   |
+| `upload_file`   | Upload file to input element       | `selector`, `filePath`                             |
 
 ### Screenshot & Inspection
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `take_screenshot` | Capture current page view | (none — captures full viewport) |
-| `take_snapshot` | Get DOM accessibility tree | (none) |
+| Tool              | Description                | Key Parameters                  |
+| ----------------- | -------------------------- | ------------------------------- |
+| `take_screenshot` | Capture current page view  | (none — captures full viewport) |
+| `take_snapshot`   | Get DOM accessibility tree | (none)                          |
 
 ### Navigation
 
-| Tool | Description | Safety |
-|------|-------------|--------|
-| `navigate_page` | Navigate CURRENT tab to URL | **ONLY use on the noVNC tab you selected** |
-| `new_page` | Open new tab | Safe — adds a new tab without affecting others |
-| `close_page` | ~~Close current tab~~ | **⛔ BLOCKED — calling this returns an error. Do NOT use.** |
-| `list_pages` | List all open tabs | Safe — read-only |
-| `select_page` | Switch to a tab | **ONLY select the noVNC tab** |
-| `wait_for` | Wait for condition | `selector`, `timeout` |
+| Tool            | Description                 | Safety                                                      |
+| --------------- | --------------------------- | ----------------------------------------------------------- |
+| `navigate_page` | Navigate CURRENT tab to URL | **ONLY use on the noVNC tab you selected**                  |
+| `new_page`      | Open new tab                | Safe — adds a new tab without affecting others              |
+| `close_page`    | ~~Close current tab~~       | **⛔ BLOCKED — calling this returns an error. Do NOT use.** |
+| `list_pages`    | List all open tabs          | Safe — read-only                                            |
+| `select_page`   | Switch to a tab             | **ONLY select the noVNC tab**                               |
+| `wait_for`      | Wait for condition          | `selector`, `timeout`                                       |
 
 ### Advanced
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `evaluate_script` | Execute JavaScript in page | `expression` |
-| `resize_page` | Change viewport dimensions | `width`, `height` |
-| `emulate` | Emulate device settings | `device` |
+| Tool              | Description                | Key Parameters    |
+| ----------------- | -------------------------- | ----------------- |
+| `evaluate_script` | Execute JavaScript in page | `expression`      |
+| `resize_page`     | Change viewport dimensions | `width`, `height` |
+| `emulate`         | Emulate device settings    | `device`          |
 
 ### Network & Performance (rarely needed for desktop control)
 
-| Tool | Description |
-|------|-------------|
-| `list_network_requests` | List network activity |
-| `get_network_request` | Get request details |
-| `performance_start_trace` | Start performance trace |
-| `performance_stop_trace` | Stop trace |
-| `performance_analyze_insight` | Analyze trace data |
+| Tool                          | Description             |
+| ----------------------------- | ----------------------- |
+| `list_network_requests`       | List network activity   |
+| `get_network_request`         | Get request details     |
+| `performance_start_trace`     | Start performance trace |
+| `performance_stop_trace`      | Stop trace              |
+| `performance_analyze_insight` | Analyze trace data      |
 
 ---
 

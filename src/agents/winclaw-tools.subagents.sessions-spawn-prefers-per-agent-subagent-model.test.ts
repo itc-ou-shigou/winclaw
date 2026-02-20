@@ -22,8 +22,8 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 import "./test-helpers/fast-core-tools.js";
-import { createWinClawTools } from "./winclaw-tools.js";
 import { resetSubagentRegistryForTests } from "./subagent-registry.js";
+import { createWinClawTools } from "./winclaw-tools.js";
 
 describe("winclaw-tools: subagents", () => {
   beforeEach(() => {

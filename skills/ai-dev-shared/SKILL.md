@@ -1,13 +1,7 @@
 ---
 name: ai-dev-shared
 description: "Shared infrastructure for AI development automation skills. Provides common phase execution functions, service startup/repair, Chrome DevTools MCP setup, and documentation generation. Not invoked directly - loaded as a dependency by ai-dev-* skills."
-metadata:
-  {
-    "winclaw": {
-      "emoji": "⚙️",
-      "os": ["win32", "darwin", "linux"]
-    }
-  }
+metadata: { "winclaw": { "emoji": "⚙️", "os": ["win32", "darwin", "linux"] } }
 user-invocable: false
 disable-model-invocation: true
 ---
@@ -20,19 +14,19 @@ Common references for `ai-dev-legacy-modernization`, `ai-dev-new-project`, and `
 
 ### Environment Variables (All Skills)
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `AIDEV_WORKSPACE` | **Yes** | Project root directory | Ask user |
-| `AUTOPROJECT_REPO` | No | GitHub repo for `.claude` prompts templates | `ITC-cloud-soft/autoproject` |
-| `GITHUB_TOKEN` | No | GitHub PAT for private repo / push access | `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` |
-| `GITHUB_REPO` | No | `owner/repo` format for push | Skip push |
-| `GITHUB_BRANCH` | No | Target branch | Current branch |
-| `DATABASE_URL` | No | DB connection string | Auto-detect from .env |
-| `DATABASE_ASYNC_URL` | No | Async DB connection | Auto-convert from DATABASE_URL |
-| `AIDEV_BACKEND_URL` | No | Backend test URL | Auto-detect port |
-| `AIDEV_FRONTEND_URL` | No | Frontend test URL | Auto-detect port |
-| `AIDEV_DOC_LANGUAGE` | No | Documentation language | `ja` |
-| `AIDEV_TEST_MODE` | No | `standard` or `efficient` | `standard` |
+| Variable             | Required | Description                                 | Default                                                                                         |
+| -------------------- | -------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `AIDEV_WORKSPACE`    | **Yes**  | Project root directory                      | Ask user                                                                                        |
+| `AUTOPROJECT_REPO`   | No       | GitHub repo for `.claude` prompts templates | `ITC-cloud-soft/autoproject`                                                                    |
+| `GITHUB_TOKEN`       | No       | GitHub PAT for private repo / push access   | `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` |
+| `GITHUB_REPO`        | No       | `owner/repo` format for push                | Skip push                                                                                       |
+| `GITHUB_BRANCH`      | No       | Target branch                               | Current branch                                                                                  |
+| `DATABASE_URL`       | No       | DB connection string                        | Auto-detect from .env                                                                           |
+| `DATABASE_ASYNC_URL` | No       | Async DB connection                         | Auto-convert from DATABASE_URL                                                                  |
+| `AIDEV_BACKEND_URL`  | No       | Backend test URL                            | Auto-detect port                                                                                |
+| `AIDEV_FRONTEND_URL` | No       | Frontend test URL                           | Auto-detect port                                                                                |
+| `AIDEV_DOC_LANGUAGE` | No       | Documentation language                      | `ja`                                                                                            |
+| `AIDEV_TEST_MODE`    | No       | `standard` or `efficient`                   | `standard`                                                                                      |
 
 ### Parameter Resolution Order
 
@@ -48,10 +42,10 @@ All phases require `.claude/prompts/` in the workspace. **Auto-download from aut
 
 #### Environment Variables for Autoproject
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `AUTOPROJECT_REPO` | No | GitHub repo for prompt templates | `ITC-cloud-soft/autoproject` |
-| `GITHUB_TOKEN` | No | GitHub PAT for private repo access | Public clone |
+| Variable           | Required | Description                        | Default                      |
+| ------------------ | -------- | ---------------------------------- | ---------------------------- |
+| `AUTOPROJECT_REPO` | No       | GitHub repo for prompt templates   | `ITC-cloud-soft/autoproject` |
+| `GITHUB_TOKEN`     | No       | GitHub PAT for private repo access | Public clone                 |
 
 #### Auto-Download .claude Directory
 
@@ -135,14 +129,14 @@ fi
 
 ### Phase Completion Markers
 
-| Phase | Marker File | Description |
-|-------|------------|-------------|
-| 2 | `INITIAL.md` or `CODE_ANALYSIS.md` | Spec or analysis generated |
-| 3 | `PRPs/*.md` or `CODE_REVIEW_REPORT.md` | PRPs or review generated |
-| 4 | `.prp_status/*.done` | All PRPs executed |
-| 5 | `test-logs/` | Test results exist |
-| 6 | `docs/*.md` | Documentation generated |
-| 7 | `deployment-logs/` | Deployment logs exist |
+| Phase | Marker File                            | Description                |
+| ----- | -------------------------------------- | -------------------------- |
+| 2     | `INITIAL.md` or `CODE_ANALYSIS.md`     | Spec or analysis generated |
+| 3     | `PRPs/*.md` or `CODE_REVIEW_REPORT.md` | PRPs or review generated   |
+| 4     | `.prp_status/*.done`                   | All PRPs executed          |
+| 5     | `test-logs/`                           | Test results exist         |
+| 6     | `docs/*.md`                            | Documentation generated    |
+| 7     | `deployment-logs/`                     | Deployment logs exist      |
 
 ### Git Integration (Optional)
 

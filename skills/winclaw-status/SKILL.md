@@ -16,6 +16,7 @@ curl -s http://127.0.0.1:18789/__winclaw__/api \
 ```
 
 Or via CLI:
+
 ```bash
 winclaw health --json
 ```
@@ -106,6 +107,7 @@ Check `valid` (bool) and `issues` (array) fields. Report any validation errors t
 ## Logs
 
 Gateway log file location:
+
 ```bash
 # Default log path
 cat /tmp/winclaw/winclaw-$(date +%Y-%m-%d).log
@@ -115,6 +117,7 @@ type %TEMP%\winclaw\winclaw-%DATE:~0,4%-%DATE:~5,2%-%DATE:~8,2%.log
 ```
 
 Or via CLI:
+
 ```bash
 winclaw logs --tail 50
 ```
@@ -126,6 +129,7 @@ winclaw status --deep
 ```
 
 Also check:
+
 - Gateway process: `curl -s http://127.0.0.1:18789/__winclaw__/api -d '{"method":"health","params":{}}'`
 - Port listening: `netstat -tlnp | grep 18789` (Linux) or `netstat -ano | findstr :18789` (Windows)
 - Config validity: `config.get` and check `issues`
@@ -148,6 +152,7 @@ When user asks about status, gather relevant info and present a clean summary:
 4. **Issues**: Call `config.get` → report any validation issues.
 
 Present as a concise dashboard:
+
 ```
 🟢 Gateway: Running (port 18789, uptime 2h)
 📡 Channels: Slack ✅, Discord ✅, Telegram ❌ (token expired)
@@ -159,10 +164,10 @@ Present as a concise dashboard:
 
 ## Troubleshooting quick reference
 
-| Symptom | Check | Fix |
-|---------|-------|-----|
-| Gateway not responding | Port 18789 listening? | Restart gateway |
-| Channel disconnected | `channels.status` probe | Re-enter credentials |
-| High token usage | `usage.summary` | Switch to cheaper model |
-| Config invalid | `config.get` issues | Fix reported errors |
-| Skill not available | `skills.status` bins | Install missing binaries |
+| Symptom                | Check                   | Fix                      |
+| ---------------------- | ----------------------- | ------------------------ |
+| Gateway not responding | Port 18789 listening?   | Restart gateway          |
+| Channel disconnected   | `channels.status` probe | Re-enter credentials     |
+| High token usage       | `usage.summary`         | Switch to cheaper model  |
+| Config invalid         | `config.get` issues     | Fix reported errors      |
+| Skill not available    | `skills.status` bins    | Install missing binaries |

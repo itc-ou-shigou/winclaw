@@ -1,6 +1,5 @@
 import type { GatewayRequestHandlers } from "./types.js";
 import { loadConfig } from "../../config/config.js";
-import { resolveWinClawPackageRoot } from "../../infra/winclaw-root.js";
 import {
   formatDoctorNonInteractiveHint,
   type RestartSentinelPayload,
@@ -9,6 +8,7 @@ import {
 import { scheduleGatewaySigusr1Restart } from "../../infra/restart.js";
 import { normalizeUpdateChannel } from "../../infra/update-channels.js";
 import { runGatewayUpdate } from "../../infra/update-runner.js";
+import { resolveWinClawPackageRoot } from "../../infra/winclaw-root.js";
 import {
   ErrorCodes,
   errorShape,

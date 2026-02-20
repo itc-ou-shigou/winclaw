@@ -38,14 +38,14 @@ This threat model documents adversarial threats to the WinClaw AI agent platform
 
 ### 1.2 Scope
 
-| Component              | Included | Notes                                            |
-| ---------------------- | -------- | ------------------------------------------------ |
+| Component             | Included | Notes                                            |
+| --------------------- | -------- | ------------------------------------------------ |
 | WinClaw Agent Runtime | Yes      | Core agent execution, tool calls, sessions       |
-| Gateway                | Yes      | Authentication, routing, channel integration     |
-| Channel Integrations   | Yes      | WhatsApp, Telegram, Discord, Signal, Slack, etc. |
-| ClawHub Marketplace    | Yes      | Skill publishing, moderation, distribution       |
-| MCP Servers            | Yes      | External tool providers                          |
-| User Devices           | Partial  | Mobile apps, desktop clients                     |
+| Gateway               | Yes      | Authentication, routing, channel integration     |
+| Channel Integrations  | Yes      | WhatsApp, Telegram, Discord, Signal, Slack, etc. |
+| ClawHub Marketplace   | Yes      | Skill publishing, moderation, distribution       |
+| MCP Servers           | Yes      | External tool providers                          |
+| User Devices          | Partial  | Mobile apps, desktop clients                     |
 
 ### 1.3 Out of Scope
 
@@ -144,7 +144,7 @@ Nothing is explicitly out of scope for this threat model.
 | Attribute               | Value                                                                |
 | ----------------------- | -------------------------------------------------------------------- |
 | **ATLAS ID**            | AML.T0006 - Active Scanning                                          |
-| **Description**         | Attacker scans for exposed WinClaw gateway endpoints                |
+| **Description**         | Attacker scans for exposed WinClaw gateway endpoints                 |
 | **Attack Vector**       | Network scanning, shodan queries, DNS enumeration                    |
 | **Affected Components** | Gateway, exposed API endpoints                                       |
 | **Current Mitigations** | Tailscale auth option, bind to loopback by default                   |
@@ -198,7 +198,7 @@ Nothing is explicitly out of scope for this threat model.
 | **ATLAS ID**            | AML.T0040 - AI Model Inference API Access                   |
 | **Description**         | Attacker steals authentication tokens from config files     |
 | **Attack Vector**       | Malware, unauthorized device access, config backup exposure |
-| **Affected Components** | ~/.winclaw/credentials/, config storage                    |
+| **Affected Components** | ~/.winclaw/credentials/, config storage                     |
 | **Current Mitigations** | File permissions                                            |
 | **Residual Risk**       | High - Tokens stored in plaintext                           |
 | **Recommendations**     | Implement token encryption at rest, add token rotation      |
@@ -560,7 +560,7 @@ T-EXEC-002 → T-EXFIL-001 → External exfiltration
 
 ### 7.1 ATLAS Technique Mapping
 
-| ATLAS ID      | Technique Name                 | WinClaw Threats                                                 |
+| ATLAS ID      | Technique Name                 | WinClaw Threats                                                  |
 | ------------- | ------------------------------ | ---------------------------------------------------------------- |
 | AML.T0006     | Active Scanning                | T-RECON-001, T-RECON-002                                         |
 | AML.T0009     | Collection                     | T-EXFIL-001, T-EXFIL-002, T-EXFIL-003                            |
@@ -591,11 +591,11 @@ T-EXEC-002 → T-EXFIL-001 → External exfiltration
 | Term                 | Definition                                                |
 | -------------------- | --------------------------------------------------------- |
 | **ATLAS**            | MITRE's Adversarial Threat Landscape for AI Systems       |
-| **ClawHub**          | WinClaw's skill marketplace                              |
-| **Gateway**          | WinClaw's message routing and authentication layer       |
+| **ClawHub**          | WinClaw's skill marketplace                               |
+| **Gateway**          | WinClaw's message routing and authentication layer        |
 | **MCP**              | Model Context Protocol - tool provider interface          |
 | **Prompt Injection** | Attack where malicious instructions are embedded in input |
-| **Skill**            | Downloadable extension for WinClaw agents                |
+| **Skill**            | Downloadable extension for WinClaw agents                 |
 | **SSRF**             | Server-Side Request Forgery                               |
 
 ---

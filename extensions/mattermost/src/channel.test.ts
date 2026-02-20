@@ -1,6 +1,6 @@
 import type { WinClawConfig } from "winclaw/plugin-sdk";
-import { createReplyPrefixOptions } from "winclaw/plugin-sdk";
 import { describe, expect, it } from "vitest";
+import { createReplyPrefixOptions } from "winclaw/plugin-sdk";
 import { mattermostPlugin } from "./channel.js";
 
 describe("mattermostPlugin", () => {

@@ -214,20 +214,21 @@ REPORT final_status, iteration, pass_rate
 
 Use these MCP tools for browser interaction:
 
-| Tool | Usage |
-|------|-------|
-| `mcp__claude-in-chrome__tabs_context_mcp` | Get current browser tabs |
-| `mcp__claude-in-chrome__tabs_create_mcp` | Create new browser tab |
-| `mcp__claude-in-chrome__navigate` | Navigate to Swagger UI URL |
-| `mcp__claude-in-chrome__read_page` | Read page content (accessibility tree) |
-| `mcp__claude-in-chrome__find` | Find elements by natural language |
-| `mcp__claude-in-chrome__computer` | Click, type, screenshot actions |
-| `mcp__claude-in-chrome__form_input` | Fill form fields |
-| `mcp__claude-in-chrome__javascript_tool` | Execute JavaScript on page |
-| `mcp__claude-in-chrome__read_network_requests` | Monitor API responses |
-| `mcp__claude-in-chrome__read_console_messages` | Check for errors |
+| Tool                                           | Usage                                  |
+| ---------------------------------------------- | -------------------------------------- |
+| `mcp__claude-in-chrome__tabs_context_mcp`      | Get current browser tabs               |
+| `mcp__claude-in-chrome__tabs_create_mcp`       | Create new browser tab                 |
+| `mcp__claude-in-chrome__navigate`              | Navigate to Swagger UI URL             |
+| `mcp__claude-in-chrome__read_page`             | Read page content (accessibility tree) |
+| `mcp__claude-in-chrome__find`                  | Find elements by natural language      |
+| `mcp__claude-in-chrome__computer`              | Click, type, screenshot actions        |
+| `mcp__claude-in-chrome__form_input`            | Fill form fields                       |
+| `mcp__claude-in-chrome__javascript_tool`       | Execute JavaScript on page             |
+| `mcp__claude-in-chrome__read_network_requests` | Monitor API responses                  |
+| `mcp__claude-in-chrome__read_console_messages` | Check for errors                       |
 
 **Advantages of Claude In Chrome**:
+
 - Full context sharing across entire session
 - Real-time bug fixing without context loss
 - No need for separate bug collection phase
@@ -332,6 +333,7 @@ echo ""
 ```
 
 **IF VALIDATION FAILS:**
+
 1. Run `python3 .claude/scripts/update_env_from_database_info.py`
 2. Edit `backend/.env` and change `mysql+pymysql://` to `mysql+aiomysql://`
 3. Re-run validation until it passes
@@ -374,6 +376,7 @@ fi
 ```
 
 **IMPORTANT**: The endpoint count from `verify_api_endpoints.py` is the ground truth.
+
 - If you discover fewer endpoints in Swagger UI, you MISSED some
 - Expand ALL categories and sections to ensure complete coverage
 
@@ -435,6 +438,7 @@ echo "[SEED] Test data saved to test-logs/test_data.json"
 ```
 
 **How to Use test_data.json (after seeding)**:
+
 1. **GET /items/{id}**: Use IDs from `entities` (e.g., `entities.users[0].id`)
 2. **PUT /items/{id}**: Use existing IDs to update records
 3. **DELETE /items/{id}**: Use existing IDs (test LAST to avoid affecting other tests)
@@ -442,6 +446,7 @@ echo "[SEED] Test data saved to test-logs/test_data.json"
 5. **GET /items**: Verify list contains seeded entities
 
 **If a 404 occurs during testing**: This means test data is missing. DO NOT classify as "acceptable failure". Instead:
+
 1. Create the missing resource via POST or direct DB insertion
 2. Record the new ID in test_data.json
 3. Retry the failing test with the correct ID
@@ -615,7 +620,6 @@ PATTERN: 502/503/504
 ```
 
 ---
-
 
 ## ⚡ SMART TEST DATA GENERATION (SYSTEM-LEVEL - NO HARDCODING) ⚡
 
@@ -878,7 +882,6 @@ def get_smart_default_by_name(field_name, field_schema):
 ╚═══════════════════════════════════════════════════════════════════════════════════╝
 ```
 
-
 ---
 
 ## Step 3: API Testing with Real-Time Bug Fixing
@@ -1009,7 +1012,6 @@ HTTP 500 - Server Error:
 
 ---
 
-
 ---
 
 ## ⚡⚡⚡ DYNAMIC TEST DATA CREATION (v2.0 - NO HARDCODING) ⚡⚡⚡
@@ -1036,7 +1038,7 @@ HTTP 500 - Server Error:
 
 ### Dynamic Test Data Algorithm
 
-```
+````
 ALGORITHM: AI-Driven Test Data Creation on 404
 
 WHEN you encounter a 404 on GET/PUT/DELETE /api/v1/{resource}/{id}:
@@ -1123,7 +1125,7 @@ WHEN you encounter a 404 on GET/PUT/DELETE /api/v1/{resource}/{id}:
 5. IF STILL FAILING AFTER DATA CREATION:
    - This is a REAL BUG, not missing data
    - Proceed with normal bug fixing workflow
-```
+````
 
 ### Smart Field Value Generation for Dynamic Creation
 
@@ -1155,7 +1157,7 @@ WHEN you encounter a 404 on GET/PUT/DELETE /api/v1/{resource}/{id}:
 
 ### Example: Handling Video Endpoint 404
 
-```
+````
 SCENARIO: Testing GET /api/v1/videos/{video_id} returns 404
 
 AI ACTIONS:
@@ -1219,39 +1221,42 @@ AI ACTIONS:
 
    asyncio.run(create())
    "
-   ```
+````
 
 5. [RE-TEST] Execute GET /api/v1/videos/{created_id}
    - Expected: 200 OK with video data
 
 6. [RECORD] Update results: video endpoint now PASSED
+
 ```
 
 ### DO NOT Section (Prohibited Approaches)
 
 ```
+
 ╔═══════════════════════════════════════════════════════════════════════════════════╗
-║  ❌ DO NOT DO THESE (Hardcoding Anti-Patterns)                                    ║
+║ ❌ DO NOT DO THESE (Hardcoding Anti-Patterns) ║
 ╠═══════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                   ║
-║  ❌ DO NOT use pre-written seed scripts with hardcoded model lists                ║
-║     Wrong: for model in ['User', 'Product', 'Video']:                             ║
-║                                                                                   ║
-║  ❌ DO NOT hardcode field names in seed scripts                                   ║
-║     Wrong: video = Video(title='Test', status='completed')                        ║
-║                                                                                   ║
-║  ❌ DO NOT assume table/model names without inspection                            ║
-║     Wrong: from app.models.video import Video  # might not exist                  ║
-║                                                                                   ║
-║  ❌ DO NOT skip foreign key resolution                                            ║
-║     Wrong: video = Video(user_id=1, ...)  # user 1 might not exist                ║
-║                                                                                   ║
-║  ✅ DO inspect model at runtime                                                   ║
-║  ✅ DO discover required fields dynamically                                       ║
-║  ✅ DO resolve foreign keys by querying related tables                            ║
-║  ✅ DO attempt API creation first, DB fallback second                             ║
-║                                                                                   ║
+║ ║
+║ ❌ DO NOT use pre-written seed scripts with hardcoded model lists ║
+║ Wrong: for model in ['User', 'Product', 'Video']: ║
+║ ║
+║ ❌ DO NOT hardcode field names in seed scripts ║
+║ Wrong: video = Video(title='Test', status='completed') ║
+║ ║
+║ ❌ DO NOT assume table/model names without inspection ║
+║ Wrong: from app.models.video import Video # might not exist ║
+║ ║
+║ ❌ DO NOT skip foreign key resolution ║
+║ Wrong: video = Video(user_id=1, ...) # user 1 might not exist ║
+║ ║
+║ ✅ DO inspect model at runtime ║
+║ ✅ DO discover required fields dynamically ║
+║ ✅ DO resolve foreign keys by querying related tables ║
+║ ✅ DO attempt API creation first, DB fallback second ║
+║ ║
 ╚═══════════════════════════════════════════════════════════════════════════════════╝
+
 ```
 
 ---
@@ -1261,21 +1266,23 @@ AI ACTIONS:
 ### Target: 95% Pass Rate
 
 ```
+
 QUALITY GATE CRITERIA (Efficient Mode):
 
 Target: 95% pass rate (95% of endpoints must pass)
 
 +----------------------------------------------------------------+
-| Pass Rate | Quality Gate | Action Required                      |
+| Pass Rate | Quality Gate | Action Required |
 +----------------------------------------------------------------+
-| >=95%     | PASSED       | Proceed to Phase 5C                 |
-| 80-94%    | WARN         | Document remaining issues, proceed   |
-| 50-79%    | FAILED       | Should not happen in efficient mode  |
-| <50%      | CRITICAL     | Major issues - investigate           |
+| >=95% | PASSED | Proceed to Phase 5C |
+| 80-94% | WARN | Document remaining issues, proceed |
+| 50-79% | FAILED | Should not happen in efficient mode |
+| <50% | CRITICAL | Major issues - investigate |
 +----------------------------------------------------------------+
 
 NOTE: In efficient mode, bugs are fixed in real-time.
 If pass rate is below 95%, investigate why fixes didn't work.
+
 ```
 
 ---
@@ -1285,19 +1292,21 @@ If pass rate is below 95%, investigate why fixes didn't work.
 ### Step 5.1: Generate JSON Results (MANDATORY - Iteration Loop Depends On This)
 
 ```
+
 ╔═══════════════════════════════════════════════════════════════════════════════════╗
-║  ⚠️ CRITICAL: CREATE THIS JSON FILE IMMEDIATELY AFTER TESTING COMPLETES!          ║
+║ ⚠️ CRITICAL: CREATE THIS JSON FILE IMMEDIATELY AFTER TESTING COMPLETES! ║
 ╠═══════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                   ║
-║  FILENAME MUST BE EXACTLY: test-logs/phase5b_efficient_test_results.json          ║
-║                                                                                   ║
-║  WHY: The iteration loop reads this file to determine pass_rate                   ║
-║  - If file doesn't exist → loop shows 0% → unnecessary re-runs                    ║
-║  - If filename is wrong → loop can't find it → shows 0%                           ║
-║                                                                                   ║
-║  CREATE THIS FILE AS YOUR FIRST ACTION AFTER TESTING!                             ║
+║ ║
+║ FILENAME MUST BE EXACTLY: test-logs/phase5b_efficient_test_results.json ║
+║ ║
+║ WHY: The iteration loop reads this file to determine pass_rate ║
+║ - If file doesn't exist → loop shows 0% → unnecessary re-runs ║
+║ - If filename is wrong → loop can't find it → shows 0% ║
+║ ║
+║ CREATE THIS FILE AS YOUR FIRST ACTION AFTER TESTING! ║
 ╚═══════════════════════════════════════════════════════════════════════════════════╝
-```
+
+````
 
 **⚠️ CRITICAL: You MUST create this JSON file BEFORE the Markdown report.**
 **Without this file, the iteration loop cannot read pass_rate and will always show 0%.**
@@ -1339,7 +1348,7 @@ cat > test-logs/phase5b_efficient_test_results.json << EOF
 EOF
 echo "[PHASE5B] JSON results saved to test-logs/phase5b_efficient_test_results.json"
 cat test-logs/phase5b_efficient_test_results.json
-```
+````
 
 ### Step 5.2: Generate Markdown Report
 
@@ -1384,16 +1393,18 @@ Categorize EACH failure into one of these categories:
 
 **Adjusted Pass Rate Calculation**:
 ```
-excluded_failures = ext_svc_count  (ONLY external services)
+
+excluded_failures = ext_svc_count (ONLY external services)
 adjusted_total = total - excluded_failures
-adjusted_pass_rate = (pass_count / adjusted_total) * 100
+adjusted_pass_rate = (pass_count / adjusted_total) \* 100
 
 Example:
-  Total: 72, Passed: 58, Failed: 14
-  External Services: 13
-  Excluded: 13
-  Adjusted Total: 72 - 13 = 59
-  Adjusted Pass Rate: 58 / 59 * 100 = 98.3%
+Total: 72, Passed: 58, Failed: 14
+External Services: 13
+Excluded: 13
+Adjusted Total: 72 - 13 = 59
+Adjusted Pass Rate: 58 / 59 \* 100 = 98.3%
+
 ```
 
 > **Note**: Adjusted Pass Rate excludes ONLY external service failures (502/503).

@@ -52,7 +52,6 @@
   padding-top: 0;
 }
 
-
 /* ===========================================
    Topbar
    =========================================== */
@@ -208,7 +207,6 @@
     padding var(--shell-focus-duration) var(--shell-focus-ease);
   max-height: 80px;
 }
-
 
 .page-title {
   font-size: 26px;

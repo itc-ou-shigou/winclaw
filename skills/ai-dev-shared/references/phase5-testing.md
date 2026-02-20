@@ -3,6 +3,7 @@
 ## Overview
 
 Phase 5 runs three sub-phases:
+
 - **5A**: Database validation (pre-check)
 - **5B**: API endpoint testing
 - **5C**: UI testing with browser automation
@@ -12,12 +13,14 @@ Phase 5 runs three sub-phases:
 Pre-requisite check before API/UI testing.
 
 ### Steps
+
 1. Check `DATABASE_URL` connectivity
 2. Verify database schema (tables exist)
 3. Run migrations if needed (`alembic upgrade head` / `prisma migrate deploy`)
 4. Validate health endpoint responds
 
 ### Execution
+
 ```bash
 # Auto-detect and validate DB
 if [ -n "$DATABASE_URL" ]; then
@@ -33,11 +36,13 @@ fi
 ```
 
 ### Skip Condition
+
 If `DATABASE_URL` is not set and cannot be auto-detected, skip 5A entirely.
 
 ## Phase 5B: API Testing
 
 ### Pre-requisite: Start Backend
+
 Before running API tests, ensure backend is running:
 
 ```bash
@@ -59,6 +64,7 @@ bash pty:true workdir:$AIDEV_WORKSPACE timeout:7200 command:"cat .claude/prompts
 ```
 
 ### What It Tests
+
 - All API endpoints from `/openapi.json`
 - CRUD operations (Create, Read, Update, Delete)
 - Authentication flows (login, token refresh)
@@ -66,7 +72,9 @@ bash pty:true workdir:$AIDEV_WORKSPACE timeout:7200 command:"cat .claude/prompts
 - Target pass rate: 95%
 
 ### Port Configuration
+
 Use `AIDEV_BACKEND_URL` if set, otherwise auto-detect:
+
 ```
 Scan order: 3001 → 8000 → 8080 → 5000 → 3000
 Health endpoint: /health (default)
@@ -75,6 +83,7 @@ Health endpoint: /health (default)
 ## Phase 5C: UI Testing
 
 ### Pre-requisite: Start Frontend
+
 ```bash
 # Start frontend
 bash pty:true workdir:$AIDEV_WORKSPACE timeout:60 command:"cd frontend && npm ci && npm run dev &"
@@ -93,20 +102,25 @@ bash pty:true workdir:$AIDEV_WORKSPACE timeout:7200 command:"cat .claude/prompts
 ```
 
 ### What It Tests (4 Categories)
+
 1. **Form Input + Submit**: Fill forms with validation
 2. **Button Click**: CRUD operations, modals, dialogs
 3. **Link Navigation**: Page routing, breadcrumbs
 4. **CSS/Visual**: Layout, responsive design
 
 ### Chrome DevTools MCP Setup
+
 Phase 5C uses Chrome DevTools MCP for browser automation:
+
 - `read_page`: Get page accessibility tree
 - `find`: Find elements by description
 - `computer`: Click, type, screenshot
 - `javascript_tool`: Execute JS in page context
 
 ### Test Results
+
 Output saved to `test-logs/`:
+
 - `test-logs/phase5b_api_results.json` — API test results
 - `test-logs/phase5c_ui_results.json` — UI test results
 - `test-logs/screenshots/` — UI test screenshots

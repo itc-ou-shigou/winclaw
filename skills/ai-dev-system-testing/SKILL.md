@@ -3,11 +3,8 @@ name: ai-dev-system-testing
 description: "Test and validate an existing codebase. Analyzes code structure, performs automated code review with auto-fix, runs API endpoint tests and UI tests via Chrome browser automation, generates documentation. Phase 4 (code generation) is skipped since code already exists. Use when user asks to test existing code, run quality assurance, perform code review, or validate a system."
 metadata:
   {
-    "winclaw": {
-      "emoji": "🧪",
-      "os": ["win32", "darwin", "linux"],
-      "requires": { "bins": ["claude"] }
-    }
+    "winclaw":
+      { "emoji": "🧪", "os": ["win32", "darwin", "linux"], "requires": { "bins": ["claude"] } },
   }
 ---
 
@@ -17,16 +14,16 @@ Automates code analysis, review, testing, and documentation for an existing code
 
 ## Phase Overview
 
-| Phase | What It Does | Output | Timeout |
-|-------|-------------|--------|---------|
-| Init | User confirmation & environment check | Confirmed settings | — |
-| 2 | Code structure analysis | `CODE_ANALYSIS.md` + `project-structure.json` | 30min |
-| 3 | Code review & auto-fix + review report | `CODE_REVIEW_REPORT.md` | 40min |
-| 4 | **SKIPPED** (code exists) | — | — |
-| 5B | API endpoint testing (backend URL required) | `test-logs/` | 2h |
-| 5C | UI testing (browser automation) | `test-logs/` + screenshots | 2h |
-| 6 | Documentation + PDF | `docs/` | 30min |
-| 7 | Azure deploy (optional) | `deployment-logs/` | 60min |
+| Phase | What It Does                                | Output                                        | Timeout |
+| ----- | ------------------------------------------- | --------------------------------------------- | ------- |
+| Init  | User confirmation & environment check       | Confirmed settings                            | —       |
+| 2     | Code structure analysis                     | `CODE_ANALYSIS.md` + `project-structure.json` | 30min   |
+| 3     | Code review & auto-fix + review report      | `CODE_REVIEW_REPORT.md`                       | 40min   |
+| 4     | **SKIPPED** (code exists)                   | —                                             | —       |
+| 5B    | API endpoint testing (backend URL required) | `test-logs/`                                  | 2h      |
+| 5C    | UI testing (browser automation)             | `test-logs/` + screenshots                    | 2h      |
+| 6     | Documentation + PDF                         | `docs/`                                       | 30min   |
+| 7     | Azure deploy (optional)                     | `deployment-logs/`                            | 60min   |
 
 ## Configuration
 
@@ -36,20 +33,20 @@ Pre-configured values can be set. If not set, the Init phase will ask the user i
 
 ```json5
 {
-  "skills": {
-    "entries": {
+  skills: {
+    entries: {
       "ai-dev-system-testing": {
-        "env": {
-          "AIDEV_BACKEND_URL": "http://localhost:3001",
-          "AIDEV_FRONTEND_URL": "http://localhost:3000",
-          "DATABASE_URL": "mysql+pymysql://root:pass@localhost/myapp",
-          "GITHUB_TOKEN": "ghp_xxxxxxxxxxxx",
-          "GITHUB_REPO": "myorg/my-app",
-          "AIDEV_DOC_LANGUAGE": "ja"
-        }
-      }
-    }
-  }
+        env: {
+          AIDEV_BACKEND_URL: "http://localhost:3001",
+          AIDEV_FRONTEND_URL: "http://localhost:3000",
+          DATABASE_URL: "mysql+pymysql://root:pass@localhost/myapp",
+          GITHUB_TOKEN: "ghp_xxxxxxxxxxxx",
+          GITHUB_REPO: "myorg/my-app",
+          AIDEV_DOC_LANGUAGE: "ja",
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -103,10 +100,12 @@ bash pty:true workdir:$WORKSPACE timeout:1800 command:"cat .claude/prompts/phase
 ```
 
 **Verify**:
+
 - `CODE_ANALYSIS.md` exists (> 3,000 bytes)
 - `deployment-logs/project-structure.json` exists
 
 If `CODE_ANALYSIS.md` exists but `project-structure.json` is missing, generate PSC only:
+
 ```bash
 bash pty:true workdir:$WORKSPACE timeout:600 command:"claude --dangerously-skip-permissions -p 'Read CODE_ANALYSIS.md and generate deployment-logs/project-structure.json with backend/frontend directory, ports, install commands, start commands, and health endpoints.'"
 ```
@@ -177,12 +176,12 @@ See `ai-dev-shared/references/phase7-deployment.md`.
 
 ## Differences from Other Skills
 
-| Aspect | System Testing | Legacy Modernization | New Project |
-|--------|---------------|---------------------|-------------|
+| Aspect  | System Testing                   | Legacy Modernization         | New Project               |
+| ------- | -------------------------------- | ---------------------------- | ------------------------- |
 | Phase 2 | Code analysis → CODE_ANALYSIS.md | Legacy analysis → INITIAL.md | Requirements → INITIAL.md |
-| Phase 3 | Code review & auto-fix | PRP generation | PRP generation |
-| Phase 4 | **Skipped** | PRP execution (code gen) | PRP execution (code gen) |
-| Input | Existing codebase | Legacy codebase | User requirements |
+| Phase 3 | Code review & auto-fix           | PRP generation               | PRP generation            |
+| Phase 4 | **Skipped**                      | PRP execution (code gen)     | PRP execution (code gen)  |
+| Input   | Existing codebase                | Legacy codebase              | User requirements         |
 
 ## Smart Resume
 
@@ -197,12 +196,12 @@ Phase 5C: ⏳ UI tests
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Chrome extension not installed | Install Claude In Chrome from Chrome Web Store |
-| No backend detected | Check project structure; ensure backend/ or server/ exists |
-| Health check fails | Verify port in .env matches AIDEV_BACKEND_URL |
-| UI tests fail | Ensure frontend is running and accessible |
-| Code review timeout | Increase timeout or reduce codebase scope |
-| DB connection error | Check DATABASE_URL or backend/.env |
-| Phase 5B skipped unexpectedly | Confirm AIDEV_BACKEND_URL was provided in Init |
+| Problem                        | Solution                                                   |
+| ------------------------------ | ---------------------------------------------------------- |
+| Chrome extension not installed | Install Claude In Chrome from Chrome Web Store             |
+| No backend detected            | Check project structure; ensure backend/ or server/ exists |
+| Health check fails             | Verify port in .env matches AIDEV_BACKEND_URL              |
+| UI tests fail                  | Ensure frontend is running and accessible                  |
+| Code review timeout            | Increase timeout or reduce codebase scope                  |
+| DB connection error            | Check DATABASE_URL or backend/.env                         |
+| Phase 5B skipped unexpectedly  | Confirm AIDEV_BACKEND_URL was provided in Init             |

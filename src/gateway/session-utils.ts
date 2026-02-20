@@ -347,10 +347,7 @@ function resolveDefaultStoreAgentId(cfg: WinClawConfig): string {
   return normalizeAgentId(resolveDefaultAgentId(cfg));
 }
 
-export function resolveSessionStoreKey(params: {
-  cfg: WinClawConfig;
-  sessionKey: string;
-}): string {
+export function resolveSessionStoreKey(params: { cfg: WinClawConfig; sessionKey: string }): string {
   const raw = params.sessionKey.trim();
   if (!raw) {
     return raw;

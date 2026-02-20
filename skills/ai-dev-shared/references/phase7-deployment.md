@@ -3,21 +3,22 @@
 ## Overview
 
 Phase 7 deploys the application to Azure using a separated architecture:
+
 - **Frontend**: Azure Static Web Apps (FREE tier)
 - **Backend**: Azure App Service (Container)
 
 ## Required Azure Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `AZURE_TENANT_ID` | Azure AD tenant ID |
-| `AZURE_CLIENT_ID` | Service principal client ID |
-| `AZURE_CLIENT_SECRET` | Service principal secret |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
-| `AZURE_RESOURCE_GROUP` | Resource group name |
-| `AZURE_LOCATION` | Azure region (e.g., `japaneast`) |
-| `AZURE_APP_SERVICE_PLAN` | App Service plan name |
-| `AZURE_ACR_NAME` | Azure Container Registry name |
+| Variable                 | Description                      |
+| ------------------------ | -------------------------------- |
+| `AZURE_TENANT_ID`        | Azure AD tenant ID               |
+| `AZURE_CLIENT_ID`        | Service principal client ID      |
+| `AZURE_CLIENT_SECRET`    | Service principal secret         |
+| `AZURE_SUBSCRIPTION_ID`  | Azure subscription ID            |
+| `AZURE_RESOURCE_GROUP`   | Resource group name              |
+| `AZURE_LOCATION`         | Azure region (e.g., `japaneast`) |
+| `AZURE_APP_SERVICE_PLAN` | App Service plan name            |
+| `AZURE_ACR_NAME`         | Azure Container Registry name    |
 
 ## Execution
 

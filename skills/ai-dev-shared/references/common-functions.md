@@ -7,6 +7,7 @@
 Scan order for backend directory: `backend/`, `server/`, `api/`, `.`
 
 Detection by file presence:
+
 - `requirements.txt` or `pyproject.toml` → Python (FastAPI/Django/Flask)
 - `package.json` with express/fastify/nest → Node.js
 - `go.mod` → Go
@@ -17,6 +18,7 @@ Detection by file presence:
 Scan order: `frontend/`, `client/`, `web/`, `.`
 
 Detection by `package.json` content:
+
 - `next` → Next.js
 - `react-scripts` → Create React App
 - `vite` + `react` → Vite + React
@@ -39,14 +41,14 @@ done
 
 ### Install Command Detection
 
-| Lock File | Install Command |
-|-----------|----------------|
-| `poetry.lock` | `poetry install` |
-| `package-lock.json` | `npm ci` |
-| `yarn.lock` | `yarn install --frozen-lockfile` |
-| `pnpm-lock.yaml` | `pnpm install --frozen-lockfile` |
-| `requirements.txt` | `pip install -r requirements.txt` |
-| `Pipfile.lock` | `pipenv install` |
+| Lock File           | Install Command                   |
+| ------------------- | --------------------------------- |
+| `poetry.lock`       | `poetry install`                  |
+| `package-lock.json` | `npm ci`                          |
+| `yarn.lock`         | `yarn install --frozen-lockfile`  |
+| `pnpm-lock.yaml`    | `pnpm install --frozen-lockfile`  |
+| `requirements.txt`  | `pip install -r requirements.txt` |
+| `Pipfile.lock`      | `pipenv install`                  |
 
 ## Service Startup & Health Check
 
@@ -87,12 +89,14 @@ done
 When a service fails to start, apply this escalating repair strategy:
 
 ### Stage 1: Dependency Fix
+
 ```bash
 cd "$BACKEND_DIR"
 pip install -r requirements.txt  # or npm ci
 ```
 
 ### Stage 2: Migration Fix
+
 ```bash
 # Auto-detect migration tool
 if [ -f "alembic.ini" ]; then
@@ -105,6 +109,7 @@ fi
 ```
 
 ### Stage 3: Port Conflict Fix
+
 ```bash
 # Kill process on target port (Mac/Linux)
 PORT=${BACKEND_PORT:-3001}
@@ -113,6 +118,7 @@ lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
 ```
 
 ### Stage 4: Claude Auto-Repair
+
 ```bash
 # Ask Claude to diagnose and fix
 claude --dangerously-skip-permissions -p "The backend service failed to start. Error log: $(tail -50 /tmp/backend.log). Diagnose and fix the issue."

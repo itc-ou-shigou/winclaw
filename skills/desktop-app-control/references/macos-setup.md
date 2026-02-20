@@ -107,6 +107,7 @@ This runs websockify in the background, bridging VNC (port 5900) to WebSocket (p
 ## Step 6: Open noVNC
 
 Navigate to:
+
 ```
 http://localhost:6080/vnc.html?autoconnect=1&resize=remote
 ```
@@ -147,6 +148,7 @@ echo "To stop: kill \$(lsof -t -i :6080)"
 ```
 
 Make it executable:
+
 ```bash
 chmod +x ~/.winclaw/vnc/start-vnc-desktop-mac.sh
 ```
@@ -194,6 +196,7 @@ macOS Retina displays have 2x pixel density. This can affect coordinate mapping:
   - Or divide screenshot coordinates by 2 before clicking
 
 **Recommended URL for Retina Macs:**
+
 ```
 http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=6
 ```
@@ -202,15 +205,15 @@ http://localhost:6080/vnc.html?autoconnect=1&resize=scale&quality=6
 
 ## Troubleshooting
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| "Connection refused" on port 5900 | Screen Sharing not enabled | Enable in System Settings → Sharing |
-| Password prompt in noVNC | macOS requires VNC password | Enter the password you set in Step 1 |
-| Black screen | Screen Recording permission missing | Grant permission (see Permissions above) |
-| Click coordinates offset | Retina 2x scaling | Use `resize=scale` or divide coordinates by 2 |
-| "Address already in use" on 6080 | websockify already running | `kill $(lsof -t -i :6080)` then restart |
-| Input (click/type) not working | Accessibility permission missing | Grant Accessibility permission |
-| Chrome won't connect | Not launched with debug port | Quit Chrome completely, relaunch with `--remote-debugging-port=9222` |
+| Issue                             | Cause                               | Solution                                                             |
+| --------------------------------- | ----------------------------------- | -------------------------------------------------------------------- |
+| "Connection refused" on port 5900 | Screen Sharing not enabled          | Enable in System Settings → Sharing                                  |
+| Password prompt in noVNC          | macOS requires VNC password         | Enter the password you set in Step 1                                 |
+| Black screen                      | Screen Recording permission missing | Grant permission (see Permissions above)                             |
+| Click coordinates offset          | Retina 2x scaling                   | Use `resize=scale` or divide coordinates by 2                        |
+| "Address already in use" on 6080  | websockify already running          | `kill $(lsof -t -i :6080)` then restart                              |
+| Input (click/type) not working    | Accessibility permission missing    | Grant Accessibility permission                                       |
+| Chrome won't connect              | Not launched with debug port        | Quit Chrome completely, relaunch with `--remote-debugging-port=9222` |
 
 ### Diagnostic commands
 

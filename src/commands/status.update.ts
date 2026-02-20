@@ -1,10 +1,10 @@
 import { formatCliCommand } from "../cli/command-format.js";
-import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import {
   checkUpdateStatus,
   compareSemverStrings,
   type UpdateCheckResult,
 } from "../infra/update-check.js";
+import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { VERSION } from "../version.js";
 
 export async function getUpdateCheckResult(params: {

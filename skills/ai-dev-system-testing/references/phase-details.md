@@ -3,12 +3,15 @@
 ## Phase 2: Code Structure Analysis
 
 ### Purpose
+
 Analyze the existing codebase to understand its structure, technology stack, and generate machine-readable configuration (`project-structure.json`) for subsequent phases.
 
 ### Prompt File
+
 `.claude/prompts/phase2-code-analysis.md`
 
 ### What Claude Does
+
 1. Scans all source files to identify technology stack
 2. Detects backend framework (FastAPI, Django, Express, Spring, etc.)
 3. Detects frontend framework (React, Vue, Angular, etc.)
@@ -17,7 +20,9 @@ Analyze the existing codebase to understand its structure, technology stack, and
 6. Generates two outputs:
 
 #### Output 1: `CODE_ANALYSIS.md`
+
 Comprehensive human-readable analysis:
+
 - Technology stack overview
 - Directory structure description
 - Backend architecture (routes, services, models)
@@ -27,7 +32,9 @@ Comprehensive human-readable analysis:
 - Identified issues and recommendations
 
 #### Output 2: `deployment-logs/project-structure.json`
+
 Machine-readable configuration (PSC):
+
 ```json
 {
   "backend": {
@@ -65,13 +72,16 @@ Machine-readable configuration (PSC):
 ```
 
 ### PSC-Only Recovery
+
 If `CODE_ANALYSIS.md` exists but `project-structure.json` is missing, a focused prompt generates only the PSC file (timeout: 600s).
 
 ### Validation
+
 - `CODE_ANALYSIS.md` > 3,000 bytes
 - `deployment-logs/project-structure.json` is valid JSON
 
 ### Timeout
+
 1800 seconds (30 minutes)
 
 ---
@@ -79,12 +89,15 @@ If `CODE_ANALYSIS.md` exists but `project-structure.json` is missing, a focused 
 ## Phase 3: Code Review & Auto-Fix
 
 ### Purpose
+
 Perform automated code review across the entire codebase. Identify issues, apply auto-fixes where safe, and generate a comprehensive review report.
 
 ### Prompt File
+
 `.claude/prompts/phase3-code-review.md`
 
 ### What Claude Does
+
 1. Reads `CODE_ANALYSIS.md` to understand the stack
 2. Reviews backend code:
    - Security vulnerabilities (SQL injection, XSS, auth bypass)
@@ -109,7 +122,9 @@ Perform automated code review across the entire codebase. Identify issues, apply
    - Recommendations
 
 ### Dynamic Technology Support
+
 The review is not limited to Python/React. Claude adapts to whatever stack is detected:
+
 - Python (FastAPI, Django, Flask)
 - PHP (Laravel, Symfony)
 - Java (Spring Boot)
@@ -119,12 +134,15 @@ The review is not limited to Python/React. Claude adapts to whatever stack is de
 - React, Vue, Angular, Svelte
 
 ### Execution Logs
+
 Output is teed to `test-logs/code-review/phase3_execution.log`.
 
 ### Timeout Handling
+
 If Phase 3 times out (2400s), partial results may exist. The skill continues to Phase 5 with whatever review was completed. A minimal `CODE_REVIEW_REPORT.md` is created if Claude didn't generate one.
 
 ### Validation
+
 - `CODE_REVIEW_REPORT.md` exists (auto-created with minimal content if timeout)
 - Review logs saved to `test-logs/code-review/`
 
@@ -133,6 +151,7 @@ If Phase 3 times out (2400s), partial results may exist. The skill continues to 
 ## Phase 4: SKIPPED
 
 System Testing mode skips Phase 4 entirely because:
+
 - Code already exists (uploaded/cloned by user)
 - No PRP generation needed
 - No code generation needed

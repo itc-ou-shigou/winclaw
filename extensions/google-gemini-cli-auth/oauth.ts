@@ -5,10 +5,7 @@ import { delimiter, dirname, join } from "node:path";
 import { isWSL2Sync } from "winclaw/plugin-sdk";
 
 const CLIENT_ID_KEYS = ["WINCLAW_GEMINI_OAUTH_CLIENT_ID", "GEMINI_CLI_OAUTH_CLIENT_ID"];
-const CLIENT_SECRET_KEYS = [
-  "WINCLAW_GEMINI_OAUTH_CLIENT_SECRET",
-  "GEMINI_CLI_OAUTH_CLIENT_SECRET",
-];
+const CLIENT_SECRET_KEYS = ["WINCLAW_GEMINI_OAUTH_CLIENT_SECRET", "GEMINI_CLI_OAUTH_CLIENT_SECRET"];
 const REDIRECT_URI = "http://localhost:8085/oauth2callback";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";

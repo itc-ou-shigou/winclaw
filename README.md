@@ -551,14 +551,14 @@ WinClaw includes 6 built-in **settings skills** that let you configure everythin
 
 ### Available settings skills
 
-| Skill | Emoji | What it does |
-|-------|-------|-------------|
-| `winclaw-setup` | ⚙️ | Gateway core settings: port, auth token, TLS, AI model, theme, logging |
-| `winclaw-channels` | 🔗 | Add, remove, enable/disable messaging channels; manage DM/group policies |
-| `winclaw-agents` | 🤖 | Create/configure AI agents: model, personality, workspace, thinking level |
-| `winclaw-cron` | ⏰ | Schedule recurring tasks: daily reports, reminders, periodic checks |
-| `winclaw-status` | 📊 | Check system health, usage stats, connected channels, active sessions |
-| `winclaw-sns-wizard` | 📲 | Step-by-step guided setup for connecting any of the 19 supported platforms |
+| Skill                | Emoji | What it does                                                               |
+| -------------------- | ----- | -------------------------------------------------------------------------- |
+| `winclaw-setup`      | ⚙️    | Gateway core settings: port, auth token, TLS, AI model, theme, logging     |
+| `winclaw-channels`   | 🔗    | Add, remove, enable/disable messaging channels; manage DM/group policies   |
+| `winclaw-agents`     | 🤖    | Create/configure AI agents: model, personality, workspace, thinking level  |
+| `winclaw-cron`       | ⏰    | Schedule recurring tasks: daily reports, reminders, periodic checks        |
+| `winclaw-status`     | 📊    | Check system health, usage stats, connected channels, active sessions      |
+| `winclaw-sns-wizard` | 📲    | Step-by-step guided setup for connecting any of the 19 supported platforms |
 
 ### How it works
 
@@ -567,6 +567,7 @@ Open the **Chat** tab in the Dashboard (or send a message from any connected cha
 ### Example conversations
 
 **Initial setup:**
+
 ```
 You:   Help me set up WinClaw for the first time
 AI:    I'll guide you through the initial setup. Let me check your current
@@ -578,6 +579,7 @@ AI:    Done! I've set agent.model to claude-sonnet-4-20250514. Would you like
 ```
 
 **Connecting a messaging platform:**
+
 ```
 You:   I want to connect Telegram
 AI:    Great! Let's set up Telegram step by step.
@@ -591,6 +593,7 @@ AI:    ✅ Telegram connected! Your bot is now receiving messages.
 ```
 
 **Scheduling a recurring task:**
+
 ```
 You:   Send me a weather summary every morning at 8am
 AI:    I'll create a cron job for that. Setting up a daily task at 08:00
@@ -599,6 +602,7 @@ AI:    I'll create a cron job for that. Setting up a daily task at 08:00
 ```
 
 **Checking system status:**
+
 ```
 You:   Is everything working? Show me what's connected
 AI:    📊 System Status:
@@ -610,6 +614,7 @@ AI:    📊 System Status:
 ```
 
 **Managing agents:**
+
 ```
 You:   Create a new agent called "translator" that uses GPT-4o
 AI:    I'll create a new agent with ID "translator" using gpt-4o.

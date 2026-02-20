@@ -20,28 +20,30 @@ Returns `channels` (configured status per channel), `channelAccounts` (runtime c
 
 ## Supported channels
 
-| Channel | Config key | Required fields |
-|---------|-----------|----------------|
-| Slack | `channels.slack` | `botToken`, `appToken` |
-| Discord | `channels.discord` | `token` (bot token) |
-| Telegram | `channels.telegram` | `botToken` |
-| WhatsApp | `channels.whatsapp` | pairing flow (no token) |
-| Signal | `channels.signal` | `signalCli` path |
-| iMessage | `channels.imessage` | macOS only |
-| Google Chat | `channels.googlechat` | service account |
-| MS Teams | `channels.msteams` | app credentials |
+| Channel     | Config key            | Required fields         |
+| ----------- | --------------------- | ----------------------- |
+| Slack       | `channels.slack`      | `botToken`, `appToken`  |
+| Discord     | `channels.discord`    | `token` (bot token)     |
+| Telegram    | `channels.telegram`   | `botToken`              |
+| WhatsApp    | `channels.whatsapp`   | pairing flow (no token) |
+| Signal      | `channels.signal`     | `signalCli` path        |
+| iMessage    | `channels.imessage`   | macOS only              |
+| Google Chat | `channels.googlechat` | service account         |
+| MS Teams    | `channels.msteams`    | app credentials         |
 
 ## Add a channel
 
 Read current config, build patch, write. Example for Slack:
 
 **Step 1**: Get current config and hash:
+
 ```bash
 curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{"method":"config.get","params":{}}'
 ```
 
 **Step 2**: Patch to add Slack:
+
 ```bash
 curl -s http://127.0.0.1:18789/__winclaw__/api \
   -d '{
@@ -56,6 +58,7 @@ curl -s http://127.0.0.1:18789/__winclaw__/api \
 ## Channel config structure
 
 Each channel uses named accounts under `channels.<platform>`:
+
 ```json
 {
   "channels": {
@@ -84,65 +87,71 @@ Each channel uses named accounts under `channels.<platform>`:
 
 ## Common per-account settings
 
-| Setting | Type | Default | Notes |
-|---------|------|---------|-------|
-| `enabled` | bool | true | Enable/disable this account |
-| `dmPolicy` | string | "pairing" | "pairing", "allowlist", "open", "disabled" |
-| `groupPolicy` | string | "open" | "open", "disabled", "allowlist" |
-| `allowFrom` | string[] | [] | DM allowlist (user IDs) |
-| `groupAllowFrom` | string[] | [] | Group allowlist (chat IDs) |
-| `historyLimit` | number | — | Context history limit |
-| `mediaMaxMb` | number | — | Max file size in MB |
-| `blockStreaming` | bool | — | Enable block streaming |
-| `configWrites` | bool | false | Allow config changes from channel |
-| `allowBots` | bool | false | Respond to other bots |
+| Setting          | Type     | Default   | Notes                                      |
+| ---------------- | -------- | --------- | ------------------------------------------ |
+| `enabled`        | bool     | true      | Enable/disable this account                |
+| `dmPolicy`       | string   | "pairing" | "pairing", "allowlist", "open", "disabled" |
+| `groupPolicy`    | string   | "open"    | "open", "disabled", "allowlist"            |
+| `allowFrom`      | string[] | []        | DM allowlist (user IDs)                    |
+| `groupAllowFrom` | string[] | []        | Group allowlist (chat IDs)                 |
+| `historyLimit`   | number   | —         | Context history limit                      |
+| `mediaMaxMb`     | number   | —         | Max file size in MB                        |
+| `blockStreaming` | bool     | —         | Enable block streaming                     |
+| `configWrites`   | bool     | false     | Allow config changes from channel          |
+| `allowBots`      | bool     | false     | Respond to other bots                      |
 
 ## Platform-specific settings
 
 ### Slack
-| Setting | Notes |
-|---------|-------|
-| `mode` | "socket" (default) or "http" |
-| `requireMention` | Require @mention in channels (default: true) |
-| `signingSecret` | For HTTP mode |
-| `thread.historyScope` | "thread" or "channel" |
+
+| Setting               | Notes                                        |
+| --------------------- | -------------------------------------------- |
+| `mode`                | "socket" (default) or "http"                 |
+| `requireMention`      | Require @mention in channels (default: true) |
+| `signingSecret`       | For HTTP mode                                |
+| `thread.historyScope` | "thread" or "channel"                        |
 
 ### Discord
-| Setting | Notes |
-|---------|-------|
+
+| Setting                     | Notes                    |
+| --------------------------- | ------------------------ |
 | `guilds.<guildId>.channels` | Per-guild channel config |
-| `intents.presence` | Privileged intent |
-| `intents.guildMembers` | Privileged intent |
-| `maxLinesPerMessage` | Soft limit (default: 17) |
+| `intents.presence`          | Privileged intent        |
+| `intents.guildMembers`      | Privileged intent        |
+| `maxLinesPerMessage`        | Soft limit (default: 17) |
 
 ### Telegram
-| Setting | Notes |
-|---------|-------|
-| `botToken` | From @BotFather |
-| `webhookUrl` | For webhook mode |
-| `streamMode` | "off", "partial" (default), "block" |
-| `linkPreview` | Enable link previews (default: true) |
-| `customCommands` | Register slash commands |
+
+| Setting          | Notes                                |
+| ---------------- | ------------------------------------ |
+| `botToken`       | From @BotFather                      |
+| `webhookUrl`     | For webhook mode                     |
+| `streamMode`     | "off", "partial" (default), "block"  |
+| `linkPreview`    | Enable link previews (default: true) |
+| `customCommands` | Register slash commands              |
 
 ### WhatsApp
-| Setting | Notes |
-|---------|-------|
-| `selfChatMode` | Use personal number |
-| `sendReadReceipts` | Default: true |
-| `debounceMs` | Batch rapid messages |
+
+| Setting            | Notes                |
+| ------------------ | -------------------- |
+| `selfChatMode`     | Use personal number  |
+| `sendReadReceipts` | Default: true        |
+| `debounceMs`       | Batch rapid messages |
 
 ## Disable a channel
 
 Patch `enabled: false`:
+
 ```json
-{"channels":{"slack":{"default":{"enabled":false}}}}
+{ "channels": { "slack": { "default": { "enabled": false } } } }
 ```
 
 ## Remove a channel
 
 Set the account to `null` to delete:
+
 ```json
-{"channels":{"slack":{"default":null}}}
+{ "channels": { "slack": { "default": null } } }
 ```
 
 ## Logout a channel

@@ -40,10 +40,7 @@ export function clearIdeMcpServerConfigs(): void {
  * Convert ACP McpServer definitions to MCP Bridge server configs
  * and register them for use by the MCP Bridge plugin.
  */
-export function applyIdeMcpServersToConfig(
-  servers: McpServer[],
-  log: (msg: string) => void,
-): void {
+export function applyIdeMcpServersToConfig(servers: McpServer[], log: (msg: string) => void): void {
   if (!servers || servers.length === 0) {
     return;
   }

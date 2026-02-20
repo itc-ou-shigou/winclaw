@@ -374,8 +374,8 @@ winclaw pairing list feishu
 
 ## Gateway management commands
 
-| Command                    | Description                   |
-| -------------------------- | ----------------------------- |
+| Command                   | Description                   |
+| ------------------------- | ----------------------------- |
 | `winclaw gateway status`  | Show gateway status           |
 | `winclaw gateway install` | Install/start gateway service |
 | `winclaw gateway stop`    | Stop gateway service          |
