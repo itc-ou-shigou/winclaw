@@ -374,7 +374,7 @@ function handleExecLogFromToolEvent(
       {
         ts,
         stream: exitCode !== 0 ? "stderr" : "system",
-        text: `${status} (exit ${exitCode ?? "?"})`,
+        text: `${status} (exit ${exitCode != null ? exitCode : "?"})`,
         toolCallId,
       },
     ]);
