@@ -39,15 +39,11 @@ Phase 5 测试需要测试账号。在运行测试前，请确保：
 ## 快速开始
 
 ```powershell
-# 基本用法（交互式）- 替换为实际的 skill 路径
-& "$env:USERPROFILE\.winclaw\skills\ai-dev-system-testing\scripts\run-all.ps1" -Workspace "C:\path\to\project"
-
-# 或者使用 skill 目录变量
-$skillDir = Split-Path -Parent $MyInvocation.MyCommand.Path  # 如果在 skill 目录下
-& "$skillDir\scripts\run-all.ps1" -Workspace "C:\path\to\project"
+# 基本用法（交互式）
+& "{baseDir}/scripts/run-all.ps1" -Workspace "C:\path\to\project"
 
 # 完整参数（非交互式）
-& "run-all.ps1" `
+& "{baseDir}/scripts/run-all.ps1" `
     -Workspace "C:\path\to\project" `
     -FrontendUrl "http://localhost:3000" `
     -BackendUrl "http://localhost:8000" `
@@ -55,10 +51,10 @@ $skillDir = Split-Path -Parent $MyInvocation.MyCommand.Path  # 如果在 skill �
     -NonInteractive
 
 # Resume 模式（跳过已完成的 Phase）
-& "run-all.ps1" -Workspace "C:\path\to\project" -Resume
+& "{baseDir}/scripts/run-all.ps1" -Workspace "C:\path\to\project" -Resume
 
 # 只运行特定 Phase
-& "run-all.ps1" -Workspace "C:\path\to\project" -Phases "phase5b,phase5c"
+& "{baseDir}/scripts/run-all.ps1" -Workspace "C:\path\to\project" -Phases "phase5b,phase5c"
 ```
 
 ## 参数说明
