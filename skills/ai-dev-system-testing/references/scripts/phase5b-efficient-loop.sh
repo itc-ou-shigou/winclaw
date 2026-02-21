@@ -148,7 +148,7 @@ main() {
         echo "[RESULT] Pass Rate: $current_pass_rate%"
         
         # Check if target achieved
-        if [ $(echo "$current_pass_rate >= $TARGET_PASS_RATE" | bc -l 2>/dev/null || echo "0") -eq 1 ]; then
+        if [ $(python3 -c "print(1 if $current_pass_rate >= $TARGET_PASS_RATE else 0)" 2>/dev/null || echo "0") -eq 1 ]; then
             echo ""
             echo "╔════════════════════════════════════════════════════════════╗"
             echo "║  ✅ SUCCESS: Target pass rate achieved!                     ║"
@@ -158,8 +158,8 @@ main() {
             exit 0
         fi
         
-        # Check early exit
-        if [ $(echo "$current_pass_rate <= $previous_pass_rate" | bc -l 2>/dev/null || echo "0") -eq 1 ]; then
+        # Check early exit (strict less-than: plateau is NOT treated as no-improvement)
+        if [ $(python3 -c "print(1 if $current_pass_rate < $previous_pass_rate else 0)" 2>/dev/null || echo "0") -eq 1 ]; then
             no_improvement_count=$((no_improvement_count + 1))
             echo "[WARN] No improvement ($no_improvement_count/$EARLY_EXIT_THRESHOLD)"
             

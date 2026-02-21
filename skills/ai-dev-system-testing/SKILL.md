@@ -81,8 +81,8 @@ $skillDir = Split-Path -Parent $MyInvocation.MyCommand.Path  # 如果在 skill �
 | 2 | 代码结构分析 | `CODE_ANALYSIS.md`, `project-structure.json` | 30min |
 | 3 | 代码审查 & 自动修复 | `CODE_REVIEW_REPORT.md` | 40min |
 | 4 | **跳过**（代码已存在） | — | — |
-| 5B | API 端点测试 | `test-logs/phase5b_*.json` | 2h |
-| 5C | UI 浏览器测试 | `test-logs/phase5c_*.json` | 2h |
+| 5B | API 端点测试 | `test-logs/phase5b_*.json` | 30min/iter x 15 |
+| 5C | UI 浏览器测试 | `test-logs/phase5c_*.json` | 30min/iter x 15 |
 | 6 | 文档生成 | `docs/` | 30min |
 
 ## Smart Resume 机制
@@ -126,8 +126,10 @@ ai-dev-system-testing/
 ├── scripts/
 │   └── run-all.ps1                   # 主入口脚本（强制使用）
 └── references/
+    ├── phase-details.md              # Phase 详细说明
     ├── config/
-    │   └── phase5-loop-control.json  # Phase 5 循环控制配置
+    │   ├── phase5-loop-control.json  # Phase 5 循环控制配置
+    │   └── workflow-state-template.json # 工作流状态模板
     ├── docs/
     │   └── PHASE5_EXECUTION_GUIDE.md # Phase 5 执行指南
     ├── prompts/
