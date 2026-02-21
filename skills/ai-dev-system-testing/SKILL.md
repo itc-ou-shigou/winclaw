@@ -8,200 +8,156 @@ metadata:
   }
 ---
 
-# System Testing
+# System Testing (Script-Driven)
 
-Automates code analysis, review, testing, and documentation for an existing codebase. Phase 4 (code generation) is skipped because code already exists. Testing is performed via Chrome + Claude In Chrome browser automation.
+Automates code analysis, review, testing, and documentation for an existing codebase.
 
-## Phase Overview
+## ⚠️ 重要：执行规则
 
-| Phase | What It Does                                | Output                                        | Timeout |
-| ----- | ------------------------------------------- | --------------------------------------------- | ------- |
-| Init  | User confirmation & environment check       | Confirmed settings                            | —       |
-| 2     | Code structure analysis                     | `CODE_ANALYSIS.md` + `project-structure.json` | 30min   |
-| 3     | Code review & auto-fix + review report      | `CODE_REVIEW_REPORT.md`                       | 40min   |
-| 4     | **SKIPPED** (code exists)                   | —                                             | —       |
-| 5B    | API endpoint testing (backend URL required) | `test-logs/`                                  | 2h      |
-| 5C    | UI testing (browser automation)             | `test-logs/` + screenshots                    | 2h      |
-| 6     | Documentation + PDF                         | `docs/`                                       | 30min   |
-| 7     | Azure deploy (optional)                     | `deployment-logs/`                            | 60min   |
+**AI agent 必须严格遵守以下规则：**
 
-## Configuration
+1. **只能执行脚本** - 运行 `scripts/run-all.ps1`，不得自行发挥
+2. **禁止替代方案** - 禁止用 `sessions_spawn`、手动命令或其他方式替代脚本
+3. **禁止跳过步骤** - 除非脚本自身判断可跳过（Resume 模式）
+4. **必须显示日志** - 使用 `pty:true` 或直接运行脚本显示实时输出
+5. **必须交互确认** - 除非用户指定 `-NonInteractive`，必须询问配置
 
-### Optional (in `~/.winclaw/winclaw.json`)
+## 测试数据配置
 
-Pre-configured values can be set. If not set, the Init phase will ask the user interactively.
+Phase 5 测试需要测试账号。在运行测试前，请确保：
 
-```json5
+1. **测试账号存在** - 在目标系统中创建测试账号
+2. **配置凭据** - 在 `references/prompts/phase5b-api-tests-efficient.md` 中修改：
+   - `TEST_USER_EMAIL` - 测试用户邮箱
+   - `TEST_USER_PASSWORD` - 测试用户密码
+3. **或使用环境变量**：
+   ```powershell
+   $env:TEST_USER_EMAIL = "your-test@example.com"
+   $env:TEST_USER_PASSWORD = "YourPassword123"
+   ```
+
+## 快速开始
+
+```powershell
+# 基本用法（交互式）- 替换为实际的 skill 路径
+& "$env:USERPROFILE\.winclaw\skills\ai-dev-system-testing\scripts\run-all.ps1" -Workspace "C:\path\to\project"
+
+# 或者使用 skill 目录变量
+$skillDir = Split-Path -Parent $MyInvocation.MyCommand.Path  # 如果在 skill 目录下
+& "$skillDir\scripts\run-all.ps1" -Workspace "C:\path\to\project"
+
+# 完整参数（非交互式）
+& "run-all.ps1" `
+    -Workspace "C:\path\to\project" `
+    -FrontendUrl "http://localhost:3000" `
+    -BackendUrl "http://localhost:8000" `
+    -DatabaseUrl "mysql+pymysql://user:pass@host/db" `
+    -NonInteractive
+
+# Resume 模式（跳过已完成的 Phase）
+& "run-all.ps1" -Workspace "C:\path\to\project" -Resume
+
+# 只运行特定 Phase
+& "run-all.ps1" -Workspace "C:\path\to\project" -Phases "phase5b,phase5c"
+```
+
+## 参数说明
+
+| 参数 | 必需 | 说明 |
+|------|------|------|
+| `-Workspace` | ✅ | 项目根目录路径 |
+| `-FrontendUrl` | ❌ | 前端 URL（不提供则跳过 Phase 5C） |
+| `-BackendUrl` | ❌ | 后端 URL（不提供则跳过 Phase 5B） |
+| `-DatabaseUrl` | ❌ | 数据库连接字符串 |
+| `-Resume` | ❌ | 启用 Smart Resume，跳过已完成的 Phase |
+| `-NonInteractive` | ❌ | 非交互模式，不询问用户配置 |
+| `-Phases` | ❌ | 指定运行的 Phase（逗号分隔） |
+
+## Phase 概览
+
+| Phase | 功能 | 输出文件 | 超时 |
+|-------|------|----------|------|
+| Init | 环境检查 & 配置 | `deployment-logs/workflow-state.json` | — |
+| 2 | 代码结构分析 | `CODE_ANALYSIS.md`, `project-structure.json` | 30min |
+| 3 | 代码审查 & 自动修复 | `CODE_REVIEW_REPORT.md` | 40min |
+| 4 | **跳过**（代码已存在） | — | — |
+| 5B | API 端点测试 | `test-logs/phase5b_*.json` | 2h |
+| 5C | UI 浏览器测试 | `test-logs/phase5c_*.json` | 2h |
+| 6 | 文档生成 | `docs/` | 30min |
+
+## Smart Resume 机制
+
+脚本会检查每个 Phase 的输出文件：
+
+```
+Phase 2: CODE_ANALYSIS.md + deployment-logs/project-structure.json 存在 → SKIP
+Phase 3: CODE_REVIEW_REPORT.md 存在 → SKIP
+Phase 5B: pass_rate >= 95% → SKIP
+Phase 5C: pass_rate == 100% → SKIP
+```
+
+## 配置文件（可选）
+
+在 `~/.winclaw/winclaw.json` 中预配置：
+
+```json
 {
-  skills: {
-    entries: {
+  "skills": {
+    "entries": {
       "ai-dev-system-testing": {
-        env: {
-          AIDEV_BACKEND_URL: "http://localhost:3001",
-          AIDEV_FRONTEND_URL: "http://localhost:3000",
-          DATABASE_URL: "mysql+pymysql://root:pass@localhost/myapp",
-          GITHUB_TOKEN: "ghp_xxxxxxxxxxxx",
-          GITHUB_REPO: "myorg/my-app",
-          AIDEV_DOC_LANGUAGE: "ja",
-        },
-      },
-    },
-  },
+        "env": {
+          "AIDEV_BACKEND_URL": "http://localhost:8000",
+          "AIDEV_FRONTEND_URL": "http://localhost:3000",
+          "DATABASE_URL": "mysql+pymysql://user:pass@host/db"
+        }
+      }
+    }
+  }
 }
 ```
 
-## Execution Workflow
+**注意**: 上面的端口号和 URL 仅为示例，请根据实际项目配置修改。
 
-### Init: User Confirmation & Environment Check
-
-This phase replaces the old Phase 1. Since the user starts this skill from the WinClaw chat interface, the workspace is already set via the chat session.
-
-#### Step 1: Open Chrome Browser
-
-Use `mcp__Claude_in_Chrome__tabs_context_mcp` to check if a tab group exists. If not, create one with `createIfEmpty: true`.
-
-#### Step 2: Confirm Test Environment with User
-
-Ask the user the following:
+## 脚本结构
 
 ```
-テスト環境を確認します。以下の項目について回答してください:
-
-1. Chrome に Claude In Chrome 拡張がインストールされ、ON状態ですか？
-   （ON状態であれば Claude Code のインストールは確認不要です）
-
-2. Claude Code の API 設定は完了していますか？
-   （Anthropic API に限らず、他プロバイダでも可。set/export コマンドで設定）
-
-3. テスト対象システムの情報を入力してください:
-   - フロントエンド URL (例: http://localhost:3000):
-   - バックエンド URL (例: http://localhost:8000) ※前後端分離でない場合は空欄:
-   - テストDB接続文字列 (例: mysql+aiomysql://user:pass@host/db) ※不要なら空欄:
+ai-dev-system-testing/
+├── SKILL.md                          # 本文件
+├── scripts/
+│   └── run-all.ps1                   # 主入口脚本（强制使用）
+└── references/
+    ├── config/
+    │   └── phase5-loop-control.json  # Phase 5 循环控制配置
+    ├── docs/
+    │   └── PHASE5_EXECUTION_GUIDE.md # Phase 5 执行指南
+    ├── prompts/
+    │   ├── phase5b-api-tests-efficient.md
+    │   └── phase5c-ui-tests-efficient.md
+    └── scripts/
+        ├── phase5b-efficient-loop.sh # Phase 5B 迭代循环
+        └── phase5c-efficient-loop.sh # Phase 5C 迭代循环
 ```
 
-#### Step 3: Save Settings & Determine Flow
+## 错误处理
 
-- Frontend URL → `AIDEV_FRONTEND_URL`
-- Backend URL → `AIDEV_BACKEND_URL` (empty → Phase 5B will be skipped)
-- DB connection string → `DATABASE_URL` (empty → DB-related tests skipped)
+- Phase 失败 → 脚本立即停止，显示错误
+- 超时 → 当前迭代终止，继续下一个
+- 输出文件缺失 → Phase 标记为失败
 
-```
-Flow determination:
-  AIDEV_BACKEND_URL is set   → Phase 5B (API) then Phase 5C (UI)
-  AIDEV_BACKEND_URL is empty → Phase 5B skipped, Phase 5C (UI) only
-```
+## 故障排除
 
-### Phase 2: Code Structure Analysis
+| 问题 | 解决方案 |
+|------|----------|
+| claude CLI 未找到 | 安装 Claude Code: `npm install -g @anthropic/claude-code` |
+| Chrome 扩展未安装 | 从 Chrome Web Store 安装 Claude In Chrome |
+| 后端健康检查失败 | 检查端口配置，确保服务已启动 |
+| Phase 5B 被意外跳过 | 确认提供了 `-BackendUrl` 参数 |
 
-Resume check: if `CODE_ANALYSIS.md` AND `deployment-logs/project-structure.json` exist, skip.
+## 与其他 Skill 的区别
 
-```bash
-bash pty:true workdir:$WORKSPACE timeout:1800 command:"cat .claude/prompts/phase2-code-analysis.md | claude --dangerously-skip-permissions"
-```
-
-**Verify**:
-
-- `CODE_ANALYSIS.md` exists (> 3,000 bytes)
-- `deployment-logs/project-structure.json` exists
-
-If `CODE_ANALYSIS.md` exists but `project-structure.json` is missing, generate PSC only:
-
-```bash
-bash pty:true workdir:$WORKSPACE timeout:600 command:"claude --dangerously-skip-permissions -p 'Read CODE_ANALYSIS.md and generate deployment-logs/project-structure.json with backend/frontend directory, ports, install commands, start commands, and health endpoints.'"
-```
-
-### Phase 3: Code Review & Auto-Fix
-
-Resume check: if `CODE_REVIEW_REPORT.md` exists, skip.
-
-```bash
-bash pty:true workdir:$WORKSPACE timeout:2400 command:"cat .claude/prompts/phase3-code-review.md | claude --dangerously-skip-permissions"
-```
-
-**Verify**: `CODE_REVIEW_REPORT.md` exists. If Claude times out but partial results exist in `test-logs/code-review/`, continue to Phase 5.
-
-### Phase 4: SKIPPED
-
-Code already exists — no code generation needed.
-
-### Phase 5B: API Endpoint Testing
-
-**Condition**: Only run if `AIDEV_BACKEND_URL` is set (non-empty).
-
-**Important**: Backend must be started BEFORE testing:
-
-```bash
-# Start backend (auto-detect from project-structure.json)
-bash pty:true workdir:$WORKSPACE background:true command:"cd backend && pip install -r requirements.txt && python -m uvicorn app.main:app --port ${BACKEND_PORT:-3001}"
-
-# Wait for backend health
-bash workdir:$WORKSPACE timeout:60 command:"for i in $(seq 1 30); do curl -s http://localhost:${BACKEND_PORT:-3001}/health && break; sleep 2; done"
-```
-
-Run API tests using the iteration loop:
-
-```bash
-WORKSPACE_DIR=$WORKSPACE bash references/scripts/phase5b-efficient-loop.sh
-```
-
-See `references/prompts/phase5b-api-tests-efficient.md` for test details and `references/docs/PHASE5_EXECUTION_GUIDE.md` for the iteration loop flow.
-
-### Phase 5C: UI Testing (Browser Automation)
-
-**Important**: Frontend and backend must be running:
-
-```bash
-# Start frontend
-bash pty:true workdir:$WORKSPACE background:true command:"cd frontend && npm ci && npm run dev"
-
-# Wait for frontend
-bash workdir:$WORKSPACE timeout:60 command:"sleep 15 && curl -s http://localhost:${FRONTEND_PORT:-3000}"
-```
-
-Run UI tests using the iteration loop:
-
-```bash
-WORKSPACE_DIR=$WORKSPACE bash references/scripts/phase5c-efficient-loop.sh
-```
-
-See `references/prompts/phase5c-ui-tests-efficient.md` for test details (4 CORE TESTS + 6-GATE verification system).
-
-### Phase 6: Documentation
-
-See `ai-dev-shared/references/phase6-documentation.md`.
-
-### Phase 7: Azure Deploy (Optional)
-
-See `ai-dev-shared/references/phase7-deployment.md`.
-
-## Differences from Other Skills
-
-| Aspect  | System Testing                   | Legacy Modernization         | New Project               |
-| ------- | -------------------------------- | ---------------------------- | ------------------------- |
-| Phase 2 | Code analysis → CODE_ANALYSIS.md | Legacy analysis → INITIAL.md | Requirements → INITIAL.md |
-| Phase 3 | Code review & auto-fix           | PRP generation               | PRP generation            |
-| Phase 4 | **Skipped**                      | PRP execution (code gen)     | PRP execution (code gen)  |
-| Input   | Existing codebase                | Legacy codebase              | User requirements         |
-
-## Smart Resume
-
-```
-Init: ✓ Confirmed (frontend URL, backend URL, DB)
-Phase 2: ✓ CODE_ANALYSIS.md (15,230 bytes) + project-structure.json
-Phase 3: ✓ CODE_REVIEW_REPORT.md (8,400 bytes)
-Phase 4: ⏭ Skipped (system testing)
-Phase 5B: ⏳ API tests (skip if no backend URL)
-Phase 5C: ⏳ UI tests
-```
-
-## Troubleshooting
-
-| Problem                        | Solution                                                   |
-| ------------------------------ | ---------------------------------------------------------- |
-| Chrome extension not installed | Install Claude In Chrome from Chrome Web Store             |
-| No backend detected            | Check project structure; ensure backend/ or server/ exists |
-| Health check fails             | Verify port in .env matches AIDEV_BACKEND_URL              |
-| UI tests fail                  | Ensure frontend is running and accessible                  |
-| Code review timeout            | Increase timeout or reduce codebase scope                  |
-| DB connection error            | Check DATABASE_URL or backend/.env                         |
-| Phase 5B skipped unexpectedly  | Confirm AIDEV_BACKEND_URL was provided in Init             |
+| 方面 | System Testing | Legacy Modernization | New Project |
+|------|----------------|---------------------|-------------|
+| Phase 2 | 代码分析 | 遗留分析 | 需求分析 |
+| Phase 3 | 代码审查 | PRP 生成 | PRP 生成 |
+| Phase 4 | **跳过** | PRP 执行 | PRP 执行 |
+| 输入 | 现有代码库 | 遗留代码库 | 用户需求 |
