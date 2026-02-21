@@ -20,6 +20,12 @@ LOG_DIR="$PROJECT_ROOT/test-logs"
 mkdir -p "$LOG_DIR"
 mkdir -p "$LOG_DIR/screenshots"
 
+# Real-time log helper: outputs to both console and realtime log file
+log_msg() {
+    echo "$1"
+    [ -n "$REALTIME_LOG" ] && echo "[$(date +%H:%M:%S)] $1" >> "$REALTIME_LOG"
+}
+
 # ================================================================
 # Load Configuration
 # ================================================================
@@ -45,14 +51,14 @@ print(cfg.get('phase5c_bugfix', {}).get('max_iterations', cfg.get('iteration_con
     TARGET_PASS_RATE="${BUGFIX_TARGET_PASS_RATE:-100}"
     EARLY_EXIT_THRESHOLD="${BUGFIX_EARLY_EXIT_THRESHOLD:-$EARLY_EXIT_THRESHOLD}"
 
-    echo "════════════════════════════════════════════════════════════"
-    echo "Phase 5C Efficient Mode - Configuration"
-    echo "════════════════════════════════════════════════════════════"
-    echo "Max Iterations: $MAX_ITERATIONS"
-    echo "Target Pass Rate: $TARGET_PASS_RATE%"
-    echo "Early Exit Threshold: $EARLY_EXIT_THRESHOLD"
-    echo "Iteration Timeout: ${ITERATION_TIMEOUT}s"
-    echo "════════════════════════════════════════════════════════════"
+    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "Phase 5C Efficient Mode - Configuration"
+    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "Max Iterations: $MAX_ITERATIONS"
+    log_msg "Target Pass Rate: $TARGET_PASS_RATE%"
+    log_msg "Early Exit Threshold: $EARLY_EXIT_THRESHOLD"
+    log_msg "Iteration Timeout: ${ITERATION_TIMEOUT}s"
+    log_msg "════════════════════════════════════════════════════════════"
 }
 
 # ================================================================
@@ -82,10 +88,10 @@ except:
 # ================================================================
 run_iteration() {
     local iteration=$1
-    echo ""
-    echo "════════════════════════════════════════════════════════════"
-    echo "ITERATION $iteration/$MAX_ITERATIONS"
-    echo "════════════════════════════════════════════════════════════"
+    log_msg ""
+    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "ITERATION $iteration/$MAX_ITERATIONS"
+    log_msg "════════════════════════════════════════════════════════════"
     
     # Build prompt with iteration context
     local prompt_file_abs="$PROMPT_FILE"
@@ -112,11 +118,15 @@ ${prompt_file_abs}
     # Run Claude CLI with the prompt
     cd "$PROJECT_ROOT"
     
-    timeout $ITERATION_TIMEOUT claude --dangerously-skip-permissions -p "$ITERATION_PROMPT" 2>&1 | tee "$LOG_DIR/phase5c_iteration_${iteration}.log"
-    
+    if [ -n "$REALTIME_LOG" ]; then
+        timeout $ITERATION_TIMEOUT claude --dangerously-skip-permissions -p "$ITERATION_PROMPT" 2>&1 | tee "$LOG_DIR/phase5c_iteration_${iteration}.log" | tee -a "$REALTIME_LOG"
+    else
+        timeout $ITERATION_TIMEOUT claude --dangerously-skip-permissions -p "$ITERATION_PROMPT" 2>&1 | tee "$LOG_DIR/phase5c_iteration_${iteration}.log"
+    fi
+
     local exit_code=$?
     if [ $exit_code -eq 124 ]; then
-        echo "[WARN] Iteration $iteration timed out after ${ITERATION_TIMEOUT}s"
+        log_msg "[WARN] Iteration $iteration timed out after ${ITERATION_TIMEOUT}s"
     fi
     
     return $exit_code
@@ -129,7 +139,7 @@ validate_gates() {
     RESULT_FILE="$LOG_DIR/phase5c_test_results.json"
     
     if [ ! -f "$RESULT_FILE" ]; then
-        echo "[ERROR] Result file not found"
+        log_msg "[ERROR] Result file not found"
         return 1
     fi
     
@@ -172,69 +182,69 @@ print(f'[OK] GATE validation complete')
 # Main Loop
 # ================================================================
 main() {
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Phase 5C Efficient Mode - Iteration Loop Controller       ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
-    
+    log_msg "╔════════════════════════════════════════════════════════════╗"
+    log_msg "║  Phase 5C Efficient Mode - Iteration Loop Controller       ║"
+    log_msg "╚════════════════════════════════════════════════════════════╝"
+
     load_config
-    
+
     iteration=1
     no_improvement_count=0
     previous_pass_rate=0
-    
+
     while [ $iteration -le $MAX_ITERATIONS ]; do
         # Run iteration
         run_iteration $iteration || true
-        
+
         # Validate GATE results
-        validate_gates || echo "[WARN] GATE validation had issues"
-        
+        validate_gates || log_msg "[WARN] GATE validation had issues"
+
         # Get pass rate from results
         current_pass_rate=$(get_pass_rate)
-        echo ""
-        echo "[RESULT] Pass Rate: $current_pass_rate%"
-        
+        log_msg ""
+        log_msg "[RESULT] Pass Rate: $current_pass_rate%"
+
         # Check if target achieved (100% for Phase 5C)
         if [ $(python3 -c "print(1 if $current_pass_rate >= $TARGET_PASS_RATE else 0)" 2>/dev/null || echo "0") -eq 1 ]; then
-            echo ""
-            echo "╔════════════════════════════════════════════════════════════╗"
-            echo "║  ✅ SUCCESS: All pages passed!                              ║"
-            echo "║  Final Pass Rate: $current_pass_rate%                              ║"
-            echo "║  Iterations Used: $iteration                                        ║"
-            echo "╚════════════════════════════════════════════════════════════╝"
+            log_msg ""
+            log_msg "╔════════════════════════════════════════════════════════════╗"
+            log_msg "║  ✅ SUCCESS: All pages passed!                              ║"
+            log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
+            log_msg "║  Iterations Used: $iteration                                        ║"
+            log_msg "╚════════════════════════════════════════════════════════════╝"
             exit 0
         fi
-        
+
         # Check early exit (strict less-than: plateau is NOT treated as no-improvement)
         if [ $(python3 -c "print(1 if $current_pass_rate < $previous_pass_rate else 0)" 2>/dev/null || echo "0") -eq 1 ]; then
             no_improvement_count=$((no_improvement_count + 1))
-            echo "[WARN] No improvement ($no_improvement_count/$EARLY_EXIT_THRESHOLD)"
-            
+            log_msg "[WARN] No improvement ($no_improvement_count/$EARLY_EXIT_THRESHOLD)"
+
             if [ $no_improvement_count -ge $EARLY_EXIT_THRESHOLD ]; then
-                echo ""
-                echo "╔════════════════════════════════════════════════════════════╗"
-                echo "║  ⚠️ EARLY EXIT: No improvement for $EARLY_EXIT_THRESHOLD iterations        ║"
-                echo "║  Final Pass Rate: $current_pass_rate%                              ║"
-                echo "║  Remaining pages need fixes                                ║"
-                echo "╚════════════════════════════════════════════════════════════╝"
+                log_msg ""
+                log_msg "╔════════════════════════════════════════════════════════════╗"
+                log_msg "║  ⚠️ EARLY EXIT: No improvement for $EARLY_EXIT_THRESHOLD iterations        ║"
+                log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
+                log_msg "║  Remaining pages need fixes                                ║"
+                log_msg "╚════════════════════════════════════════════════════════════╝"
                 exit 1
             fi
         else
-            echo "[OK] Improvement: $previous_pass_rate% → $current_pass_rate%"
+            log_msg "[OK] Improvement: $previous_pass_rate% → $current_pass_rate%"
             no_improvement_count=0
         fi
-        
+
         previous_pass_rate=$current_pass_rate
         iteration=$((iteration + 1))
     done
-    
+
     # Max iterations reached
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  ❌ MAX_ITERATIONS_REACHED: $MAX_ITERATIONS iterations completed        ║"
-    echo "║  Final Pass Rate: $current_pass_rate%                              ║"
-    echo "║  Some pages still have issues                              ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
+    log_msg ""
+    log_msg "╔════════════════════════════════════════════════════════════╗"
+    log_msg "║  ❌ MAX_ITERATIONS_REACHED: $MAX_ITERATIONS iterations completed        ║"
+    log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
+    log_msg "║  Some pages still have issues                              ║"
+    log_msg "╚════════════════════════════════════════════════════════════╝"
     exit 1
 }
 

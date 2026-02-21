@@ -57,6 +57,35 @@ function Get-Config {
 
 $Config = Get-Config
 
+# ================================================================
+# Real-time Log Viewer
+# ================================================================
+$LOG_DIR = Join-Path $Workspace "test-logs"
+if (-not (Test-Path $LOG_DIR)) {
+    New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null
+}
+$REALTIME_LOG = Join-Path $LOG_DIR "realtime.log"
+
+# Clear previous log
+"" | Set-Content $REALTIME_LOG -Encoding UTF8
+
+# Launch viewer window
+$viewerProcess = Start-Process powershell -ArgumentList @(
+    "-NoProfile", "-Command",
+    "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $(Get-Date -Format ''yyyy-MM-dd HH:mm:ss'')' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
+) -PassThru
+
+# Write-Log: outputs to both console (for agent capture) and log file (for viewer window)
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$ForegroundColor = "White"
+    )
+    Write-Host $Message -ForegroundColor $ForegroundColor
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    "[$timestamp] $Message" | Add-Content $REALTIME_LOG -Encoding UTF8
+}
+
 # Helper to get timeout (parameter > config > default)
 function Get-Timeout {
     param([string]$Phase)
@@ -76,19 +105,19 @@ function Get-Timeout {
 
 function Write-Header {
     param([string]$Title)
-    Write-Host ""
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  $Title" -ForegroundColor Cyan
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Log ""
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Log "  $Title" -ForegroundColor Cyan
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Log ""
 }
 
 function Write-PhaseCheck {
     param([string]$Phase, [string]$Status, [string]$Output = "")
     $statusColor = if ($Status -eq "COMPLETE") { "Green" } elseif ($Status -eq "SKIP") { "Yellow" } else { "Red" }
-    Write-Host "[PHASE_CHECK] Phase $Phase : $Status" -ForegroundColor $statusColor
+    Write-Log "[PHASE_CHECK] Phase $Phase : $Status" -ForegroundColor $statusColor
     if ($Output) {
-        Write-Host "  - Output: $Output" -ForegroundColor Gray
+        Write-Log "  - Output: $Output" -ForegroundColor Gray
     }
 }
 
@@ -139,7 +168,7 @@ function Invoke-ClaudeCommand {
         # On Windows, claude might be a .ps1 script, use proper invocation
         $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
         if (-not $claudeCmd) {
-            Write-Host "[ERROR] claude CLI not found in PATH" -ForegroundColor Red
+            Write-Log "[ERROR] claude CLI not found in PATH" -ForegroundColor Red
             return $false
         }
         
@@ -157,15 +186,15 @@ function Invoke-ClaudeCommand {
             if (-not $completed) {
                 Stop-Job $job
                 Remove-Job $job
-                Write-Host "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
+                Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
                 return $false
             }
-            
+
             $output = Receive-Job $job
             Remove-Job $job
-            
+
             $output | Out-File $outputLog -Encoding UTF8
-            $output | ForEach-Object { Write-Host $_ }
+            $output | ForEach-Object { Write-Log $_ }
             
             return $true
         } else {
@@ -179,7 +208,7 @@ function Invoke-ClaudeCommand {
             
             if (-not $completed) {
                 $process.Kill()
-                Write-Host "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
+                Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
                 return $false
             }
             
@@ -197,12 +226,12 @@ function Invoke-ClaudeCommand {
 
 function Ask-User {
     param([string]$Question)
-    
+
     if ($NonInteractive) {
         return ""
     }
-    
-    Write-Host $Question -ForegroundColor Yellow
+
+    Write-Log $Question -ForegroundColor Yellow
     $response = Read-Host "> "
     return $response
 }
@@ -264,24 +293,24 @@ function Invoke-PhaseInit {
     
     # Check workspace exists
     if (-not (Test-Path $Workspace)) {
-        Write-Host "[ERROR] Workspace does not exist: $Workspace" -ForegroundColor Red
+        Write-Log "[ERROR] Workspace does not exist: $Workspace" -ForegroundColor Red
         exit 1
     }
-    
+
     # Check claude CLI (no hardcoded path)
     $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
     if (-not $claudeCmd) {
-        Write-Host "[ERROR] claude CLI not found in PATH. Please install Claude Code first." -ForegroundColor Red
+        Write-Log "[ERROR] claude CLI not found in PATH. Please install Claude Code first." -ForegroundColor Red
         exit 1
     }
-    
-    Write-Host "[OK] claude CLI found at: $($claudeCmd.Source)" -ForegroundColor Green
-    
+
+    Write-Log "[OK] claude CLI found at: $($claudeCmd.Source)" -ForegroundColor Green
+
     # Interactive configuration if not provided
     if (-not $NonInteractive -and -not $FrontendUrl -and -not $BackendUrl) {
-        Write-Host ""
-        Write-Host "Please configure the test environment:" -ForegroundColor Yellow
-        Write-Host ""
+        Write-Log ""
+        Write-Log "Please configure the test environment:" -ForegroundColor Yellow
+        Write-Log ""
         
         $script:FrontendUrl = Ask-User "Frontend URL (e.g., http://localhost:3000)"
         $script:BackendUrl = Ask-User "Backend URL (e.g., http://localhost:8000) [leave empty if not separate]"
@@ -314,15 +343,15 @@ function Invoke-PhaseInit {
     $script:RunPhase5B = $script:BackendUrl -ne ""
     $script:RunPhase5C = $script:FrontendUrl -ne ""
     
-    Write-Host ""
-    Write-Host "Configuration saved:" -ForegroundColor Green
-    Write-Host "  - Frontend: $($script:FrontendUrl)"
-    Write-Host "  - Backend: $($script:BackendUrl)"
-    Write-Host "  - Database: $(if ($script:DatabaseUrl) { 'configured' } else { 'not configured' })"
-    Write-Host ""
-    Write-Host "Flow:" -ForegroundColor Yellow
-    Write-Host "  - Phase 5B (API): $(if ($script:RunPhase5B) { 'WILL RUN' } else { 'SKIP (no backend URL)' })"
-    Write-Host "  - Phase 5C (UI): $(if ($script:RunPhase5C) { 'WILL RUN' } else { 'SKIP (no frontend URL)' })"
+    Write-Log ""
+    Write-Log "Configuration saved:" -ForegroundColor Green
+    Write-Log "  - Frontend: $($script:FrontendUrl)"
+    Write-Log "  - Backend: $($script:BackendUrl)"
+    Write-Log "  - Database: $(if ($script:DatabaseUrl) { 'configured' } else { 'not configured' })"
+    Write-Log ""
+    Write-Log "Flow:" -ForegroundColor Yellow
+    Write-Log "  - Phase 5B (API): $(if ($script:RunPhase5B) { 'WILL RUN' } else { 'SKIP (no backend URL)' })"
+    Write-Log "  - Phase 5C (UI): $(if ($script:RunPhase5C) { 'WILL RUN' } else { 'SKIP (no frontend URL)' })"
     
     Write-PhaseCheck "Init" "COMPLETE" "deployment-logs/workflow-state.json"
     return $true
@@ -459,18 +488,19 @@ function Invoke-Phase5B {
         # Set environment variables
         $env:WORKSPACE_DIR = $Workspace
         $env:AIDEV_BACKEND_URL = $backendUrl
-        
+        $env:REALTIME_LOG = $REALTIME_LOG
+
         # Find bash executable
         $bashPath = Find-Bash
-        
+
         if (-not $bashPath) {
-            Write-Host "[ERROR] bash not found. Please install Git Bash or WSL." -ForegroundColor Red
+            Write-Log "[ERROR] bash not found. Please install Git Bash or WSL." -ForegroundColor Red
             return $false
         }
-        
-        Write-Host "Running: $bashPath $script5b" -ForegroundColor Yellow
-        Write-Host "WORKSPACE_DIR: $Workspace" -ForegroundColor Gray
-        Write-Host "AIDEV_BACKEND_URL: $backendUrl" -ForegroundColor Gray
+
+        Write-Log "Running: $bashPath $script5b" -ForegroundColor Yellow
+        Write-Log "WORKSPACE_DIR: $Workspace" -ForegroundColor Gray
+        Write-Log "AIDEV_BACKEND_URL: $backendUrl" -ForegroundColor Gray
         
         if ($bashPath -eq "wsl") {
             # Convert Windows path to WSL path
@@ -481,9 +511,9 @@ function Invoke-Phase5B {
         }
         $exitCode = $LASTEXITCODE
     } else {
-        Write-Host "[WARN] Script not found: $script5b" -ForegroundColor Yellow
-        Write-Host "Falling back to claude CLI..." -ForegroundColor Yellow
-        
+        Write-Log "[WARN] Script not found: $script5b" -ForegroundColor Yellow
+        Write-Log "Falling back to claude CLI..." -ForegroundColor Yellow
+
         $promptFile = Join-Path $SKILL_DIR "references\prompts\phase5b-api-tests-efficient.md"
         $prompt = @"
 Run Phase 5B API Testing using claude CLI with the test specification from:
@@ -561,18 +591,19 @@ function Invoke-Phase5C {
         # Set environment variables
         $env:WORKSPACE_DIR = $Workspace
         $env:AIDEV_FRONTEND_URL = $frontendUrl
-        
+        $env:REALTIME_LOG = $REALTIME_LOG
+
         # Find bash executable
         $bashPath = Find-Bash
-        
+
         if (-not $bashPath) {
-            Write-Host "[ERROR] bash not found. Please install Git Bash or WSL." -ForegroundColor Red
+            Write-Log "[ERROR] bash not found. Please install Git Bash or WSL." -ForegroundColor Red
             return $false
         }
-        
-        Write-Host "Running: $bashPath $script5c" -ForegroundColor Yellow
-        Write-Host "WORKSPACE_DIR: $Workspace" -ForegroundColor Gray
-        Write-Host "AIDEV_FRONTEND_URL: $frontendUrl" -ForegroundColor Gray
+
+        Write-Log "Running: $bashPath $script5c" -ForegroundColor Yellow
+        Write-Log "WORKSPACE_DIR: $Workspace" -ForegroundColor Gray
+        Write-Log "AIDEV_FRONTEND_URL: $frontendUrl" -ForegroundColor Gray
         
         if ($bashPath -eq "wsl") {
             # Convert Windows path to WSL path
@@ -583,9 +614,9 @@ function Invoke-Phase5C {
         }
         $exitCode = $LASTEXITCODE
     } else {
-        Write-Host "[WARN] Script not found: $script5c" -ForegroundColor Yellow
-        Write-Host "Falling back to claude CLI..." -ForegroundColor Yellow
-        
+        Write-Log "[WARN] Script not found: $script5c" -ForegroundColor Yellow
+        Write-Log "Falling back to claude CLI..." -ForegroundColor Yellow
+
         $promptFile = Join-Path $SKILL_DIR "references\prompts\phase5c-ui-tests-efficient.md"
         $prompt = @"
 Run Phase 5C UI Testing using claude CLI with the test specification from:
@@ -648,7 +679,7 @@ Use actual code analysis, do not hallucinate.
 # Main Entry Point
 # ================================================================
 
-Write-Host @"
+Write-Log @"
 
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
@@ -658,11 +689,12 @@ Write-Host @"
 
 "@ -ForegroundColor Cyan
 
-Write-Host "Workspace: $Workspace" -ForegroundColor White
-Write-Host "Skill Dir: $SKILL_DIR" -ForegroundColor White
-Write-Host "Resume Mode: $Resume" -ForegroundColor White
-Write-Host "Non-Interactive: $NonInteractive" -ForegroundColor White
-Write-Host ""
+Write-Log "Workspace: $Workspace" -ForegroundColor White
+Write-Log "Skill Dir: $SKILL_DIR" -ForegroundColor White
+Write-Log "Resume Mode: $Resume" -ForegroundColor White
+Write-Log "Non-Interactive: $NonInteractive" -ForegroundColor White
+Write-Log "Log Viewer: PID $($viewerProcess.Id)" -ForegroundColor White
+Write-Log ""
 
 # Create log directory
 $logDir = Join-Path $Workspace "test-logs"
@@ -691,13 +723,13 @@ foreach ($phase in $phaseList) {
         "phase5b" { $success = Invoke-Phase5B }
         "phase5c" { $success = Invoke-Phase5C }
         "phase6" { $success = Invoke-Phase6 }
-        default { Write-Host "[WARN] Unknown phase: $phase" -ForegroundColor Yellow }
+        default { Write-Log "[WARN] Unknown phase: $phase" -ForegroundColor Yellow }
     }
-    
+
     if (-not $success) {
         $allSuccess = $false
-        Write-Host ""
-        Write-Host "[ERROR] Phase $phase failed. Stopping workflow." -ForegroundColor Red
+        Write-Log ""
+        Write-Log "[ERROR] Phase $phase failed. Stopping workflow." -ForegroundColor Red
         break
     }
 }
@@ -706,9 +738,17 @@ foreach ($phase in $phaseList) {
 Write-Header "Workflow Summary"
 
 if ($allSuccess) {
-    Write-Host "[OK] All phases completed successfully!" -ForegroundColor Green
+    Write-Log "[OK] All phases completed successfully!" -ForegroundColor Green
+    Write-Log ""
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Log "  ALL PHASES COMPLETE - Log viewer will remain open" -ForegroundColor Green
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "[FAIL] Workflow failed. Check logs for details." -ForegroundColor Red
+    Write-Log "[FAIL] Workflow failed. Check logs for details." -ForegroundColor Red
+    Write-Log ""
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Log "  WORKFLOW FAILED - Check log viewer for details" -ForegroundColor Red
+    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Red
     exit 1
 }
