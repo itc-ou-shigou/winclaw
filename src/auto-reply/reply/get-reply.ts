@@ -98,7 +98,7 @@ export async function getReplyFromConfig(
     dir: workspaceDirRaw,
     ensureBootstrapFiles: !agentCfg?.skipBootstrap && !isFastTestEnv,
   });
-  const workspaceDir = workspace.dir;
+  let workspaceDir = workspace.dir;
   const agentDir = resolveAgentDir(cfg, agentId);
   const timeoutMs = resolveAgentTimeoutMs({ cfg });
   const configuredTypingSeconds =
@@ -158,6 +158,16 @@ export async function getReplyFromConfig(
     triggerBodyNormalized,
     bodyStripped,
   } = sessionState;
+
+  // Per-session workspace override: if the session has a workspace set
+  // (e.g., via UI workspace picker), prefer it over agent-level default.
+  if (sessionEntry?.workspace?.trim()) {
+    const sessionWorkspace = await ensureAgentWorkspace({
+      dir: sessionEntry.workspace.trim(),
+      ensureBootstrapFiles: !agentCfg?.skipBootstrap && !isFastTestEnv,
+    });
+    workspaceDir = sessionWorkspace.dir;
+  }
 
   await applyResetModelOverride({
     cfg,
