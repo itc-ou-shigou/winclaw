@@ -60,5 +60,13 @@
     "iteration_timeout": "BUGFIX_ITERATION_TIMEOUT",
     "target_pass_rate": "BUGFIX_TARGET_PASS_RATE",
     "early_exit_threshold": "BUGFIX_EARLY_EXIT_THRESHOLD"
+  },
+
+  "environment_check": {
+    "chrome_mcp_check_enabled": true,
+    "chrome_mcp_check_timeout_seconds": 60,
+    "fail_on_mcp_unavailable": true,
+    "allowed_test_methods": ["claude_in_chrome_mcp"],
+    "prohibited_test_methods": ["curl", "python_requests", "playwright", "puppeteer", "selenium", "httpx", "aiohttp", "wget"]
   }
 }

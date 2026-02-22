@@ -70,9 +70,10 @@ $REALTIME_LOG = Join-Path $LOG_DIR "realtime.log"
 "" | Set-Content $REALTIME_LOG -Encoding UTF8
 
 # Launch viewer window
+$startTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $viewerProcess = Start-Process powershell -ArgumentList @(
     "-NoProfile", "-Command",
-    "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $(Get-Date -Format ''yyyy-MM-dd HH:mm:ss'')' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
+    "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $startTime' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
 ) -PassThru
 
 # Write-Log: outputs to both console (for agent capture) and log file (for viewer window)
@@ -150,77 +151,142 @@ function Invoke-ClaudeCommand {
         [string]$Prompt,
         [int]$TimeoutSeconds = 0
     )
-    
+
     if ($TimeoutSeconds -eq 0) {
         $TimeoutSeconds = Get-Timeout
     }
-    
+
     $logDir = Join-Path $Workspace "test-logs"
     if (-not (Test-Path $logDir)) {
         New-Item -ItemType Directory -Path $logDir -Force | Out-Null
     }
-    
-    Push-Location $Workspace
-    try {
-        $outputLog = Join-Path $logDir "claude_output.log"
-        $errorLog = Join-Path $logDir "claude_error.log"
-        
-        # On Windows, claude might be a .ps1 script, use proper invocation
-        $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
-        if (-not $claudeCmd) {
-            Write-Log "[ERROR] claude CLI not found in PATH" -ForegroundColor Red
-            return $false
-        }
-        
-        # Check if it's a PowerShell script
-        if ($claudeCmd.Source -like "*.ps1") {
-            # Use PowerShell to execute
-            $job = Start-Job -ScriptBlock {
-                param($Ws, $P)
-                Set-Location $Ws
-                & claude --dangerously-skip-permissions -p $P 2>&1
-            } -ArgumentList $Workspace, $Prompt
-            
-            $completed = Wait-Job $job -Timeout $TimeoutSeconds
-            
-            if (-not $completed) {
-                Stop-Job $job
-                Remove-Job $job
-                Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
-                return $false
-            }
 
-            $output = Receive-Job $job
-            Remove-Job $job
+    $outputLog = Join-Path $logDir "claude_output.log"
+    $errorLog = Join-Path $logDir "claude_error.log"
 
-            $output | Out-File $outputLog -Encoding UTF8
-            $output | ForEach-Object { Write-Log $_ }
-            
-            return $true
-        } else {
-            # Use Start-Process for executable
-            $process = Start-Process -FilePath $claudeCmd.Source `
-                -ArgumentList "--dangerously-skip-permissions", "-p", $Prompt `
-                -NoNewWindow -PassThru -RedirectStandardOutput $outputLog `
-                -RedirectStandardError $errorLog
-            
-            $completed = $process.WaitForExit($TimeoutSeconds * 1000)
-            
-            if (-not $completed) {
-                $process.Kill()
-                Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
-                return $false
-            }
-            
-            if (Test-Path $outputLog) {
-                Get-Content $outputLog
-            }
-            
-            return $process.ExitCode -eq 0
+    # Find claude CLI
+    $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+    if (-not $claudeCmd) {
+        Write-Log "[ERROR] claude CLI not found in PATH" -ForegroundColor Red
+        return $false
+    }
+
+    $claudePath = $claudeCmd.Source
+    Write-Log "[INFO] Using claude at: $claudePath" -ForegroundColor Gray
+    Write-Log "[INFO] Timeout: ${TimeoutSeconds}s" -ForegroundColor Gray
+
+    # Build process: use cmd.exe /c for .cmd wrappers (Volta), direct for others
+    # IMPORTANT: Do NOT use -p flag — it disables tools (Write/Edit/Bash).
+    # Instead, pipe prompt via stdin so claude runs in session mode with tools enabled.
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    if ($claudePath -like "*.cmd") {
+        $psi.FileName = "cmd.exe"
+        $psi.Arguments = "/c `"$claudePath`" --dangerously-skip-permissions --verbose"
+    } else {
+        $psi.FileName = $claudePath
+        $psi.Arguments = "--dangerously-skip-permissions --verbose"
+    }
+    $psi.WorkingDirectory = $Workspace
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+
+    # Initialize log files
+    "" | Set-Content $outputLog -Encoding UTF8
+    "" | Set-Content $errorLog -Encoding UTF8
+
+    # Thread-safe builders for output collection
+    $outputBuilder = [System.Text.StringBuilder]::new()
+    $errorBuilder = [System.Text.StringBuilder]::new()
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $psi
+    $process.EnableRaisingEvents = $true
+
+    # Async output handlers for realtime log streaming
+    $outHandler = {
+        if ($EventArgs.Data) {
+            $Event.MessageData.Builder.AppendLine($EventArgs.Data) | Out-Null
+            $EventArgs.Data | Add-Content $Event.MessageData.LogFile -Encoding UTF8
+            $ts = Get-Date -Format "HH:mm:ss"
+            "[$ts] $($EventArgs.Data)" | Add-Content $Event.MessageData.RealtimeLog -Encoding UTF8
         }
     }
+    $errHandler = {
+        if ($EventArgs.Data) {
+            $Event.MessageData.Builder.AppendLine($EventArgs.Data) | Out-Null
+            $EventArgs.Data | Add-Content $Event.MessageData.LogFile -Encoding UTF8
+        }
+    }
+
+    $outEvent = Register-ObjectEvent $process OutputDataReceived -Action $outHandler -MessageData @{
+        Builder = $outputBuilder; LogFile = $outputLog; RealtimeLog = $REALTIME_LOG
+    }
+    $errEvent = Register-ObjectEvent $process ErrorDataReceived -Action $errHandler -MessageData @{
+        Builder = $errorBuilder; LogFile = $errorLog
+    }
+
+    try {
+        Write-Log "[INFO] Starting claude CLI session..." -ForegroundColor Gray
+        $process.Start() | Out-Null
+        $process.BeginOutputReadLine()
+        $process.BeginErrorReadLine()
+
+        # Pipe prompt via stdin (UTF-8) and close to signal EOF
+        # Force English output to avoid encoding issues on Windows console
+        $fullPrompt = "IMPORTANT: Always respond in English only. Do NOT use Japanese or any other non-ASCII language in your responses or file content.`n`n" + $Prompt
+        $stdinWriter = New-Object System.IO.StreamWriter($process.StandardInput.BaseStream, [System.Text.Encoding]::UTF8)
+        $stdinWriter.Write($fullPrompt)
+        $stdinWriter.Flush()
+        $stdinWriter.Close()
+
+        # Wait with timeout
+        $completed = $process.WaitForExit($TimeoutSeconds * 1000)
+
+        if (-not $completed) {
+            Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
+            try { & taskkill /PID $process.Id /T /F 2>&1 | Out-Null } catch {
+                try { $process.Kill() } catch {}
+            }
+            return $false
+        }
+
+        # Wait for async handlers to flush
+        Start-Sleep -Milliseconds 500
+
+        $exitCode = $process.ExitCode
+        Write-Log "[INFO] claude CLI exited with code: $exitCode" -ForegroundColor Gray
+
+        # Log captured output to console
+        $output = $outputBuilder.ToString()
+        if ($output) {
+            $output -split "`n" | ForEach-Object { if ($_.Trim()) { Write-Log $_ } }
+        }
+
+        $capturedError = $errorBuilder.ToString()
+        if ($capturedError.Trim()) {
+            Write-Log "[STDERR] $capturedError" -ForegroundColor Yellow
+        }
+
+        return $exitCode -eq 0
+    }
+    catch {
+        Write-Log "[ERROR] Failed to execute claude CLI: $_" -ForegroundColor Red
+        return $false
+    }
     finally {
-        Pop-Location
+        Unregister-Event $outEvent.Name -ErrorAction SilentlyContinue
+        Unregister-Event $errEvent.Name -ErrorAction SilentlyContinue
+        if (-not $process.HasExited) {
+            try { & taskkill /PID $process.Id /T /F 2>&1 | Out-Null } catch {
+                try { $process.Kill() } catch {}
+            }
+        }
+        $process.Dispose()
     }
 }
 
@@ -234,6 +300,60 @@ function Ask-User {
     Write-Log $Question -ForegroundColor Yellow
     $response = Read-Host "> "
     return $response
+}
+
+function Test-ChromeMcpConnection {
+    Write-Log "[CHECK] Verifying Claude In Chrome MCP connection..." -ForegroundColor Yellow
+
+    # MCP check uses stdin pipe (not -p flag) so tools are enabled and MCP calls work
+    $testPrompt = 'Call mcp__Claude_in_Chrome__tabs_context_mcp with createIfEmpty=true. If it succeeds output EXACTLY: CHROME_MCP_OK  If it fails output EXACTLY: CHROME_MCP_FAIL'
+
+    try {
+        $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+        if (-not $claudeCmd) { return $false }
+
+        $claudePath = $claudeCmd.Source
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        if ($claudePath -like "*.cmd") {
+            $psi.FileName = "cmd.exe"
+            $psi.Arguments = "/c `"$claudePath`" --dangerously-skip-permissions --verbose"
+        } else {
+            $psi.FileName = $claudePath
+            $psi.Arguments = "--dangerously-skip-permissions --verbose"
+        }
+        $psi.WorkingDirectory = $Workspace
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardInput = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+
+        $proc = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $psi
+        $proc.Start() | Out-Null
+
+        # Pipe prompt and close stdin
+        $proc.StandardInput.Write($testPrompt)
+        $proc.StandardInput.Close()
+
+        $output = $proc.StandardOutput.ReadToEnd()
+        $completed = $proc.WaitForExit(60000)  # 60 second timeout
+
+        if (-not $completed) {
+            try { & taskkill /PID $proc.Id /T /F 2>&1 | Out-Null } catch {
+                try { $proc.Kill() } catch {}
+            }
+            Write-Log "[WARN] Chrome MCP check timed out after 60s" -ForegroundColor Yellow
+            return $false
+        }
+
+        $proc.Dispose()
+        return ($output -match "CHROME_MCP_OK")
+    } catch {
+        Write-Log "[WARN] Chrome MCP check failed: $_" -ForegroundColor Yellow
+        return $false
+    }
 }
 
 function Find-Bash {
@@ -329,6 +449,7 @@ function Invoke-PhaseInit {
         database_url = $script:DatabaseUrl
         timestamp = (Get-Date -Format "o")
         skill_dir = $SKILL_DIR
+        chrome_mcp_verified = $false
     }
     
     $configDir = Join-Path $Workspace "deployment-logs"
@@ -352,7 +473,29 @@ function Invoke-PhaseInit {
     Write-Log "Flow:" -ForegroundColor Yellow
     Write-Log "  - Phase 5B (API): $(if ($script:RunPhase5B) { 'WILL RUN' } else { 'SKIP (no backend URL)' })"
     Write-Log "  - Phase 5C (UI): $(if ($script:RunPhase5C) { 'WILL RUN' } else { 'SKIP (no frontend URL)' })"
-    
+
+    # Check Claude In Chrome MCP connection (required for Phase 5B/5C)
+    if ($script:RunPhase5B -or $script:RunPhase5C) {
+        Write-Log ""
+        if (Test-ChromeMcpConnection) {
+            Write-Log "[OK] Claude In Chrome MCP is connected" -ForegroundColor Green
+        } else {
+            Write-Log "" -ForegroundColor Red
+            Write-Log "================================================================" -ForegroundColor Red
+            Write-Log "  [ERROR] Claude In Chrome MCP is NOT available!" -ForegroundColor Red
+            Write-Log "================================================================" -ForegroundColor Red
+            Write-Log "" -ForegroundColor Red
+            Write-Log "  Phase 5B/5C REQUIRE Chrome + Claude In Chrome extension." -ForegroundColor Yellow
+            Write-Log "  1. Open Chrome browser" -ForegroundColor Yellow
+            Write-Log "  2. Install/enable 'Claude In Chrome' extension" -ForegroundColor Yellow
+            Write-Log "  3. Ensure MCP shows 'Connected'" -ForegroundColor Yellow
+            Write-Log "  4. Re-run this script" -ForegroundColor Yellow
+            Write-Log "" -ForegroundColor Red
+            Write-Log "================================================================" -ForegroundColor Red
+            exit 1
+        }
+    }
+
     Write-PhaseCheck "Init" "COMPLETE" "deployment-logs/workflow-state.json"
     return $true
 }
@@ -704,7 +847,17 @@ if (-not (Test-Path $logDir)) {
 
 # Determine phases to run
 if ($Phases) {
-    $phaseList = $Phases -split ","
+    $phaseList = ($Phases -split ",") | ForEach-Object { $_.Trim().ToLower() }
+
+    # Auto-inject Phase Init when Phase 5B/5C is included (required for MCP check)
+    $needs5b = $phaseList -contains "phase5b"
+    $needs5c = $phaseList -contains "phase5c"
+    $hasInit = $phaseList -contains "init"
+
+    if (($needs5b -or $needs5c) -and -not $hasInit) {
+        Write-Log "[AUTO] Injecting Phase Init (required for Phase 5B/5C MCP check)" -ForegroundColor Yellow
+        $phaseList = @("init") + $phaseList
+    }
 } else {
     $phaseList = @("init", "phase2", "phase3", "phase5b", "phase5c", "phase6")
 }

@@ -27,6 +27,23 @@ log_msg() {
 }
 
 # ================================================================
+# Check Claude In Chrome MCP Connectivity
+# ================================================================
+check_chrome_mcp() {
+    log_msg "[CHECK] Verifying Claude In Chrome MCP..."
+    local out
+    out=$(timeout 60 claude --dangerously-skip-permissions \
+        -p 'Call mcp__Claude_in_Chrome__tabs_context_mcp with createIfEmpty=true. If succeeds output EXACTLY: CHROME_MCP_OK  If fails output EXACTLY: CHROME_MCP_FAIL' 2>&1)
+    if echo "$out" | grep -q "CHROME_MCP_OK"; then
+        log_msg "[OK] Claude In Chrome MCP connected"
+        return 0
+    fi
+    log_msg "[ERROR] Claude In Chrome MCP NOT available!"
+    log_msg "[ERROR] Please: 1) Open Chrome  2) Enable Claude In Chrome extension  3) Verify MCP Connected"
+    return 1
+}
+
+# ================================================================
 # Load Configuration
 # ================================================================
 load_config() {
@@ -100,18 +117,39 @@ run_iteration() {
 请阅读并执行以下测试提示词文件中的所有步骤：
 ${prompt_file_abs}
 
+⛔ 必须遵守的执行方法 ⛔:
+所有 UI 测试必须且只能通过 Claude In Chrome MCP 工具进行浏览器自动化。
+严格禁止以下替代方法：
+- Playwright / Puppeteer / Selenium 等浏览器自动化框架
+- curl / wget / python requests / httpx
+- 无头浏览器 (headless browser)
+- 仅检查源代码而不在真实浏览器中渲染验证
+- Node.js fetch / axios
+- 任何非 MCP 的 HTTP 客户端
+
+必须使用的 MCP 工具：
+- mcp__Claude_in_Chrome__tabs_context_mcp
+- mcp__Claude_in_Chrome__navigate
+- mcp__Claude_in_Chrome__read_page / find
+- mcp__Claude_in_Chrome__computer (点击/截图)
+- mcp__Claude_in_Chrome__form_input
+- mcp__Claude_in_Chrome__javascript_tool
+- mcp__Claude_in_Chrome__read_network_requests
+- mcp__Claude_in_Chrome__read_console_messages
+
+第一步：调用 mcp__Claude_in_Chrome__tabs_context_mcp 验证 MCP 连接。
+如果不可用 → 立即停止并报告错误，不要使用替代方案。
+
 关键要求：
-1. 使用 Claude In Chrome MCP 工具进行浏览器自动化
+1. 使用 Claude In Chrome MCP 进行浏览器自动化（唯一允许的方法）
 2. 对每个页面执行 4 CORE TESTS (Form/Link/Button/CSS)
 3. 对每个页面执行 6-GATE 验证
 4. 发现 bug 后立即修复
-5. 生成 JSON 结果文件: test-logs/phase5c_test_results.json
+5. 生成结果文件: test-logs/phase5c_test_results.json
 6. 目标通过率: ${TARGET_PASS_RATE}% (所有页面必须通过)
 
 测试前准备：
-- 确保前端服务已启动
 - 使用 Phase 5B 创建的测试账号登录
-- 检查 Chrome 浏览器已安装 Claude In Chrome 插件
 
 完成后请报告测试结果和 GATE 验证状态。"
 
@@ -187,6 +225,12 @@ main() {
     log_msg "╚════════════════════════════════════════════════════════════╝"
 
     load_config
+
+    # Pre-check: Claude In Chrome MCP must be available
+    if ! check_chrome_mcp; then
+        log_msg "[FATAL] Cannot proceed without Claude In Chrome MCP."
+        exit 1
+    fi
 
     iteration=1
     no_improvement_count=0
