@@ -119,7 +119,7 @@ In just 3 hours:
 - GitHub renamed: `github.com/winclaw/winclaw` ✅
 - X handle `@winclaw` secured with GOLD CHECKMARK 💰
 - npm packages released under new name
-- Docs migrated to `docs.openclaw.ai`
+- Docs migrated to `docs.winclaw.ai`
 - 200K+ views on announcement in 90 minutes
 
 **The Heroes:**

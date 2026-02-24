@@ -1,5 +1,5 @@
 import type { WinClawConfig } from "winclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk/account-id";
 import type { MattermostAccountConfig, MattermostChatMode } from "../types.js";
 import { normalizeMattermostBaseUrl } from "./client.js";
 

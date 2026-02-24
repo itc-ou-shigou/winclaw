@@ -116,7 +116,7 @@ If you used a profile, delete the matching task name and `~\.winclaw-<profile>\g
 
 ### Normal install (install.sh / npm / pnpm / bun)
 
-If you used `https://openclaw.ai/install.sh` or `install.ps1`, the CLI was installed with `npm install -g winclaw@latest`.
+If you used `https://winclaw.ai/install.sh` or `install.ps1`, the CLI was installed with `npm install -g winclaw@latest`.
 Remove it with `npm rm -g winclaw` (or `pnpm remove -g` / `bun remove -g` if you installed that way).
 
 ### Source checkout (git clone)

@@ -24,7 +24,7 @@ export const browserActionExamples = [
   "winclaw browser hover 44",
   "winclaw browser drag 10 11",
   "winclaw browser select 9 OptionA OptionB",
-  "winclaw browser upload /tmp/file.pdf",
+  "winclaw browser upload /tmp/winclaw/uploads/file.pdf",
   'winclaw browser fill --fields \'[{"ref":"1","value":"Ada"}]\'',
   "winclaw browser dialog --accept",
   'winclaw browser wait --text "Done"',

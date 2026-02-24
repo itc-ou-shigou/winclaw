@@ -43,6 +43,11 @@ export type GoogleChatAccountConfig = {
   enabled?: boolean;
   /** Allow bot-authored messages to trigger replies (default: false). */
   allowBots?: boolean;
+  /**
+   * Break-glass override: allow mutable principal matching (raw email entries) in allowlists.
+   * Default behavior is ID-only matching.
+   */
+  dangerouslyAllowNameMatching?: boolean;
   /** Default mention requirement for space messages (default: true). */
   requireMention?: boolean;
   /**
@@ -54,6 +59,8 @@ export type GoogleChatAccountConfig = {
   groupPolicy?: GroupPolicy;
   /** Optional allowlist for space senders (user ids or emails). */
   groupAllowFrom?: Array<string | number>;
+  /** Default delivery target for CLI --deliver when no explicit --reply-to is provided. */
+  defaultTo?: string;
   /** Per-space configuration keyed by space id or name. */
   groups?: Record<string, GoogleChatGroupConfig>;
   /** Service account JSON (inline string or object). */

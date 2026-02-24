@@ -1,8 +1,8 @@
-import { Type } from "@sinclair/typebox";
-import Ajv from "ajv";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Type } from "@sinclair/typebox";
+import Ajv from "ajv";
 // NOTE: This extension is intended to be bundled with WinClaw.
 // When running from source (tests/dev), WinClaw internals live under src/.
 // When running from a built install, internals live under dist/ (no src/ tree).
@@ -96,7 +96,11 @@ export function createLlmTaskTool(api: WinClawPluginApi) {
 
       const pluginCfg = (api.pluginConfig ?? {}) as PluginCfg;
 
-      const primary = api.config?.agents?.defaults?.model?.primary;
+      const defaultsModel = api.config?.agents?.defaults?.model;
+      const primary =
+        typeof defaultsModel === "string"
+          ? defaultsModel.trim()
+          : (defaultsModel?.primary?.trim() ?? undefined);
       const primaryProvider = typeof primary === "string" ? primary.split("/")[0] : undefined;
       const primaryModel =
         typeof primary === "string" ? primary.split("/").slice(1).join("/") : undefined;

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { WinClawConfig } from "./types.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
+import type { WinClawConfig } from "./types.js";
 
 /**
  * Nix mode detection: When WINCLAW_NIX_MODE=1, the gateway is running under Nix.
@@ -17,15 +17,11 @@ export function resolveIsNixMode(env: NodeJS.ProcessEnv = process.env): boolean 
 
 export const isNixMode = resolveIsNixMode();
 
-const LEGACY_STATE_DIRNAMES = [".openclaw", ".clawdbot", ".moltbot", ".moldbot"] as const;
+// Support historical (and occasionally misspelled) legacy state dirs.
+const LEGACY_STATE_DIRNAMES = [".clawdbot", ".moldbot", ".moltbot"] as const;
 const NEW_STATE_DIRNAME = ".winclaw";
 const CONFIG_FILENAME = "winclaw.json";
-const LEGACY_CONFIG_FILENAMES = [
-  "openclaw.json",
-  "clawdbot.json",
-  "moltbot.json",
-  "moldbot.json",
-] as const;
+const LEGACY_CONFIG_FILENAMES = ["clawdbot.json", "moldbot.json", "moltbot.json"] as const;
 
 function resolveDefaultHomeDir(): string {
   return resolveRequiredHomeDir(process.env, os.homedir);

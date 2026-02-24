@@ -27,6 +27,7 @@ export type HandleCommandsParams = {
   cfg: WinClawConfig;
   command: CommandContext;
   agentId?: string;
+  agentDir?: string;
   directives: InlineDirectives;
   elevated: {
     enabled: boolean;

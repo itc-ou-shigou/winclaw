@@ -1,9 +1,10 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   resolveDefaultConfigCandidates,
+  resolveConfigPathCandidate,
   resolveConfigPath,
   resolveOAuthDir,
   resolveOAuthPath,
@@ -36,6 +37,27 @@ describe("oauth paths", () => {
 });
 
 describe("state + config path candidates", () => {
+  async function withTempRoot(prefix: string, run: (root: string) => Promise<void>): Promise<void> {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
+    try {
+      await run(root);
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  }
+
+  function expectWinClawHomeDefaults(env: NodeJS.ProcessEnv): void {
+    const configuredHome = env.WINCLAW_HOME;
+    if (!configuredHome) {
+      throw new Error("WINCLAW_HOME must be set for this assertion helper");
+    }
+    const resolvedHome = path.resolve(configuredHome);
+    expect(resolveStateDir(env)).toBe(path.join(resolvedHome, ".winclaw"));
+
+    const candidates = resolveDefaultConfigCandidates(env);
+    expect(candidates[0]).toBe(path.join(resolvedHome, ".winclaw", "winclaw.json"));
+  }
+
   it("uses WINCLAW_STATE_DIR when set", () => {
     const env = {
       WINCLAW_STATE_DIR: "/new/state",
@@ -48,12 +70,7 @@ describe("state + config path candidates", () => {
     const env = {
       WINCLAW_HOME: "/srv/winclaw-home",
     } as NodeJS.ProcessEnv;
-
-    const resolvedHome = path.resolve("/srv/winclaw-home");
-    expect(resolveStateDir(env)).toBe(path.join(resolvedHome, ".winclaw"));
-
-    const candidates = resolveDefaultConfigCandidates(env);
-    expect(candidates[0]).toBe(path.join(resolvedHome, ".winclaw", "winclaw.json"));
+    expectWinClawHomeDefaults(env);
   });
 
   it("prefers WINCLAW_HOME over HOME for default state/config locations", () => {
@@ -61,12 +78,7 @@ describe("state + config path candidates", () => {
       WINCLAW_HOME: "/srv/winclaw-home",
       HOME: "/home/other",
     } as NodeJS.ProcessEnv;
-
-    const resolvedHome = path.resolve("/srv/winclaw-home");
-    expect(resolveStateDir(env)).toBe(path.join(resolvedHome, ".winclaw"));
-
-    const candidates = resolveDefaultConfigCandidates(env);
-    expect(candidates[0]).toBe(path.join(resolvedHome, ".winclaw", "winclaw.json"));
+    expectWinClawHomeDefaults(env);
   });
 
   it("orders default config candidates in a stable order", () => {
@@ -76,112 +88,56 @@ describe("state + config path candidates", () => {
     const expected = [
       path.join(resolvedHome, ".winclaw", "winclaw.json"),
       path.join(resolvedHome, ".winclaw", "clawdbot.json"),
-      path.join(resolvedHome, ".winclaw", "moltbot.json"),
       path.join(resolvedHome, ".winclaw", "moldbot.json"),
+      path.join(resolvedHome, ".winclaw", "moltbot.json"),
       path.join(resolvedHome, ".clawdbot", "winclaw.json"),
       path.join(resolvedHome, ".clawdbot", "clawdbot.json"),
-      path.join(resolvedHome, ".clawdbot", "moltbot.json"),
       path.join(resolvedHome, ".clawdbot", "moldbot.json"),
-      path.join(resolvedHome, ".moltbot", "winclaw.json"),
-      path.join(resolvedHome, ".moltbot", "clawdbot.json"),
-      path.join(resolvedHome, ".moltbot", "moltbot.json"),
-      path.join(resolvedHome, ".moltbot", "moldbot.json"),
+      path.join(resolvedHome, ".clawdbot", "moltbot.json"),
       path.join(resolvedHome, ".moldbot", "winclaw.json"),
       path.join(resolvedHome, ".moldbot", "clawdbot.json"),
-      path.join(resolvedHome, ".moldbot", "moltbot.json"),
       path.join(resolvedHome, ".moldbot", "moldbot.json"),
+      path.join(resolvedHome, ".moldbot", "moltbot.json"),
+      path.join(resolvedHome, ".moltbot", "winclaw.json"),
+      path.join(resolvedHome, ".moltbot", "clawdbot.json"),
+      path.join(resolvedHome, ".moltbot", "moldbot.json"),
+      path.join(resolvedHome, ".moltbot", "moltbot.json"),
     ];
     expect(candidates).toEqual(expected);
   });
 
   it("prefers ~/.winclaw when it exists and legacy dir is missing", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-state-"));
-    try {
+    await withTempRoot("winclaw-state-", async (root) => {
       const newDir = path.join(root, ".winclaw");
       await fs.mkdir(newDir, { recursive: true });
       const resolved = resolveStateDir({} as NodeJS.ProcessEnv, () => root);
       expect(resolved).toBe(newDir);
-    } finally {
-      await fs.rm(root, { recursive: true, force: true });
-    }
+    });
+  });
+
+  it("falls back to existing legacy state dir when ~/.winclaw is missing", async () => {
+    await withTempRoot("winclaw-state-legacy-", async (root) => {
+      const legacyDir = path.join(root, ".clawdbot");
+      await fs.mkdir(legacyDir, { recursive: true });
+      const resolved = resolveStateDir({} as NodeJS.ProcessEnv, () => root);
+      expect(resolved).toBe(legacyDir);
+    });
   });
 
   it("CONFIG_PATH prefers existing config when present", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-config-"));
-    const previousHome = process.env.HOME;
-    const previousUserProfile = process.env.USERPROFILE;
-    const previousHomeDrive = process.env.HOMEDRIVE;
-    const previousHomePath = process.env.HOMEPATH;
-    const previousWinClawConfig = process.env.WINCLAW_CONFIG_PATH;
-    const previousWinClawState = process.env.WINCLAW_STATE_DIR;
-    try {
+    await withTempRoot("winclaw-config-", async (root) => {
       const legacyDir = path.join(root, ".winclaw");
       await fs.mkdir(legacyDir, { recursive: true });
       const legacyPath = path.join(legacyDir, "winclaw.json");
       await fs.writeFile(legacyPath, "{}", "utf-8");
 
-      process.env.HOME = root;
-      if (process.platform === "win32") {
-        process.env.USERPROFILE = root;
-        const parsed = path.win32.parse(root);
-        process.env.HOMEDRIVE = parsed.root.replace(/\\$/, "");
-        process.env.HOMEPATH = root.slice(parsed.root.length - 1);
-      }
-      delete process.env.WINCLAW_CONFIG_PATH;
-      delete process.env.WINCLAW_STATE_DIR;
-
-      vi.resetModules();
-      const { CONFIG_PATH } = await import("./paths.js");
-      expect(CONFIG_PATH).toBe(legacyPath);
-    } finally {
-      if (previousHome === undefined) {
-        delete process.env.HOME;
-      } else {
-        process.env.HOME = previousHome;
-      }
-      if (previousUserProfile === undefined) {
-        delete process.env.USERPROFILE;
-      } else {
-        process.env.USERPROFILE = previousUserProfile;
-      }
-      if (previousHomeDrive === undefined) {
-        delete process.env.HOMEDRIVE;
-      } else {
-        process.env.HOMEDRIVE = previousHomeDrive;
-      }
-      if (previousHomePath === undefined) {
-        delete process.env.HOMEPATH;
-      } else {
-        process.env.HOMEPATH = previousHomePath;
-      }
-      if (previousWinClawConfig === undefined) {
-        delete process.env.WINCLAW_CONFIG_PATH;
-      } else {
-        process.env.WINCLAW_CONFIG_PATH = previousWinClawConfig;
-      }
-      if (previousWinClawConfig === undefined) {
-        delete process.env.WINCLAW_CONFIG_PATH;
-      } else {
-        process.env.WINCLAW_CONFIG_PATH = previousWinClawConfig;
-      }
-      if (previousWinClawState === undefined) {
-        delete process.env.WINCLAW_STATE_DIR;
-      } else {
-        process.env.WINCLAW_STATE_DIR = previousWinClawState;
-      }
-      if (previousWinClawState === undefined) {
-        delete process.env.WINCLAW_STATE_DIR;
-      } else {
-        process.env.WINCLAW_STATE_DIR = previousWinClawState;
-      }
-      await fs.rm(root, { recursive: true, force: true });
-      vi.resetModules();
-    }
+      const resolved = resolveConfigPathCandidate({} as NodeJS.ProcessEnv, () => root);
+      expect(resolved).toBe(legacyPath);
+    });
   });
 
   it("respects state dir overrides when config is missing", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-config-override-"));
-    try {
+    await withTempRoot("winclaw-config-override-", async (root) => {
       const legacyDir = path.join(root, ".winclaw");
       await fs.mkdir(legacyDir, { recursive: true });
       const legacyConfig = path.join(legacyDir, "winclaw.json");
@@ -191,8 +147,6 @@ describe("state + config path candidates", () => {
       const env = { WINCLAW_STATE_DIR: overrideDir } as NodeJS.ProcessEnv;
       const resolved = resolveConfigPath(env, overrideDir, () => root);
       expect(resolved).toBe(path.join(overrideDir, "winclaw.json"));
-    } finally {
-      await fs.rm(root, { recursive: true, force: true });
-    }
+    });
   });
 });

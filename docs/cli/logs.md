@@ -21,4 +21,8 @@ winclaw logs
 winclaw logs --follow
 winclaw logs --json
 winclaw logs --limit 500
+winclaw logs --local-time
+winclaw logs --follow --local-time
 ```
+
+Use `--local-time` to render timestamps in your local timezone.

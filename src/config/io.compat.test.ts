@@ -26,14 +26,18 @@ async function writeConfig(
   return configPath;
 }
 
+function createIoForHome(home: string, env: NodeJS.ProcessEnv = {} as NodeJS.ProcessEnv) {
+  return createConfigIO({
+    env,
+    homedir: () => home,
+  });
+}
+
 describe("config io paths", () => {
   it("uses ~/.winclaw/winclaw.json when config exists", async () => {
     await withTempHome(async (home) => {
       const configPath = await writeConfig(home, ".winclaw", 19001);
-      const io = createConfigIO({
-        env: {} as NodeJS.ProcessEnv,
-        homedir: () => home,
-      });
+      const io = createIoForHome(home);
       expect(io.configPath).toBe(configPath);
       expect(io.loadConfig().gateway?.port).toBe(19001);
     });
@@ -41,10 +45,7 @@ describe("config io paths", () => {
 
   it("defaults to ~/.winclaw/winclaw.json when config is missing", async () => {
     await withTempHome(async (home) => {
-      const io = createConfigIO({
-        env: {} as NodeJS.ProcessEnv,
-        homedir: () => home,
-      });
+      const io = createIoForHome(home);
       expect(io.configPath).toBe(path.join(home, ".winclaw", "winclaw.json"));
     });
   });
@@ -62,12 +63,78 @@ describe("config io paths", () => {
   it("honors explicit WINCLAW_CONFIG_PATH override", async () => {
     await withTempHome(async (home) => {
       const customPath = await writeConfig(home, ".winclaw", 20002, "custom.json");
-      const io = createConfigIO({
-        env: { WINCLAW_CONFIG_PATH: customPath } as NodeJS.ProcessEnv,
-        homedir: () => home,
-      });
+      const io = createIoForHome(home, { WINCLAW_CONFIG_PATH: customPath } as NodeJS.ProcessEnv);
       expect(io.configPath).toBe(customPath);
       expect(io.loadConfig().gateway?.port).toBe(20002);
+    });
+  });
+
+  it("honors legacy CLAWDBOT_CONFIG_PATH override", async () => {
+    await withTempHome(async (home) => {
+      const customPath = await writeConfig(home, ".winclaw", 20003, "legacy-custom.json");
+      const io = createIoForHome(home, { CLAWDBOT_CONFIG_PATH: customPath } as NodeJS.ProcessEnv);
+      expect(io.configPath).toBe(customPath);
+      expect(io.loadConfig().gateway?.port).toBe(20003);
+    });
+  });
+
+  it("normalizes safe-bin config entries at config load time", async () => {
+    await withTempHome(async (home) => {
+      const configDir = path.join(home, ".winclaw");
+      await fs.mkdir(configDir, { recursive: true });
+      const configPath = path.join(configDir, "winclaw.json");
+      await fs.writeFile(
+        configPath,
+        JSON.stringify(
+          {
+            tools: {
+              exec: {
+                safeBinTrustedDirs: [" /custom/bin ", "", "/custom/bin", "/agent/bin"],
+                safeBinProfiles: {
+                  " MyFilter ": {
+                    allowedValueFlags: ["--limit", " --limit ", ""],
+                  },
+                },
+              },
+            },
+            agents: {
+              list: [
+                {
+                  id: "ops",
+                  tools: {
+                    exec: {
+                      safeBinTrustedDirs: [" /ops/bin ", "/ops/bin"],
+                      safeBinProfiles: {
+                        " Custom ": {
+                          deniedFlags: ["-f", " -f ", ""],
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          null,
+          2,
+        ),
+        "utf-8",
+      );
+      const io = createIoForHome(home);
+      expect(io.configPath).toBe(configPath);
+      const cfg = io.loadConfig();
+      expect(cfg.tools?.exec?.safeBinProfiles).toEqual({
+        myfilter: {
+          allowedValueFlags: ["--limit"],
+        },
+      });
+      expect(cfg.tools?.exec?.safeBinTrustedDirs).toEqual(["/custom/bin", "/agent/bin"]);
+      expect(cfg.agents?.list?.[0]?.tools?.exec?.safeBinProfiles).toEqual({
+        custom: {
+          deniedFlags: ["-f"],
+        },
+      });
+      expect(cfg.agents?.list?.[0]?.tools?.exec?.safeBinTrustedDirs).toEqual(["/ops/bin"]);
     });
   });
 });

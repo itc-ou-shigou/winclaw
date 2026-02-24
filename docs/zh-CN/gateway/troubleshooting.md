@@ -545,13 +545,13 @@ winclaw gateway restart
 切换**到 git 安装**：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --no-onboard
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git --no-onboard
 ```
 
 切换**到 npm 全局**：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://winclaw.ai/install.sh | bash
 ```
 
 注意事项：

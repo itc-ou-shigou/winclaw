@@ -1,56 +1,85 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { withEnv } from "../test-utils/env.js";
 import { resolveWinClawAgentDir } from "./agent-paths.js";
 
 describe("resolveWinClawAgentDir", () => {
-  const previousStateDir = process.env.WINCLAW_STATE_DIR;
-  const previousAgentDir = process.env.WINCLAW_AGENT_DIR;
-  const previousPiAgentDir = process.env.PI_CODING_AGENT_DIR;
-  let tempStateDir: string | null = null;
-
-  afterEach(async () => {
-    if (tempStateDir) {
-      await fs.rm(tempStateDir, { recursive: true, force: true });
-      tempStateDir = null;
+  const withTempStateDir = async (run: (stateDir: string) => void) => {
+    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-agent-"));
+    try {
+      run(stateDir);
+    } finally {
+      await fs.rm(stateDir, { recursive: true, force: true });
     }
-    if (previousStateDir === undefined) {
-      delete process.env.WINCLAW_STATE_DIR;
-    } else {
-      process.env.WINCLAW_STATE_DIR = previousStateDir;
-    }
-    if (previousAgentDir === undefined) {
-      delete process.env.WINCLAW_AGENT_DIR;
-    } else {
-      process.env.WINCLAW_AGENT_DIR = previousAgentDir;
-    }
-    if (previousPiAgentDir === undefined) {
-      delete process.env.PI_CODING_AGENT_DIR;
-    } else {
-      process.env.PI_CODING_AGENT_DIR = previousPiAgentDir;
-    }
-  });
+  };
 
   it("defaults to the multi-agent path when no overrides are set", async () => {
-    tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-agent-"));
-    process.env.WINCLAW_STATE_DIR = tempStateDir;
-    delete process.env.WINCLAW_AGENT_DIR;
-    delete process.env.PI_CODING_AGENT_DIR;
-
-    const resolved = resolveWinClawAgentDir();
-
-    expect(resolved).toBe(path.join(tempStateDir, "agents", "main", "agent"));
+    await withTempStateDir((stateDir) => {
+      withEnv(
+        {
+          WINCLAW_STATE_DIR: stateDir,
+          WINCLAW_AGENT_DIR: undefined,
+          PI_CODING_AGENT_DIR: undefined,
+        },
+        () => {
+          const resolved = resolveWinClawAgentDir();
+          expect(resolved).toBe(path.join(stateDir, "agents", "main", "agent"));
+        },
+      );
+    });
   });
 
   it("honors WINCLAW_AGENT_DIR overrides", async () => {
-    tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-agent-"));
-    const override = path.join(tempStateDir, "agent");
-    process.env.WINCLAW_AGENT_DIR = override;
-    delete process.env.PI_CODING_AGENT_DIR;
+    await withTempStateDir((stateDir) => {
+      const override = path.join(stateDir, "agent");
+      withEnv(
+        {
+          WINCLAW_STATE_DIR: undefined,
+          WINCLAW_AGENT_DIR: override,
+          PI_CODING_AGENT_DIR: undefined,
+        },
+        () => {
+          const resolved = resolveWinClawAgentDir();
+          expect(resolved).toBe(path.resolve(override));
+        },
+      );
+    });
+  });
 
-    const resolved = resolveWinClawAgentDir();
+  it("honors PI_CODING_AGENT_DIR when WINCLAW_AGENT_DIR is unset", async () => {
+    await withTempStateDir((stateDir) => {
+      const override = path.join(stateDir, "pi-agent");
+      withEnv(
+        {
+          WINCLAW_STATE_DIR: undefined,
+          WINCLAW_AGENT_DIR: undefined,
+          PI_CODING_AGENT_DIR: override,
+        },
+        () => {
+          const resolved = resolveWinClawAgentDir();
+          expect(resolved).toBe(path.resolve(override));
+        },
+      );
+    });
+  });
 
-    expect(resolved).toBe(path.resolve(override));
+  it("prefers WINCLAW_AGENT_DIR over PI_CODING_AGENT_DIR when both are set", async () => {
+    await withTempStateDir((stateDir) => {
+      const primaryOverride = path.join(stateDir, "primary-agent");
+      const fallbackOverride = path.join(stateDir, "fallback-agent");
+      withEnv(
+        {
+          WINCLAW_STATE_DIR: undefined,
+          WINCLAW_AGENT_DIR: primaryOverride,
+          PI_CODING_AGENT_DIR: fallbackOverride,
+        },
+        () => {
+          const resolved = resolveWinClawAgentDir();
+          expect(resolved).toBe(path.resolve(primaryOverride));
+        },
+      );
+    });
   });
 });

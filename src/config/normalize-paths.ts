@@ -1,5 +1,5 @@
-import type { WinClawConfig } from "./types.js";
 import { isPlainObject, resolveUserPath } from "../utils.js";
+import type { WinClawConfig } from "./types.js";
 
 const PATH_VALUE_RE = /^~(?=$|[\\/])/;
 

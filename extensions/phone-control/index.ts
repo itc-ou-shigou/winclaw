@@ -1,6 +1,6 @@
-import type { WinClawPluginApi, WinClawPluginService } from "winclaw/plugin-sdk";
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { WinClawPluginApi, WinClawPluginService } from "winclaw/plugin-sdk";
 
 type ArmGroup = "camera" | "screen" | "writes" | "all";
 

@@ -74,7 +74,7 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt install -y nodejs
 
 # Install WinClaw
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://winclaw.ai/install.sh | bash
 
 # Verify
 winclaw --version

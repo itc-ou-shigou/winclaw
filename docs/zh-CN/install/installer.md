@@ -1,6 +1,6 @@
 ---
 read_when:
-  - 你想了解 `openclaw.ai/install.sh` 的工作机制
+  - 你想了解 `winclaw.ai/install.sh` 的工作机制
   - 你想自动化安装（CI / 无头环境）
   - 你想从 GitHub 检出安装
 summary: 安装器脚本的工作原理（install.sh + install-cli.sh）、参数和自动化
@@ -16,22 +16,22 @@ x-i18n:
 
 # 安装器内部机制
 
-WinClaw 提供两个安装器脚本（托管在 `openclaw.ai`）：
+WinClaw 提供两个安装器脚本（托管在 `winclaw.ai`）：
 
-- `https://openclaw.ai/install.sh` — "推荐"安装器（默认全局 npm 安装；也可从 GitHub 检出安装）
-- `https://openclaw.ai/install-cli.sh` — 无需 root 权限的 CLI 安装器（安装到带有独立 Node 的前缀目录）
-- `https://openclaw.ai/install.ps1` — Windows PowerShell 安装器（默认 npm；可选 git 安装）
+- `https://winclaw.ai/install.sh` — "推荐"安装器（默认全局 npm 安装；也可从 GitHub 检出安装）
+- `https://winclaw.ai/install-cli.sh` — 无需 root 权限的 CLI 安装器（安装到带有独立 Node 的前缀目录）
+- `https://winclaw.ai/install.ps1` — Windows PowerShell 安装器（默认 npm；可选 git 安装）
 
 查看当前参数/行为，运行：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --help
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --help
 ```
 
 Windows (PowerShell) 帮助：
 
 ```powershell
-& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -?
+& ([scriptblock]::Create((iwr -useb https://winclaw.ai/install.ps1))) -?
 ```
 
 如果安装器完成但在新终端中找不到 `winclaw`，通常是 Node/npm PATH 问题。参见：[安装](/install#nodejs--npm-path-sanity)。
@@ -53,7 +53,7 @@ Windows (PowerShell) 帮助：
 如果你*希望* `sharp` 链接到全局安装的 libvips（或你正在调试），请设置：
 
 ```bash
-SHARP_IGNORE_GLOBAL_LIBVIPS=0 curl -fsSL https://openclaw.ai/install.sh | bash
+SHARP_IGNORE_GLOBAL_LIBVIPS=0 curl -fsSL https://winclaw.ai/install.sh | bash
 ```
 
 ### 可发现性 / "git 安装"提示
@@ -86,7 +86,7 @@ SHARP_IGNORE_GLOBAL_LIBVIPS=0 curl -fsSL https://openclaw.ai/install.sh | bash
 帮助：
 
 ```bash
-curl -fsSL https://openclaw.ai/install-cli.sh | bash -s -- --help
+curl -fsSL https://winclaw.ai/install-cli.sh | bash -s -- --help
 ```
 
 ## install.ps1（Windows PowerShell）
@@ -102,15 +102,15 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash -s -- --help
 示例：
 
 ```powershell
-iwr -useb https://openclaw.ai/install.ps1 | iex
+iwr -useb https://winclaw.ai/install.ps1 | iex
 ```
 
 ```powershell
-iwr -useb https://openclaw.ai/install.ps1 | iex -InstallMethod git
+iwr -useb https://winclaw.ai/install.ps1 | iex -InstallMethod git
 ```
 
 ```powershell
-iwr -useb https://openclaw.ai/install.ps1 | iex -InstallMethod git -GitDir "C:\\winclaw"
+iwr -useb https://winclaw.ai/install.ps1 | iex -InstallMethod git -GitDir "C:\\winclaw"
 ```
 
 环境变量：

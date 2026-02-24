@@ -42,13 +42,11 @@ describe("parseCliProfileArgs", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("rejects combining --dev with --profile (dev first)", () => {
-    const res = parseCliProfileArgs(["node", "winclaw", "--dev", "--profile", "work", "status"]);
-    expect(res.ok).toBe(false);
-  });
-
-  it("rejects combining --dev with --profile (profile first)", () => {
-    const res = parseCliProfileArgs(["node", "winclaw", "--profile", "work", "--dev", "status"]);
+  it.each([
+    ["--dev first", ["node", "winclaw", "--dev", "--profile", "work", "status"]],
+    ["--profile first", ["node", "winclaw", "--profile", "work", "--dev", "status"]],
+  ])("rejects combining --dev with --profile (%s)", (_name, argv) => {
+    const res = parseCliProfileArgs(argv);
     expect(res.ok).toBe(false);
   });
 });
@@ -101,38 +99,45 @@ describe("applyCliProfileEnv", () => {
 });
 
 describe("formatCliCommand", () => {
-  it("returns command unchanged when no profile is set", () => {
-    expect(formatCliCommand("winclaw doctor --fix", {})).toBe("winclaw doctor --fix");
-  });
-
-  it("returns command unchanged when profile is default", () => {
-    expect(formatCliCommand("winclaw doctor --fix", { WINCLAW_PROFILE: "default" })).toBe(
-      "winclaw doctor --fix",
-    );
-  });
-
-  it("returns command unchanged when profile is Default (case-insensitive)", () => {
-    expect(formatCliCommand("winclaw doctor --fix", { WINCLAW_PROFILE: "Default" })).toBe(
-      "winclaw doctor --fix",
-    );
-  });
-
-  it("returns command unchanged when profile is invalid", () => {
-    expect(formatCliCommand("winclaw doctor --fix", { WINCLAW_PROFILE: "bad profile" })).toBe(
-      "winclaw doctor --fix",
-    );
-  });
-
-  it("returns command unchanged when --profile is already present", () => {
-    expect(
-      formatCliCommand("winclaw --profile work doctor --fix", { WINCLAW_PROFILE: "work" }),
-    ).toBe("winclaw --profile work doctor --fix");
-  });
-
-  it("returns command unchanged when --dev is already present", () => {
-    expect(formatCliCommand("winclaw --dev doctor", { WINCLAW_PROFILE: "dev" })).toBe(
-      "winclaw --dev doctor",
-    );
+  it.each([
+    {
+      name: "no profile is set",
+      cmd: "winclaw doctor --fix",
+      env: {},
+      expected: "winclaw doctor --fix",
+    },
+    {
+      name: "profile is default",
+      cmd: "winclaw doctor --fix",
+      env: { WINCLAW_PROFILE: "default" },
+      expected: "winclaw doctor --fix",
+    },
+    {
+      name: "profile is Default (case-insensitive)",
+      cmd: "winclaw doctor --fix",
+      env: { WINCLAW_PROFILE: "Default" },
+      expected: "winclaw doctor --fix",
+    },
+    {
+      name: "profile is invalid",
+      cmd: "winclaw doctor --fix",
+      env: { WINCLAW_PROFILE: "bad profile" },
+      expected: "winclaw doctor --fix",
+    },
+    {
+      name: "--profile is already present",
+      cmd: "winclaw --profile work doctor --fix",
+      env: { WINCLAW_PROFILE: "work" },
+      expected: "winclaw --profile work doctor --fix",
+    },
+    {
+      name: "--dev is already present",
+      cmd: "winclaw --dev doctor",
+      env: { WINCLAW_PROFILE: "dev" },
+      expected: "winclaw --dev doctor",
+    },
+  ])("returns command unchanged when $name", ({ cmd, env, expected }) => {
+    expect(formatCliCommand(cmd, env)).toBe(expected);
   });
 
   it("inserts --profile flag when profile is set", () => {

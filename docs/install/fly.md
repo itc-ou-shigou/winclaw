@@ -1,6 +1,10 @@
 ---
 title: Fly.io
 description: Deploy WinClaw on Fly.io
+summary: "Step-by-step Fly.io deployment for WinClaw with persistent storage and HTTPS"
+read_when:
+  - Deploying WinClaw on Fly.io
+  - Setting up Fly volumes, secrets, and first-run config
 ---
 
 # Fly.io Deployment

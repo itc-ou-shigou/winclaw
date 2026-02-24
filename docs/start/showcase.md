@@ -2,6 +2,9 @@
 title: "Showcase"
 description: "Real-world WinClaw projects from the community"
 summary: "Community-built projects and integrations powered by WinClaw"
+read_when:
+  - Looking for real WinClaw usage examples
+  - Updating community project highlights
 ---
 
 # Showcase

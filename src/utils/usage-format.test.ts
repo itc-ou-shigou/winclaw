@@ -35,7 +35,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as WinClawConfig;
+    } as unknown as WinClawConfig;
 
     const cost = resolveModelCostConfig({
       provider: "test",

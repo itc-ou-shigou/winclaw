@@ -36,7 +36,7 @@ winclaw pairing list telegram
 winclaw pairing approve telegram <CODE>
 ```
 
-Supported channels: `telegram`, `whatsapp`, `signal`, `imessage`, `discord`, `slack`.
+Supported channels: `telegram`, `whatsapp`, `signal`, `imessage`, `discord`, `slack`, `feishu`.
 
 ### Where the state lives
 

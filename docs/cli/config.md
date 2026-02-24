@@ -39,12 +39,12 @@ winclaw config set agents.list[1].tools.exec.node "node-id-or-name"
 ## Values
 
 Values are parsed as JSON5 when possible; otherwise they are treated as strings.
-Use `--json` to require JSON5 parsing.
+Use `--strict-json` to require JSON5 parsing. `--json` remains supported as a legacy alias.
 
 ```bash
 winclaw config set agents.defaults.heartbeat.every "0m"
-winclaw config set gateway.port 19001 --json
-winclaw config set channels.whatsapp.groups '["*"]' --json
+winclaw config set gateway.port 19001 --strict-json
+winclaw config set channels.whatsapp.groups '["*"]' --strict-json
 ```
 
 Restart the gateway after edits.

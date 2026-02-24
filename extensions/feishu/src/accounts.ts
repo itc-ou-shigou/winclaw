@@ -1,5 +1,5 @@
 import type { ClawdbotConfig } from "winclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk/account-id";
 import type {
   FeishuConfig,
   FeishuAccountConfig,

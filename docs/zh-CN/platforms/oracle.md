@@ -106,7 +106,7 @@ tailscale status
 ## 5) 安装 WinClaw
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://winclaw.ai/install.sh | bash
 source ~/.bashrc
 ```
 

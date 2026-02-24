@@ -2,19 +2,40 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { withEnv } from "../test-utils/env.js";
 import { loadWinClawPlugins } from "./loader.js";
 
 type TempPlugin = { dir: string; file: string; id: string };
 
-const tempDirs: string[] = [];
+const fixtureRoot = path.join(os.tmpdir(), `winclaw-plugin-${randomUUID()}`);
+let tempDirIndex = 0;
 const prevBundledDir = process.env.WINCLAW_BUNDLED_PLUGINS_DIR;
 const EMPTY_PLUGIN_SCHEMA = { type: "object", additionalProperties: false, properties: {} };
+const BUNDLED_TELEGRAM_PLUGIN_BODY = `export default { id: "telegram", register(api) {
+  api.registerChannel({
+    plugin: {
+      id: "telegram",
+      meta: {
+        id: "telegram",
+        label: "Telegram",
+        selectionLabel: "Telegram",
+        docsPath: "/channels/telegram",
+        blurb: "telegram channel"
+      },
+      capabilities: { chatTypes: ["direct"] },
+      config: {
+        listAccountIds: () => [],
+        resolveAccount: () => ({ accountId: "default" })
+      },
+      outbound: { deliveryMode: "direct" }
+    }
+  });
+} };`;
 
 function makeTempDir() {
-  const dir = path.join(os.tmpdir(), `winclaw-plugin-${randomUUID()}`);
+  const dir = path.join(fixtureRoot, `case-${tempDirIndex++}`);
   fs.mkdirSync(dir, { recursive: true });
-  tempDirs.push(dir);
   return dir;
 }
 
@@ -43,18 +64,86 @@ function writePlugin(params: {
   return { dir, file, id: params.id };
 }
 
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    try {
-      fs.rmSync(dir, { recursive: true, force: true });
-    } catch {
-      // ignore cleanup failures
-    }
+function loadBundledMemoryPluginRegistry(options?: {
+  packageMeta?: { name: string; version: string; description?: string };
+  pluginBody?: string;
+  pluginFilename?: string;
+}) {
+  const bundledDir = makeTempDir();
+  let pluginDir = bundledDir;
+  let pluginFilename = options?.pluginFilename ?? "memory-core.js";
+
+  if (options?.packageMeta) {
+    pluginDir = path.join(bundledDir, "memory-core");
+    pluginFilename = "index.js";
+    fs.mkdirSync(pluginDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(pluginDir, "package.json"),
+      JSON.stringify(
+        {
+          name: options.packageMeta.name,
+          version: options.packageMeta.version,
+          description: options.packageMeta.description,
+          winclaw: { extensions: ["./index.js"] },
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
   }
+
+  writePlugin({
+    id: "memory-core",
+    body:
+      options?.pluginBody ?? `export default { id: "memory-core", kind: "memory", register() {} };`,
+    dir: pluginDir,
+    filename: pluginFilename,
+  });
+  process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+
+  return loadWinClawPlugins({
+    cache: false,
+    config: {
+      plugins: {
+        slots: {
+          memory: "memory-core",
+        },
+      },
+    },
+  });
+}
+
+function setupBundledTelegramPlugin() {
+  const bundledDir = makeTempDir();
+  writePlugin({
+    id: "telegram",
+    body: BUNDLED_TELEGRAM_PLUGIN_BODY,
+    dir: bundledDir,
+    filename: "telegram.js",
+  });
+  process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+}
+
+function expectTelegramLoaded(registry: ReturnType<typeof loadWinClawPlugins>) {
+  const telegram = registry.plugins.find((entry) => entry.id === "telegram");
+  expect(telegram?.status).toBe("loaded");
+  expect(registry.channels.some((entry) => entry.plugin.id === "telegram")).toBe(true);
+}
+
+afterEach(() => {
   if (prevBundledDir === undefined) {
     delete process.env.WINCLAW_BUNDLED_PLUGINS_DIR;
   } else {
     process.env.WINCLAW_BUNDLED_PLUGINS_DIR = prevBundledDir;
+  }
+});
+
+afterAll(() => {
+  try {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  } catch {
+    // ignore cleanup failures
   }
 });
 
@@ -65,7 +154,7 @@ describe("loadWinClawPlugins", () => {
       id: "bundled",
       body: `export default { id: "bundled", register() {} };`,
       dir: bundledDir,
-      filename: "bundled.ts",
+      filename: "bundled.js",
     });
     process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
 
@@ -98,33 +187,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("loads bundled telegram plugin when enabled", () => {
-    const bundledDir = makeTempDir();
-    writePlugin({
-      id: "telegram",
-      body: `export default { id: "telegram", register(api) {
-  api.registerChannel({
-    plugin: {
-      id: "telegram",
-      meta: {
-        id: "telegram",
-        label: "Telegram",
-        selectionLabel: "Telegram",
-        docsPath: "/channels/telegram",
-        blurb: "telegram channel"
-      },
-      capabilities: { chatTypes: ["direct"] },
-      config: {
-        listAccountIds: () => [],
-        resolveAccount: () => ({ accountId: "default" })
-      },
-      outbound: { deliveryMode: "direct" }
-    }
-  });
-} };`,
-      dir: bundledDir,
-      filename: "telegram.ts",
-    });
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+    setupBundledTelegramPlugin();
 
     const registry = loadWinClawPlugins({
       cache: false,
@@ -138,69 +201,69 @@ describe("loadWinClawPlugins", () => {
       },
     });
 
-    const telegram = registry.plugins.find((entry) => entry.id === "telegram");
-    expect(telegram?.status).toBe("loaded");
-    expect(registry.channels.some((entry) => entry.plugin.id === "telegram")).toBe(true);
+    expectTelegramLoaded(registry);
   });
 
-  it("enables bundled memory plugin when selected by slot", () => {
-    const bundledDir = makeTempDir();
-    writePlugin({
-      id: "memory-core",
-      body: `export default { id: "memory-core", kind: "memory", register() {} };`,
-      dir: bundledDir,
-      filename: "memory-core.ts",
-    });
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+  it("loads bundled channel plugins when channels.<id>.enabled=true", () => {
+    setupBundledTelegramPlugin();
 
     const registry = loadWinClawPlugins({
       cache: false,
       config: {
+        channels: {
+          telegram: {
+            enabled: true,
+          },
+        },
         plugins: {
-          slots: {
-            memory: "memory-core",
+          enabled: true,
+        },
+      },
+    });
+
+    expectTelegramLoaded(registry);
+  });
+
+  it("still respects explicit disable via plugins.entries for bundled channels", () => {
+    setupBundledTelegramPlugin();
+
+    const registry = loadWinClawPlugins({
+      cache: false,
+      config: {
+        channels: {
+          telegram: {
+            enabled: true,
+          },
+        },
+        plugins: {
+          entries: {
+            telegram: { enabled: false },
           },
         },
       },
     });
+
+    const telegram = registry.plugins.find((entry) => entry.id === "telegram");
+    expect(telegram?.status).toBe("disabled");
+    expect(telegram?.error).toBe("disabled in config");
+  });
+
+  it("enables bundled memory plugin when selected by slot", () => {
+    const registry = loadBundledMemoryPluginRegistry();
 
     const memory = registry.plugins.find((entry) => entry.id === "memory-core");
     expect(memory?.status).toBe("loaded");
   });
 
   it("preserves package.json metadata for bundled memory plugins", () => {
-    const bundledDir = makeTempDir();
-    const pluginDir = path.join(bundledDir, "memory-core");
-    fs.mkdirSync(pluginDir, { recursive: true });
-
-    fs.writeFileSync(
-      path.join(pluginDir, "package.json"),
-      JSON.stringify({
+    const registry = loadBundledMemoryPluginRegistry({
+      packageMeta: {
         name: "@winclaw/memory-core",
         version: "1.2.3",
         description: "Memory plugin package",
-        winclaw: { extensions: ["./index.ts"] },
-      }),
-      "utf-8",
-    );
-    writePlugin({
-      id: "memory-core",
-      body: `export default { id: "memory-core", kind: "memory", name: "Memory (Core)", register() {} };`,
-      dir: pluginDir,
-      filename: "index.ts",
-    });
-
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
-
-    const registry = loadWinClawPlugins({
-      cache: false,
-      config: {
-        plugins: {
-          slots: {
-            memory: "memory-core",
-          },
-        },
       },
+      pluginBody:
+        'export default { id: "memory-core", kind: "memory", name: "Memory (Core)", register() {} };',
     });
 
     const memory = registry.plugins.find((entry) => entry.id === "memory-core");
@@ -479,5 +542,112 @@ describe("loadWinClawPlugins", () => {
     const overridden = entries.find((entry) => entry.status === "disabled");
     expect(loaded?.origin).toBe("config");
     expect(overridden?.origin).toBe("bundled");
+  });
+  it("warns when plugins.allow is empty and non-bundled plugins are discoverable", () => {
+    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    const plugin = writePlugin({
+      id: "warn-open-allow",
+      body: `export default { id: "warn-open-allow", register() {} };`,
+    });
+    const warnings: string[] = [];
+    loadWinClawPlugins({
+      cache: false,
+      logger: {
+        info: () => {},
+        warn: (msg) => warnings.push(msg),
+        error: () => {},
+      },
+      config: {
+        plugins: {
+          load: { paths: [plugin.file] },
+        },
+      },
+    });
+    expect(
+      warnings.some((msg) => msg.includes("plugins.allow is empty") && msg.includes(plugin.id)),
+    ).toBe(true);
+  });
+
+  it("warns when loaded non-bundled plugin has no install/load-path provenance", () => {
+    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    const stateDir = makeTempDir();
+    withEnv({ WINCLAW_STATE_DIR: stateDir, CLAWDBOT_STATE_DIR: undefined }, () => {
+      const globalDir = path.join(stateDir, "extensions", "rogue");
+      fs.mkdirSync(globalDir, { recursive: true });
+      writePlugin({
+        id: "rogue",
+        body: `export default { id: "rogue", register() {} };`,
+        dir: globalDir,
+        filename: "index.js",
+      });
+
+      const warnings: string[] = [];
+      const registry = loadWinClawPlugins({
+        cache: false,
+        logger: {
+          info: () => {},
+          warn: (msg) => warnings.push(msg),
+          error: () => {},
+        },
+        config: {
+          plugins: {
+            allow: ["rogue"],
+          },
+        },
+      });
+
+      const rogue = registry.plugins.find((entry) => entry.id === "rogue");
+      expect(rogue?.status).toBe("loaded");
+      expect(
+        warnings.some(
+          (msg) =>
+            msg.includes("rogue") && msg.includes("loaded without install/load-path provenance"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("rejects plugin entry files that escape plugin root via symlink", () => {
+    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    const pluginDir = makeTempDir();
+    const outsideDir = makeTempDir();
+    const outsideEntry = path.join(outsideDir, "outside.js");
+    const linkedEntry = path.join(pluginDir, "entry.js");
+    fs.writeFileSync(
+      outsideEntry,
+      'export default { id: "symlinked", register() { throw new Error("should not run"); } };',
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(pluginDir, "winclaw.plugin.json"),
+      JSON.stringify(
+        {
+          id: "symlinked",
+          configSchema: EMPTY_PLUGIN_SCHEMA,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+    try {
+      fs.symlinkSync(outsideEntry, linkedEntry);
+    } catch {
+      return;
+    }
+
+    const registry = loadWinClawPlugins({
+      cache: false,
+      config: {
+        plugins: {
+          load: { paths: [linkedEntry] },
+          allow: ["symlinked"],
+        },
+      },
+    });
+
+    const record = registry.plugins.find((entry) => entry.id === "symlinked");
+    expect(record?.status).not.toBe("loaded");
+    expect(registry.diagnostics.some((entry) => entry.message.includes("escapes"))).toBe(true);
   });
 });

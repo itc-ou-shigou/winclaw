@@ -1,18 +1,27 @@
 import type { ClawdbotConfig, RuntimeEnv } from "winclaw/plugin-sdk";
 import {
+  buildAgentMediaPayload,
   buildPendingHistoryContextFromMap,
-  recordPendingHistoryEntryIfEnabled,
   clearHistoryEntriesIfEnabled,
   DEFAULT_GROUP_HISTORY_LIMIT,
   type HistoryEntry,
+  recordPendingHistoryEntryIfEnabled,
+  resolveOpenProviderRuntimeGroupPolicy,
+  resolveDefaultGroupPolicy,
+  warnMissingProviderGroupPolicyFallbackOnce,
 } from "winclaw/plugin-sdk";
-import type { FeishuMessageContext, FeishuMediaInfo, ResolvedFeishuAccount } from "./types.js";
-import type { DynamicAgentCreationConfig } from "./types.js";
 import { resolveFeishuAccount } from "./accounts.js";
 import { createFeishuClient } from "./client.js";
+import { tryRecordMessagePersistent } from "./dedup.js";
 import { maybeCreateDynamicAgent } from "./dynamic-agent.js";
-import { downloadImageFeishu, downloadMessageResourceFeishu } from "./media.js";
-import { extractMentionTargets, extractMessageBody, isMentionForwardRequest } from "./mention.js";
+import { normalizeFeishuExternalKey } from "./external-keys.js";
+import { downloadMessageResourceFeishu } from "./media.js";
+import {
+  escapeRegExp,
+  extractMentionTargets,
+  extractMessageBody,
+  isMentionForwardRequest,
+} from "./mention.js";
 import {
   resolveFeishuGroupConfig,
   resolveFeishuReplyPolicy,
@@ -21,38 +30,9 @@ import {
 } from "./policy.js";
 import { createFeishuReplyDispatcher } from "./reply-dispatcher.js";
 import { getFeishuRuntime } from "./runtime.js";
-import { getMessageFeishu } from "./send.js";
-
-// --- Message deduplication ---
-// Prevent duplicate processing when WebSocket reconnects or Feishu redelivers messages.
-const DEDUP_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const DEDUP_MAX_SIZE = 1_000;
-const DEDUP_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // cleanup every 5 minutes
-const processedMessageIds = new Map<string, number>(); // messageId -> timestamp
-let lastCleanupTime = Date.now();
-
-function tryRecordMessage(messageId: string): boolean {
-  const now = Date.now();
-
-  // Throttled cleanup: evict expired entries at most once per interval
-  if (now - lastCleanupTime > DEDUP_CLEANUP_INTERVAL_MS) {
-    for (const [id, ts] of processedMessageIds) {
-      if (now - ts > DEDUP_TTL_MS) processedMessageIds.delete(id);
-    }
-    lastCleanupTime = now;
-  }
-
-  if (processedMessageIds.has(messageId)) return false;
-
-  // Evict oldest entries if cache is full
-  if (processedMessageIds.size >= DEDUP_MAX_SIZE) {
-    const first = processedMessageIds.keys().next().value!;
-    processedMessageIds.delete(first);
-  }
-
-  processedMessageIds.set(messageId, now);
-  return true;
-}
+import { getMessageFeishu, sendMessageFeishu } from "./send.js";
+import type { FeishuMessageContext, FeishuMediaInfo, ResolvedFeishuAccount } from "./types.js";
+import type { DynamicAgentCreationConfig } from "./types.js";
 
 // --- Permission error extraction ---
 // Extract permission grant URL from Feishu API error response.
@@ -214,23 +194,30 @@ function parseMessageContent(content: string, messageType: string): string {
 }
 
 function checkBotMentioned(event: FeishuMessageEvent, botOpenId?: string): boolean {
+  if (!botOpenId) return false;
   const mentions = event.message.mentions ?? [];
-  if (mentions.length === 0) return false;
-  if (!botOpenId) return mentions.length > 0;
-  return mentions.some((m) => m.id.open_id === botOpenId);
+  if (mentions.length > 0) {
+    return mentions.some((m) => m.id.open_id === botOpenId);
+  }
+  // Post (rich text) messages may have empty message.mentions when they contain docs/paste
+  if (event.message.message_type === "post") {
+    const { mentionedOpenIds } = parsePostContent(event.message.content);
+    return mentionedOpenIds.some((id) => id === botOpenId);
+  }
+  return false;
 }
 
-function stripBotMention(
+export function stripBotMention(
   text: string,
   mentions?: FeishuMessageEvent["message"]["mentions"],
 ): string {
   if (!mentions || mentions.length === 0) return text;
   let result = text;
   for (const mention of mentions) {
-    result = result.replace(new RegExp(`@${mention.name}\\s*`, "g"), "").trim();
-    result = result.replace(new RegExp(mention.key, "g"), "").trim();
+    result = result.replace(new RegExp(`@${escapeRegExp(mention.name)}\\s*`, "g"), "");
+    result = result.replace(new RegExp(escapeRegExp(mention.key), "g"), "");
   }
-  return result;
+  return result.trim();
 }
 
 /**
@@ -246,18 +233,20 @@ function parseMediaKeys(
 } {
   try {
     const parsed = JSON.parse(content);
+    const imageKey = normalizeFeishuExternalKey(parsed.image_key);
+    const fileKey = normalizeFeishuExternalKey(parsed.file_key);
     switch (messageType) {
       case "image":
-        return { imageKey: parsed.image_key };
+        return { imageKey };
       case "file":
-        return { fileKey: parsed.file_key, fileName: parsed.file_name };
+        return { fileKey, fileName: parsed.file_name };
       case "audio":
-        return { fileKey: parsed.file_key };
+        return { fileKey };
       case "video":
         // Video has both file_key (video) and image_key (thumbnail)
-        return { fileKey: parsed.file_key, imageKey: parsed.image_key };
+        return { fileKey, imageKey };
       case "sticker":
-        return { fileKey: parsed.file_key };
+        return { fileKey };
       default:
         return {};
     }
@@ -273,6 +262,7 @@ function parseMediaKeys(
 function parsePostContent(content: string): {
   textContent: string;
   imageKeys: string[];
+  mentionedOpenIds: string[];
 } {
   try {
     const parsed = JSON.parse(content);
@@ -280,6 +270,7 @@ function parsePostContent(content: string): {
     const contentBlocks = parsed.content || [];
     let textContent = title ? `${title}\n\n` : "";
     const imageKeys: string[] = [];
+    const mentionedOpenIds: string[] = [];
 
     for (const paragraph of contentBlocks) {
       if (Array.isArray(paragraph)) {
@@ -292,9 +283,15 @@ function parsePostContent(content: string): {
           } else if (element.tag === "at") {
             // Mention: @username
             textContent += `@${element.user_name || element.user_id || ""}`;
+            if (element.user_id) {
+              mentionedOpenIds.push(element.user_id);
+            }
           } else if (element.tag === "img" && element.image_key) {
             // Embedded image
-            imageKeys.push(element.image_key);
+            const imageKey = normalizeFeishuExternalKey(element.image_key);
+            if (imageKey) {
+              imageKeys.push(imageKey);
+            }
           }
         }
         textContent += "\n";
@@ -302,11 +299,12 @@ function parsePostContent(content: string): {
     }
 
     return {
-      textContent: textContent.trim() || "[富文本消息]",
+      textContent: textContent.trim() || "[Rich text message]",
       imageKeys,
+      mentionedOpenIds,
     };
   } catch {
-    return { textContent: "[富文本消息]", imageKeys: [] };
+    return { textContent: "[Rich text message]", imageKeys: [], mentionedOpenIds: [] };
   }
 }
 
@@ -414,7 +412,7 @@ async function resolveFeishuMediaList(params: {
 
     // For message media, always use messageResource API
     // The image.get API is only for images uploaded via im/v1/images, not for message attachments
-    const fileKey = mediaKeys.imageKey || mediaKeys.fileKey;
+    const fileKey = mediaKeys.fileKey || mediaKeys.imageKey;
     if (!fileKey) {
       return [];
     }
@@ -463,27 +461,6 @@ async function resolveFeishuMediaList(params: {
  * Build media payload for inbound context.
  * Similar to Discord's buildDiscordMediaPayload().
  */
-function buildFeishuMediaPayload(mediaList: FeishuMediaInfo[]): {
-  MediaPath?: string;
-  MediaType?: string;
-  MediaUrl?: string;
-  MediaPaths?: string[];
-  MediaUrls?: string[];
-  MediaTypes?: string[];
-} {
-  const first = mediaList[0];
-  const mediaPaths = mediaList.map((media) => media.path);
-  const mediaTypes = mediaList.map((media) => media.contentType).filter(Boolean) as string[];
-  return {
-    MediaPath: first?.path,
-    MediaType: first?.contentType,
-    MediaUrl: first?.path,
-    MediaPaths: mediaPaths.length > 0 ? mediaPaths : undefined,
-    MediaUrls: mediaPaths.length > 0 ? mediaPaths : undefined,
-    MediaTypes: mediaTypes.length > 0 ? mediaTypes : undefined,
-  };
-}
-
 export function parseFeishuMessageEvent(
   event: FeishuMessageEvent,
   botOpenId?: string,
@@ -536,15 +513,16 @@ export async function handleFeishuMessage(params: {
   const log = runtime?.log ?? console.log;
   const error = runtime?.error ?? console.error;
 
-  // Dedup check: skip if this message was already processed
+  // Dedup check: skip if this message was already processed (memory + disk).
   const messageId = event.message.message_id;
-  if (!tryRecordMessage(messageId)) {
+  if (!(await tryRecordMessagePersistent(messageId, account.accountId, log))) {
     log(`feishu: skipping duplicate message ${messageId}`);
     return;
   }
 
   let ctx = parseFeishuMessageEvent(event, botOpenId);
   const isGroup = ctx.chatType === "group";
+  const senderUserId = event.sender.sender_id.user_id?.trim() || undefined;
 
   // Resolve sender display name (best-effort) so the agent can attribute messages correctly.
   const senderResult = await resolveFeishuSenderName({
@@ -581,12 +559,28 @@ export async function handleFeishuMessage(params: {
     0,
     feishuCfg?.historyLimit ?? cfg.messages?.groupChat?.historyLimit ?? DEFAULT_GROUP_HISTORY_LIMIT,
   );
+  const groupConfig = isGroup
+    ? resolveFeishuGroupConfig({ cfg: feishuCfg, groupId: ctx.chatId })
+    : undefined;
+  const dmPolicy = feishuCfg?.dmPolicy ?? "pairing";
+  const configAllowFrom = feishuCfg?.allowFrom ?? [];
+  const useAccessGroups = cfg.commands?.useAccessGroups !== false;
 
   if (isGroup) {
-    const groupPolicy = feishuCfg?.groupPolicy ?? "open";
+    const defaultGroupPolicy = resolveDefaultGroupPolicy(cfg);
+    const { groupPolicy, providerMissingFallbackApplied } = resolveOpenProviderRuntimeGroupPolicy({
+      providerConfigPresent: cfg.channels?.feishu !== undefined,
+      groupPolicy: feishuCfg?.groupPolicy,
+      defaultGroupPolicy,
+    });
+    warnMissingProviderGroupPolicyFallbackOnce({
+      providerMissingFallbackApplied,
+      providerKey: "feishu",
+      accountId: account.accountId,
+      log,
+    });
     const groupAllowFrom = feishuCfg?.groupAllowFrom ?? [];
     // DEBUG: log(`feishu[${account.accountId}]: groupPolicy=${groupPolicy}`);
-    const groupConfig = resolveFeishuGroupConfig({ cfg: feishuCfg, groupId: ctx.chatId });
 
     // Check if this GROUP is allowed (groupAllowFrom contains group IDs like oc_xxx, not user IDs)
     const groupAllowed = isFeishuGroupAllowed({
@@ -608,6 +602,7 @@ export async function handleFeishuMessage(params: {
         groupPolicy: "allowlist",
         allowFrom: senderAllowFrom,
         senderId: ctx.senderOpenId,
+        senderIds: [senderUserId],
         senderName: ctx.senderName,
       });
       if (!senderAllowed) {
@@ -642,23 +637,79 @@ export async function handleFeishuMessage(params: {
       return;
     }
   } else {
-    const dmPolicy = feishuCfg?.dmPolicy ?? "pairing";
-    const allowFrom = feishuCfg?.allowFrom ?? [];
-
-    if (dmPolicy === "allowlist") {
-      const match = resolveFeishuAllowlistMatch({
-        allowFrom,
-        senderId: ctx.senderOpenId,
-      });
-      if (!match.allowed) {
-        log(`feishu[${account.accountId}]: sender ${ctx.senderOpenId} not in DM allowlist`);
-        return;
-      }
-    }
   }
 
   try {
     const core = getFeishuRuntime();
+    const shouldComputeCommandAuthorized = core.channel.commands.shouldComputeCommandAuthorized(
+      ctx.content,
+      cfg,
+    );
+    const storeAllowFrom =
+      !isGroup &&
+      dmPolicy !== "allowlist" &&
+      (dmPolicy !== "open" || shouldComputeCommandAuthorized)
+        ? await core.channel.pairing.readAllowFromStore("feishu").catch(() => [])
+        : [];
+    const effectiveDmAllowFrom = [...configAllowFrom, ...storeAllowFrom];
+    const dmAllowed = resolveFeishuAllowlistMatch({
+      allowFrom: effectiveDmAllowFrom,
+      senderId: ctx.senderOpenId,
+      senderIds: [senderUserId],
+      senderName: ctx.senderName,
+    }).allowed;
+
+    if (!isGroup && dmPolicy !== "open" && !dmAllowed) {
+      if (dmPolicy === "pairing") {
+        const { code, created } = await core.channel.pairing.upsertPairingRequest({
+          channel: "feishu",
+          id: ctx.senderOpenId,
+          meta: { name: ctx.senderName },
+        });
+        if (created) {
+          log(`feishu[${account.accountId}]: pairing request sender=${ctx.senderOpenId}`);
+          try {
+            await sendMessageFeishu({
+              cfg,
+              to: `user:${ctx.senderOpenId}`,
+              text: core.channel.pairing.buildPairingReply({
+                channel: "feishu",
+                idLine: `Your Feishu user id: ${ctx.senderOpenId}`,
+                code,
+              }),
+              accountId: account.accountId,
+            });
+          } catch (err) {
+            log(
+              `feishu[${account.accountId}]: pairing reply failed for ${ctx.senderOpenId}: ${String(err)}`,
+            );
+          }
+        }
+      } else {
+        log(
+          `feishu[${account.accountId}]: blocked unauthorized sender ${ctx.senderOpenId} (dmPolicy=${dmPolicy})`,
+        );
+      }
+      return;
+    }
+
+    const commandAllowFrom = isGroup
+      ? (groupConfig?.allowFrom ?? configAllowFrom)
+      : effectiveDmAllowFrom;
+    const senderAllowedForCommands = resolveFeishuAllowlistMatch({
+      allowFrom: commandAllowFrom,
+      senderId: ctx.senderOpenId,
+      senderIds: [senderUserId],
+      senderName: ctx.senderName,
+    }).allowed;
+    const commandAuthorized = shouldComputeCommandAuthorized
+      ? core.channel.commands.resolveCommandAuthorizedFromAuthorizers({
+          useAccessGroups,
+          authorizers: [
+            { configured: commandAllowFrom.length > 0, allowed: senderAllowedForCommands },
+          ],
+        })
+      : undefined;
 
     // In group chats, the session is scoped to the group, but the *speaker* is the sender.
     // Using a group-scoped From causes the agent to treat different users as the same person.
@@ -669,10 +720,10 @@ export async function handleFeishuMessage(params: {
     // When topicSessionMode is enabled, messages within a topic (identified by root_id)
     // get a separate session from the main group chat.
     let peerId = isGroup ? ctx.chatId : ctx.senderOpenId;
+    let topicSessionMode: "enabled" | "disabled" = "disabled";
     if (isGroup && ctx.rootId) {
       const groupConfig = resolveFeishuGroupConfig({ cfg: feishuCfg, groupId: ctx.chatId });
-      const topicSessionMode =
-        groupConfig?.topicSessionMode ?? feishuCfg?.topicSessionMode ?? "disabled";
+      topicSessionMode = groupConfig?.topicSessionMode ?? feishuCfg?.topicSessionMode ?? "disabled";
       if (topicSessionMode === "enabled") {
         // Use chatId:topic:rootId as peer ID for topic-scoped sessions
         peerId = `${ctx.chatId}:topic:${ctx.rootId}`;
@@ -688,6 +739,14 @@ export async function handleFeishuMessage(params: {
         kind: isGroup ? "group" : "direct",
         id: peerId,
       },
+      // Add parentPeer for binding inheritance in topic mode
+      parentPeer:
+        isGroup && ctx.rootId && topicSessionMode === "enabled"
+          ? {
+              kind: "group",
+              id: ctx.chatId,
+            }
+          : null,
     });
 
     // Dynamic agent creation for DM users
@@ -741,7 +800,7 @@ export async function handleFeishuMessage(params: {
       log,
       accountId: account.accountId,
     });
-    const mediaPayload = buildFeishuMediaPayload(mediaList);
+    const mediaPayload = buildAgentMediaPayload(mediaList);
 
     // Fetch quoted/replied message content if parentId exists
     let quotedContent: string | undefined;
@@ -815,7 +874,7 @@ export async function handleFeishuMessage(params: {
         MessageSid: `${ctx.messageId}:permission-error`,
         Timestamp: Date.now(),
         WasMentioned: false,
-        CommandAuthorized: true,
+        CommandAuthorized: commandAuthorized,
         OriginatingChannel: "feishu" as const,
         OriginatingTo: feishuTo,
       });
@@ -903,7 +962,7 @@ export async function handleFeishuMessage(params: {
       ReplyToBody: quotedContent ?? undefined,
       Timestamp: Date.now(),
       WasMentioned: ctx.mentionedBot,
-      CommandAuthorized: true,
+      CommandAuthorized: commandAuthorized,
       OriginatingChannel: "feishu" as const,
       OriginatingTo: feishuTo,
       ...mediaPayload,

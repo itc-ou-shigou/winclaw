@@ -27,6 +27,10 @@ On Windows, we strongly recommend running WinClaw under [WSL2](https://learn.mic
 The **installer script** is the recommended way to install WinClaw. It handles Node detection, installation, and onboarding in one step.
 </Tip>
 
+<Warning>
+For VPS/cloud hosts, avoid third-party "1-click" marketplace images when possible. Prefer a clean base OS image (for example Ubuntu LTS), then install WinClaw yourself with the installer script.
+</Warning>
+
 <AccordionGroup>
   <Accordion title="Installer script" icon="rocket" defaultOpen>
     Downloads the CLI, installs it globally via npm, and launches the onboarding wizard.
@@ -34,12 +38,12 @@ The **installer script** is the recommended way to install WinClaw. It handles N
     <Tabs>
       <Tab title="macOS / Linux / WSL2">
         ```bash
-        curl -fsSL https://openclaw.ai/install.sh | bash
+        curl -fsSL https://winclaw.ai/install.sh | bash
         ```
       </Tab>
       <Tab title="Windows (PowerShell)">
         ```powershell
-        iwr -useb https://openclaw.ai/install.ps1 | iex
+        iwr -useb https://winclaw.ai/install.ps1 | iex
         ```
       </Tab>
     </Tabs>
@@ -51,12 +55,12 @@ The **installer script** is the recommended way to install WinClaw. It handles N
     <Tabs>
       <Tab title="macOS / Linux / WSL2">
         ```bash
-        curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
+        curl -fsSL https://winclaw.ai/install.sh | bash -s -- --no-onboard
         ```
       </Tab>
       <Tab title="Windows (PowerShell)">
         ```powershell
-        & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
+        & ([scriptblock]::Create((iwr -useb https://winclaw.ai/install.ps1))) -NoOnboard
         ```
       </Tab>
     </Tabs>
@@ -141,6 +145,9 @@ The **installer script** is the recommended way to install WinClaw. It handles N
 <CardGroup cols={2}>
   <Card title="Docker" href="/install/docker" icon="container">
     Containerized or headless deployments.
+  </Card>
+  <Card title="Podman" href="/install/podman" icon="container">
+    Rootless container: run `setup-podman.sh` once, then the launch script.
   </Card>
   <Card title="Nix" href="/install/nix" icon="snowflake">
     Declarative install via Nix.

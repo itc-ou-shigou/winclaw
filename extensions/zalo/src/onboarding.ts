@@ -7,6 +7,7 @@ import type {
 import {
   addWildcardAllowFrom,
   DEFAULT_ACCOUNT_ID,
+  mergeAllowFromEntries,
   normalizeAccountId,
   promptAccountId,
 } from "winclaw/plugin-sdk";
@@ -117,7 +118,7 @@ async function noteZaloTokenHelp(prompter: WizardPrompter): Promise<void> {
       "2) Create a bot and get the token",
       "3) Token looks like 12345689:abc-xyz",
       "Tip: you can also set ZALO_BOT_TOKEN in your env.",
-      "Docs: https://docs.openclaw.ai/channels/zalo",
+      "Docs: https://docs.winclaw.ai/channels/zalo",
     ].join("\n"),
     "Zalo bot token",
   );
@@ -147,11 +148,7 @@ async function promptZaloAllowFrom(params: {
     },
   });
   const normalized = String(entry).trim();
-  const merged = [
-    ...existingAllowFrom.map((item) => String(item).trim()).filter(Boolean),
-    normalized,
-  ];
-  const unique = [...new Set(merged)];
+  const unique = mergeAllowFromEntries(existingAllowFrom, [normalized]);
 
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {

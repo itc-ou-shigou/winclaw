@@ -1,12 +1,9 @@
 {
   "name": "@winclaw/llm-task",
-  "version": "2026.2.20",
+  "version": "2026.2.23",
   "private": true,
   "description": "WinClaw JSON-only LLM task plugin",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
   "winclaw": {
     "extensions": [
       "./index.ts"

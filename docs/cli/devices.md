@@ -21,12 +21,15 @@ winclaw devices list
 winclaw devices list --json
 ```
 
-### `winclaw devices approve <requestId>`
+### `winclaw devices approve [requestId] [--latest]`
 
-Approve a pending device pairing request.
+Approve a pending device pairing request. If `requestId` is omitted, WinClaw
+automatically approves the most recent pending request.
 
 ```
+winclaw devices approve
 winclaw devices approve <requestId>
+winclaw devices approve --latest
 ```
 
 ### `winclaw devices reject <requestId>`

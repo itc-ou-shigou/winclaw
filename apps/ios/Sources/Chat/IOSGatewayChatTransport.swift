@@ -2,8 +2,10 @@ import WinClawChatUI
 import WinClawKit
 import WinClawProtocol
 import Foundation
+import OSLog
 
 struct IOSGatewayChatTransport: WinClawChatTransport, Sendable {
+    private static let logger = Logger(subsystem: "ai.winclaw", category: "ios.chat.transport")
     private let gateway: GatewayNodeSession
 
     init(gateway: GatewayNodeSession) {
@@ -33,10 +35,8 @@ struct IOSGatewayChatTransport: WinClawChatTransport, Sendable {
     }
 
     func setActiveSessionKey(_ sessionKey: String) async throws {
-        struct Subscribe: Codable { var sessionKey: String }
-        let data = try JSONEncoder().encode(Subscribe(sessionKey: sessionKey))
-        let json = String(data: data, encoding: .utf8)
-        await self.gateway.sendEvent(event: "chat.subscribe", payloadJSON: json)
+        // Operator clients receive chat events without node-style subscriptions.
+        // (chat.subscribe is a node event, not an operator RPC method.)
     }
 
     func requestHistory(sessionKey: String) async throws -> WinClawChatHistoryPayload {
@@ -54,6 +54,7 @@ struct IOSGatewayChatTransport: WinClawChatTransport, Sendable {
         idempotencyKey: String,
         attachments: [WinClawChatAttachmentPayload]) async throws -> WinClawChatSendResponse
     {
+        Self.logger.info("chat.send start sessionKey=\(sessionKey, privacy: .public) len=\(message.count, privacy: .public) attachments=\(attachments.count, privacy: .public)")
         struct Params: Codable {
             var sessionKey: String
             var message: String
@@ -72,8 +73,15 @@ struct IOSGatewayChatTransport: WinClawChatTransport, Sendable {
             idempotencyKey: idempotencyKey)
         let data = try JSONEncoder().encode(params)
         let json = String(data: data, encoding: .utf8)
-        let res = try await self.gateway.request(method: "chat.send", paramsJSON: json, timeoutSeconds: 35)
-        return try JSONDecoder().decode(WinClawChatSendResponse.self, from: res)
+        do {
+            let res = try await self.gateway.request(method: "chat.send", paramsJSON: json, timeoutSeconds: 35)
+            let decoded = try JSONDecoder().decode(WinClawChatSendResponse.self, from: res)
+            Self.logger.info("chat.send ok runId=\(decoded.runId, privacy: .public)")
+            return decoded
+        } catch {
+            Self.logger.error("chat.send failed \(error.localizedDescription, privacy: .public)")
+            throw error
+        }
     }
 
     func requestHealth(timeoutMs: Int) async throws -> Bool {

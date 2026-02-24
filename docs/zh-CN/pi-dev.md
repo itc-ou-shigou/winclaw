@@ -73,5 +73,5 @@ scripts/pi/run-tests.sh --live
 
 ## 参考资料
 
-- https://docs.openclaw.ai/testing
-- https://docs.openclaw.ai/start/getting-started
+- https://docs.winclaw.ai/testing
+- https://docs.winclaw.ai/start/getting-started

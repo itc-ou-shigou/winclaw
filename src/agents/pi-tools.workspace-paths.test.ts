@@ -3,11 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createWinClawCodingTools } from "./pi-tools.js";
-
-vi.mock("../plugins/tools.js", () => ({
-  getPluginToolMeta: () => undefined,
-  resolvePluginTools: () => [],
-}));
+import { createHostSandboxFsBridge } from "./test-helpers/host-sandbox-fs-bridge.js";
+import { expectReadWriteEditTools, getTextContent } from "./test-helpers/pi-tools-fs-helpers.js";
+import { createPiToolsSandboxContext } from "./test-helpers/pi-tools-sandbox-context.js";
 
 vi.mock("../infra/shell-env.js", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../infra/shell-env.js")>();
@@ -22,53 +20,39 @@ async function withTempDir<T>(prefix: string, fn: (dir: string) => Promise<T>) {
   }
 }
 
-function getTextContent(result?: { content?: Array<{ type: string; text?: string }> }) {
-  const textBlock = result?.content?.find((block) => block.type === "text");
-  return textBlock?.text ?? "";
-}
-
 describe("workspace path resolution", () => {
-  it("reads relative paths against workspaceDir even after cwd changes", async () => {
+  it("resolves relative read/write/edit paths against workspaceDir even after cwd changes", async () => {
     await withTempDir("winclaw-ws-", async (workspaceDir) => {
       await withTempDir("winclaw-cwd-", async (otherDir) => {
-        const testFile = "read.txt";
-        const contents = "workspace read ok";
-        await fs.writeFile(path.join(workspaceDir, testFile), contents, "utf8");
-
         const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(otherDir);
         try {
           const tools = createWinClawCodingTools({ workspaceDir });
-          const readTool = tools.find((tool) => tool.name === "read");
-          expect(readTool).toBeDefined();
+          const { readTool, writeTool, editTool } = expectReadWriteEditTools(tools);
 
-          const result = await readTool?.execute("ws-read", { path: testFile });
-          expect(getTextContent(result)).toContain(contents);
-        } finally {
-          cwdSpy.mockRestore();
-        }
-      });
-    });
-  });
+          const readFile = "read.txt";
+          await fs.writeFile(path.join(workspaceDir, readFile), "workspace read ok", "utf8");
+          const readResult = await readTool.execute("ws-read", { path: readFile });
+          expect(getTextContent(readResult)).toContain("workspace read ok");
 
-  it("writes relative paths against workspaceDir even after cwd changes", async () => {
-    await withTempDir("winclaw-ws-", async (workspaceDir) => {
-      await withTempDir("winclaw-cwd-", async (otherDir) => {
-        const testFile = "write.txt";
-        const contents = "workspace write ok";
-
-        const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(otherDir);
-        try {
-          const tools = createWinClawCodingTools({ workspaceDir });
-          const writeTool = tools.find((tool) => tool.name === "write");
-          expect(writeTool).toBeDefined();
-
-          await writeTool?.execute("ws-write", {
-            path: testFile,
-            content: contents,
+          const writeFile = "write.txt";
+          await writeTool.execute("ws-write", {
+            path: writeFile,
+            content: "workspace write ok",
           });
+          expect(await fs.readFile(path.join(workspaceDir, writeFile), "utf8")).toBe(
+            "workspace write ok",
+          );
 
-          const written = await fs.readFile(path.join(workspaceDir, testFile), "utf8");
-          expect(written).toBe(contents);
+          const editFile = "edit.txt";
+          await fs.writeFile(path.join(workspaceDir, editFile), "hello world", "utf8");
+          await editTool.execute("ws-edit", {
+            path: editFile,
+            oldText: "world",
+            newText: "winclaw",
+          });
+          expect(await fs.readFile(path.join(workspaceDir, editFile), "utf8")).toBe(
+            "hello winclaw",
+          );
         } finally {
           cwdSpy.mockRestore();
         }
@@ -76,26 +60,24 @@ describe("workspace path resolution", () => {
     });
   });
 
-  it("edits relative paths against workspaceDir even after cwd changes", async () => {
+  it("allows deletion edits with empty newText", async () => {
     await withTempDir("winclaw-ws-", async (workspaceDir) => {
       await withTempDir("winclaw-cwd-", async (otherDir) => {
-        const testFile = "edit.txt";
+        const testFile = "delete.txt";
         await fs.writeFile(path.join(workspaceDir, testFile), "hello world", "utf8");
 
         const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(otherDir);
         try {
           const tools = createWinClawCodingTools({ workspaceDir });
-          const editTool = tools.find((tool) => tool.name === "edit");
-          expect(editTool).toBeDefined();
+          const { editTool } = expectReadWriteEditTools(tools);
 
-          await editTool?.execute("ws-edit", {
+          await editTool.execute("ws-edit-delete", {
             path: testFile,
-            oldText: "world",
-            newText: "winclaw",
+            oldText: " world",
+            newText: "",
           });
 
-          const updated = await fs.readFile(path.join(workspaceDir, testFile), "utf8");
-          expect(updated).toBe("hello winclaw");
+          expect(await fs.readFile(path.join(workspaceDir, testFile), "utf8")).toBe("hello");
         } finally {
           cwdSpy.mockRestore();
         }
@@ -105,7 +87,10 @@ describe("workspace path resolution", () => {
 
   it("defaults exec cwd to workspaceDir when workdir is omitted", async () => {
     await withTempDir("winclaw-ws-", async (workspaceDir) => {
-      const tools = createWinClawCodingTools({ workspaceDir, exec: { host: "gateway" } });
+      const tools = createWinClawCodingTools({
+        workspaceDir,
+        exec: { host: "gateway", ask: "off", security: "full" },
+      });
       const execTool = tools.find((tool) => tool.name === "exec");
       expect(execTool).toBeDefined();
 
@@ -128,7 +113,10 @@ describe("workspace path resolution", () => {
   it("lets exec workdir override the workspace default", async () => {
     await withTempDir("winclaw-ws-", async (workspaceDir) => {
       await withTempDir("winclaw-override-", async (overrideDir) => {
-        const tools = createWinClawCodingTools({ workspaceDir, exec: { host: "gateway" } });
+        const tools = createWinClawCodingTools({
+          workspaceDir,
+          exec: { host: "gateway", ask: "off", security: "full" },
+        });
         const execTool = tools.find((tool) => tool.name === "exec");
         expect(execTool).toBeDefined();
 
@@ -155,41 +143,20 @@ describe("sandboxed workspace paths", () => {
   it("uses sandbox workspace for relative read/write/edit", async () => {
     await withTempDir("winclaw-sandbox-", async (sandboxDir) => {
       await withTempDir("winclaw-workspace-", async (workspaceDir) => {
-        const sandbox = {
-          enabled: true,
-          sessionKey: "sandbox:test",
+        const sandbox = createPiToolsSandboxContext({
           workspaceDir: sandboxDir,
           agentWorkspaceDir: workspaceDir,
-          workspaceAccess: "rw",
-          containerName: "winclaw-sbx-test",
-          containerWorkdir: "/workspace",
-          docker: {
-            image: "winclaw-sandbox:bookworm-slim",
-            containerPrefix: "winclaw-sbx-",
-            workdir: "/workspace",
-            readOnlyRoot: true,
-            tmpfs: [],
-            network: "none",
-            user: "1000:1000",
-            capDrop: ["ALL"],
-            env: { LANG: "C.UTF-8" },
-          },
+          workspaceAccess: "rw" as const,
+          fsBridge: createHostSandboxFsBridge(sandboxDir),
           tools: { allow: [], deny: [] },
-          browserAllowHostControl: false,
-        };
+        });
 
         const testFile = "sandbox.txt";
         await fs.writeFile(path.join(sandboxDir, testFile), "sandbox read", "utf8");
         await fs.writeFile(path.join(workspaceDir, testFile), "workspace read", "utf8");
 
         const tools = createWinClawCodingTools({ workspaceDir, sandbox });
-        const readTool = tools.find((tool) => tool.name === "read");
-        const writeTool = tools.find((tool) => tool.name === "write");
-        const editTool = tools.find((tool) => tool.name === "edit");
-
-        expect(readTool).toBeDefined();
-        expect(writeTool).toBeDefined();
-        expect(editTool).toBeDefined();
+        const { readTool, writeTool, editTool } = expectReadWriteEditTools(tools);
 
         const result = await readTool?.execute("sbx-read", { path: testFile });
         expect(getTextContent(result)).toContain("sandbox read");

@@ -1,125 +1,119 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolveStateDir } from "./paths.js";
+import { loadDotEnv } from "../infra/dotenv.js";
+import { resolveConfigEnvVars } from "./env-substitution.js";
+import { applyConfigEnvVars, collectConfigRuntimeEnvVars } from "./env-vars.js";
 import { withEnvOverride, withTempHome } from "./test-helpers.js";
+import type { WinClawConfig } from "./types.js";
 
 describe("config env vars", () => {
   it("applies env vars from env block when missing", async () => {
-    await withTempHome(async (home) => {
-      const configDir = path.join(home, ".winclaw");
-      await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(
-        path.join(configDir, "winclaw.json"),
-        JSON.stringify(
-          {
-            env: { vars: { OPENROUTER_API_KEY: "config-key" } },
-          },
-          null,
-          2,
-        ),
-        "utf-8",
-      );
-
-      await withEnvOverride({ OPENROUTER_API_KEY: undefined }, async () => {
-        const { loadConfig } = await import("./config.js");
-        loadConfig();
-        expect(process.env.OPENROUTER_API_KEY).toBe("config-key");
-      });
+    await withEnvOverride({ OPENROUTER_API_KEY: undefined }, async () => {
+      applyConfigEnvVars({ env: { vars: { OPENROUTER_API_KEY: "config-key" } } } as WinClawConfig);
+      expect(process.env.OPENROUTER_API_KEY).toBe("config-key");
     });
   });
 
   it("does not override existing env vars", async () => {
-    await withTempHome(async (home) => {
-      const configDir = path.join(home, ".winclaw");
-      await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(
-        path.join(configDir, "winclaw.json"),
-        JSON.stringify(
-          {
-            env: { vars: { OPENROUTER_API_KEY: "config-key" } },
-          },
-          null,
-          2,
-        ),
-        "utf-8",
-      );
-
-      await withEnvOverride({ OPENROUTER_API_KEY: "existing-key" }, async () => {
-        const { loadConfig } = await import("./config.js");
-        loadConfig();
-        expect(process.env.OPENROUTER_API_KEY).toBe("existing-key");
-      });
+    await withEnvOverride({ OPENROUTER_API_KEY: "existing-key" }, async () => {
+      applyConfigEnvVars({ env: { vars: { OPENROUTER_API_KEY: "config-key" } } } as WinClawConfig);
+      expect(process.env.OPENROUTER_API_KEY).toBe("existing-key");
     });
   });
 
   it("applies env vars from env.vars when missing", async () => {
-    await withTempHome(async (home) => {
-      const configDir = path.join(home, ".winclaw");
-      await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(
-        path.join(configDir, "winclaw.json"),
-        JSON.stringify(
-          {
-            env: { vars: { GROQ_API_KEY: "gsk-config" } },
-          },
-          null,
-          2,
-        ),
-        "utf-8",
-      );
+    await withEnvOverride({ GROQ_API_KEY: undefined }, async () => {
+      applyConfigEnvVars({ env: { vars: { GROQ_API_KEY: "gsk-config" } } } as WinClawConfig);
+      expect(process.env.GROQ_API_KEY).toBe("gsk-config");
+    });
+  });
 
-      await withEnvOverride({ GROQ_API_KEY: undefined }, async () => {
-        const { loadConfig } = await import("./config.js");
-        loadConfig();
-        expect(process.env.GROQ_API_KEY).toBe("gsk-config");
-      });
+  it("blocks dangerous startup env vars from config env", async () => {
+    await withEnvOverride(
+      {
+        BASH_ENV: undefined,
+        SHELL: undefined,
+        HOME: undefined,
+        ZDOTDIR: undefined,
+        OPENROUTER_API_KEY: undefined,
+      },
+      async () => {
+        const config = {
+          env: {
+            vars: {
+              BASH_ENV: "/tmp/pwn.sh",
+              SHELL: "/tmp/evil-shell",
+              HOME: "/tmp/evil-home",
+              ZDOTDIR: "/tmp/evil-zdotdir",
+              OPENROUTER_API_KEY: "config-key",
+            },
+          },
+        };
+        const entries = collectConfigRuntimeEnvVars(config as WinClawConfig);
+        expect(entries.BASH_ENV).toBeUndefined();
+        expect(entries.SHELL).toBeUndefined();
+        expect(entries.HOME).toBeUndefined();
+        expect(entries.ZDOTDIR).toBeUndefined();
+        expect(entries.OPENROUTER_API_KEY).toBe("config-key");
+
+        applyConfigEnvVars(config as WinClawConfig);
+        expect(process.env.BASH_ENV).toBeUndefined();
+        expect(process.env.SHELL).toBeUndefined();
+        expect(process.env.HOME).toBeUndefined();
+        expect(process.env.ZDOTDIR).toBeUndefined();
+        expect(process.env.OPENROUTER_API_KEY).toBe("config-key");
+      },
+    );
+  });
+
+  it("drops non-portable env keys from config env", async () => {
+    await withEnvOverride({ OPENROUTER_API_KEY: undefined }, async () => {
+      const config = {
+        env: {
+          vars: {
+            " BAD KEY": "oops",
+            OPENROUTER_API_KEY: "config-key",
+          },
+          "NOT-PORTABLE": "bad",
+        },
+      };
+      const entries = collectConfigRuntimeEnvVars(config as WinClawConfig);
+      expect(entries.OPENROUTER_API_KEY).toBe("config-key");
+      expect(entries[" BAD KEY"]).toBeUndefined();
+      expect(entries["NOT-PORTABLE"]).toBeUndefined();
     });
   });
 
   it("loads ${VAR} substitutions from ~/.winclaw/.env on repeated runtime loads", async () => {
-    await withTempHome(async (home) => {
-      await withEnvOverride(
-        {
-          WINCLAW_STATE_DIR: path.join(home, ".winclaw"),
-          CLAWDBOT_STATE_DIR: undefined,
-          WINCLAW_HOME: undefined,
-          CLAWDBOT_HOME: undefined,
-          BRAVE_API_KEY: undefined,
-          WINCLAW_DISABLE_CONFIG_CACHE: "1",
-        },
-        async () => {
-          const configDir = resolveStateDir(process.env, () => home);
-          await fs.mkdir(configDir, { recursive: true });
-          await fs.writeFile(
-            path.join(configDir, "winclaw.json"),
-            JSON.stringify(
-              {
-                tools: {
-                  web: {
-                    search: {
-                      apiKey: "${BRAVE_API_KEY}",
-                    },
-                  },
-                },
+    await withTempHome(async (_home) => {
+      await withEnvOverride({ BRAVE_API_KEY: undefined }, async () => {
+        const stateDir = process.env.WINCLAW_STATE_DIR?.trim();
+        if (!stateDir) {
+          throw new Error("Expected WINCLAW_STATE_DIR to be set by withTempHome");
+        }
+        await fs.mkdir(stateDir, { recursive: true });
+        await fs.writeFile(path.join(stateDir, ".env"), "BRAVE_API_KEY=from-dotenv\n", "utf-8");
+
+        const config: WinClawConfig = {
+          tools: {
+            web: {
+              search: {
+                apiKey: "${BRAVE_API_KEY}",
               },
-              null,
-              2,
-            ),
-            "utf-8",
-          );
-          await fs.writeFile(path.join(configDir, ".env"), "BRAVE_API_KEY=from-dotenv\n", "utf-8");
+            },
+          },
+        };
 
-          const { loadConfig } = await import("./config.js");
+        loadDotEnv({ quiet: true });
+        const first = resolveConfigEnvVars(config, process.env) as WinClawConfig;
+        expect(first.tools?.web?.search?.apiKey).toBe("from-dotenv");
 
-          const first = loadConfig();
-          expect(first.tools?.web?.search?.apiKey).toBe("from-dotenv");
-
-          delete process.env.BRAVE_API_KEY;
-          const second = loadConfig();
-          expect(second.tools?.web?.search?.apiKey).toBe("from-dotenv");
-        },
-      );
+        delete process.env.BRAVE_API_KEY;
+        loadDotEnv({ quiet: true });
+        const second = resolveConfigEnvVars(config, process.env) as WinClawConfig;
+        expect(second.tools?.web?.search?.apiKey).toBe("from-dotenv");
+      });
     });
   });
 });
