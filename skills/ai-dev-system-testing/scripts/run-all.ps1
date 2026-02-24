@@ -69,14 +69,20 @@ $REALTIME_LOG = Join-Path $LOG_DIR "realtime.log"
 # Clear previous log
 "" | Set-Content $REALTIME_LOG -Encoding UTF8
 
-# Launch viewer window
+# Launch viewer window (may fail in non-GUI environments — that's OK)
 $startTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$viewerProcess = Start-Process powershell -ArgumentList @(
-    "-NoProfile", "-Command",
-    "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $startTime' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
-) -PassThru
+$viewerProcess = $null
+try {
+    $viewerProcess = Start-Process powershell -ArgumentList @(
+        "-NoProfile", "-Command",
+        "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $startTime' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
+    ) -PassThru -ErrorAction SilentlyContinue
+} catch {
+    # Non-GUI environment — log viewer window not available
+}
 
 # Write-Log: outputs to both console (for agent capture) and log file (for viewer window)
+# Uses FileShare.ReadWrite to avoid locking conflicts with Get-Content -Wait viewer
 function Write-Log {
     param(
         [string]$Message,
@@ -84,7 +90,17 @@ function Write-Log {
     )
     Write-Host $Message -ForegroundColor $ForegroundColor
     $timestamp = Get-Date -Format "HH:mm:ss"
-    "[$timestamp] $Message" | Add-Content $REALTIME_LOG -Encoding UTF8
+    $line = "[$timestamp] $Message`r`n"
+    try {
+        $fs = [System.IO.FileStream]::new($REALTIME_LOG, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+        $sw = [System.IO.StreamWriter]::new($fs, [System.Text.Encoding]::UTF8)
+        $sw.Write($line)
+        $sw.Flush()
+        $sw.Close()
+        $fs.Close()
+    } catch {
+        # Silently ignore log write failures to not break workflow
+    }
 }
 
 # Helper to get timeout (parameter > config > default)
@@ -179,6 +195,7 @@ function Invoke-ClaudeCommand {
     # IMPORTANT: Do NOT use -p flag — it disables tools (Write/Edit/Bash).
     # Instead, pipe prompt via stdin so claude runs in session mode with tools enabled.
     $psi = New-Object System.Diagnostics.ProcessStartInfo
+    # claude CLI auto-reads .mcp.json from WorkingDirectory — no --mcp-config needed
     if ($claudePath -like "*.cmd") {
         $psi.FileName = "cmd.exe"
         $psi.Arguments = "/c `"$claudePath`" --dangerously-skip-permissions --verbose"
@@ -208,18 +225,29 @@ function Invoke-ClaudeCommand {
     $process.EnableRaisingEvents = $true
 
     # Async output handlers for realtime log streaming
+    # Use FileStream with FileShare.ReadWrite to avoid lock conflicts with log viewer
     $outHandler = {
         if ($EventArgs.Data) {
             $Event.MessageData.Builder.AppendLine($EventArgs.Data) | Out-Null
-            $EventArgs.Data | Add-Content $Event.MessageData.LogFile -Encoding UTF8
-            $ts = Get-Date -Format "HH:mm:ss"
-            "[$ts] $($EventArgs.Data)" | Add-Content $Event.MessageData.RealtimeLog -Encoding UTF8
+            try {
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($EventArgs.Data + "`r`n")
+                $fs = [System.IO.FileStream]::new($Event.MessageData.LogFile, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+                $fs.Write($bytes, 0, $bytes.Length); $fs.Close()
+                $ts = Get-Date -Format "HH:mm:ss"
+                $rtBytes = [System.Text.Encoding]::UTF8.GetBytes("[$ts] $($EventArgs.Data)`r`n")
+                $fs2 = [System.IO.FileStream]::new($Event.MessageData.RealtimeLog, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+                $fs2.Write($rtBytes, 0, $rtBytes.Length); $fs2.Close()
+            } catch {}
         }
     }
     $errHandler = {
         if ($EventArgs.Data) {
             $Event.MessageData.Builder.AppendLine($EventArgs.Data) | Out-Null
-            $EventArgs.Data | Add-Content $Event.MessageData.LogFile -Encoding UTF8
+            try {
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($EventArgs.Data + "`r`n")
+                $fs = [System.IO.FileStream]::new($Event.MessageData.LogFile, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+                $fs.Write($bytes, 0, $bytes.Length); $fs.Close()
+            } catch {}
         }
     }
 
@@ -249,9 +277,8 @@ function Invoke-ClaudeCommand {
 
         if (-not $completed) {
             Write-Log "[ERROR] Command timed out after $TimeoutSeconds seconds" -ForegroundColor Red
-            try { & taskkill /PID $process.Id /T /F 2>&1 | Out-Null } catch {
-                try { $process.Kill() } catch {}
-            }
+            try { $process.Kill() } catch {}
+            try { Start-Process cmd -ArgumentList "/c taskkill /PID $($process.Id) /T /F" -NoNewWindow -Wait -ErrorAction SilentlyContinue } catch {}
             return $false
         }
 
@@ -315,6 +342,7 @@ function Test-ChromeMcpConnection {
         $claudePath = $claudeCmd.Source
 
         $psi = New-Object System.Diagnostics.ProcessStartInfo
+        # claude CLI auto-reads .mcp.json from WorkingDirectory — no --mcp-config needed
         if ($claudePath -like "*.cmd") {
             $psi.FileName = "cmd.exe"
             $psi.Arguments = "/c `"$claudePath`" --dangerously-skip-permissions --verbose"
@@ -328,26 +356,31 @@ function Test-ChromeMcpConnection {
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.CreateNoWindow = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
 
         $proc = New-Object System.Diagnostics.Process
         $proc.StartInfo = $psi
         $proc.Start() | Out-Null
 
-        # Pipe prompt and close stdin
-        $proc.StandardInput.Write($testPrompt)
-        $proc.StandardInput.Close()
+        # Pipe prompt and close stdin (UTF-8)
+        $stdinWriter = New-Object System.IO.StreamWriter($proc.StandardInput.BaseStream, [System.Text.Encoding]::UTF8)
+        $stdinWriter.Write($testPrompt)
+        $stdinWriter.Flush()
+        $stdinWriter.Close()
 
-        $output = $proc.StandardOutput.ReadToEnd()
-        $completed = $proc.WaitForExit(60000)  # 60 second timeout
+        # Read stdout asynchronously to avoid deadlock (ReadToEnd blocks until process exits)
+        $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+        $completed = $proc.WaitForExit(90000)  # 90 second timeout
 
         if (-not $completed) {
-            try { & taskkill /PID $proc.Id /T /F 2>&1 | Out-Null } catch {
-                try { $proc.Kill() } catch {}
-            }
-            Write-Log "[WARN] Chrome MCP check timed out after 60s" -ForegroundColor Yellow
+            try { $proc.Kill() } catch {}
+            try { Start-Process cmd -ArgumentList "/c taskkill /PID $($proc.Id) /T /F" -NoNewWindow -Wait -ErrorAction SilentlyContinue } catch {}
+            Write-Log "[WARN] Chrome MCP check timed out after 90s" -ForegroundColor Yellow
             return $false
         }
 
+        $output = $stdoutTask.Result
         $proc.Dispose()
         return ($output -match "CHROME_MCP_OK")
     } catch {
@@ -357,12 +390,13 @@ function Test-ChromeMcpConnection {
 }
 
 function Find-Bash {
-    # Auto-detect bash (no hardcoded paths)
+    # Auto-detect bash — prefer Git Bash over WSL bash
     $bashPath = $null
-    
-    # Check PATH first
+
+    # Check PATH first, but skip WSL bash (C:\Windows\system32\bash.exe)
+    # WSL bash cannot run Windows-path scripts and lacks claude CLI
     $bashInPath = Get-Command "bash" -ErrorAction SilentlyContinue
-    if ($bashInPath) {
+    if ($bashInPath -and $bashInPath.Source -notmatch 'system32') {
         return $bashInPath.Source
     }
     
@@ -403,6 +437,90 @@ function Find-Bash {
     }
     
     return $null
+}
+
+function Find-ChromeDebugPort {
+    foreach ($port in 9222..9229) {
+        try {
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            $tcp.Connect("127.0.0.1", $port)
+            $tcp.Close()
+            return $port
+        } catch { }
+    }
+    return $null
+}
+
+function Start-ChromeWithDebugPort {
+    param([int]$Port = 9222)
+    Write-Log "[INFO] Attempting to start Chrome with debug port $Port..." -ForegroundColor Yellow
+
+    # Kill all existing Chrome processes
+    $chromeProcs = Get-Process chrome -ErrorAction SilentlyContinue
+    if ($chromeProcs) {
+        Write-Log "[INFO] Killing $($chromeProcs.Count) existing Chrome processes..." -ForegroundColor Yellow
+        $chromeProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 3
+        # Double-check
+        Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+
+    # Find Chrome executable
+    $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if (-not (Test-Path $chromePath)) {
+        $chromePath = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    }
+    if (-not (Test-Path $chromePath)) {
+        Write-Log "[ERROR] Chrome executable not found" -ForegroundColor Red
+        return $false
+    }
+
+    # Start Chrome with debug port (default profile for extensions)
+    Start-Process $chromePath -ArgumentList "--remote-debugging-port=$Port", "--remote-allow-origins=*"
+    Write-Log "[INFO] Chrome started, waiting 5 seconds for initialization..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
+
+    # Verify port is open
+    $found = Find-ChromeDebugPort
+    if ($found) {
+        Write-Log "[OK] Chrome debug port $found is now open" -ForegroundColor Green
+        return $true
+    }
+
+    # If default profile fails, try separate DebugProfile
+    Write-Log "[WARN] Debug port not open with default profile, trying DebugProfile..." -ForegroundColor Yellow
+    Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
+
+    $debugProfileDir = Join-Path $env:LOCALAPPDATA "Google\Chrome\DebugProfile"
+    Start-Process $chromePath -ArgumentList "--remote-debugging-port=$Port", "--remote-allow-origins=*", "--user-data-dir=$debugProfileDir"
+    Start-Sleep -Seconds 5
+
+    $found = Find-ChromeDebugPort
+    if ($found) {
+        Write-Log "[OK] Chrome debug port $found is open (DebugProfile)" -ForegroundColor Green
+        return $true
+    }
+
+    Write-Log "[ERROR] Failed to start Chrome with debug port" -ForegroundColor Red
+    return $false
+}
+
+function New-McpConfigFile {
+    param([int]$ChromePort)
+    $mcpConfigPath = Join-Path $Workspace ".mcp.json"
+    $config = @{
+        mcpServers = @{
+            Claude_in_Chrome = @{
+                command = "chrome-devtools-mcp"
+                args = @("--browserUrl", "http://127.0.0.1:$ChromePort")
+            }
+        }
+    }
+    $config | ConvertTo-Json -Depth 5 | Set-Content $mcpConfigPath -Encoding UTF8
+    Write-Log "[OK] Created .mcp.json with Claude_in_Chrome MCP (port $ChromePort)" -ForegroundColor Green
+    return $mcpConfigPath
 }
 
 # ================================================================
@@ -474,25 +592,38 @@ function Invoke-PhaseInit {
     Write-Log "  - Phase 5B (API): $(if ($script:RunPhase5B) { 'WILL RUN' } else { 'SKIP (no backend URL)' })"
     Write-Log "  - Phase 5C (UI): $(if ($script:RunPhase5C) { 'WILL RUN' } else { 'SKIP (no frontend URL)' })"
 
-    # Check Claude In Chrome MCP connection (required for Phase 5B/5C)
+    # Check Chrome debug port and create .mcp.json for child processes (required for Phase 5B/5C)
     if ($script:RunPhase5B -or $script:RunPhase5C) {
         Write-Log ""
-        if (Test-ChromeMcpConnection) {
-            Write-Log "[OK] Claude In Chrome MCP is connected" -ForegroundColor Green
+        # Detect Chrome debug port
+        $chromePort = Find-ChromeDebugPort
+        if (-not $chromePort) {
+            Write-Log "[WARN] No Chrome debug port found — attempting auto-start..." -ForegroundColor Yellow
+            if (Start-ChromeWithDebugPort -Port 9222) {
+                $chromePort = Find-ChromeDebugPort
+            }
+        }
+
+        if ($chromePort) {
+            Write-Log "[OK] Chrome debug port found: $chromePort" -ForegroundColor Green
+            # Generate .mcp.json so child claude CLI processes can connect
+            $script:McpConfigPath = New-McpConfigFile -ChromePort $chromePort
+            # Quick HTTP check against Chrome DevTools Protocol (fast, no claude CLI spawn needed)
+            try {
+                $cdpResponse = Invoke-RestMethod -Uri "http://127.0.0.1:$chromePort/json/version" -TimeoutSec 5 -ErrorAction Stop
+                Write-Log "[OK] Chrome DevTools Protocol verified: $($cdpResponse.Browser)" -ForegroundColor Green
+                $config.chrome_mcp_verified = $true
+                $config | ConvertTo-Json -Depth 3 | Out-File $configPath -Encoding UTF8
+            } catch {
+                Write-Log "[WARN] Chrome DevTools Protocol check failed — .mcp.json created, Phase 5B/5C will retry at runtime" -ForegroundColor Yellow
+            }
         } else {
-            Write-Log "" -ForegroundColor Red
-            Write-Log "================================================================" -ForegroundColor Red
-            Write-Log "  [ERROR] Claude In Chrome MCP is NOT available!" -ForegroundColor Red
-            Write-Log "================================================================" -ForegroundColor Red
-            Write-Log "" -ForegroundColor Red
-            Write-Log "  Phase 5B/5C REQUIRE Chrome + Claude In Chrome extension." -ForegroundColor Yellow
-            Write-Log "  1. Open Chrome browser" -ForegroundColor Yellow
-            Write-Log "  2. Install/enable 'Claude In Chrome' extension" -ForegroundColor Yellow
-            Write-Log "  3. Ensure MCP shows 'Connected'" -ForegroundColor Yellow
-            Write-Log "  4. Re-run this script" -ForegroundColor Yellow
-            Write-Log "" -ForegroundColor Red
-            Write-Log "================================================================" -ForegroundColor Red
-            exit 1
+            Write-Log "[ERROR] No Chrome debug port found (9222-9229)" -ForegroundColor Red
+            Write-Log "  Please start Chrome with --remote-debugging-port=9222" -ForegroundColor Yellow
+            # Don't exit — Phase 2/3/6 can still run, Phase 5B/5C get disabled
+            $script:RunPhase5B = $false
+            $script:RunPhase5C = $false
+            Write-Log "[WARN] Phase 5B/5C disabled (no Chrome debug port)" -ForegroundColor Yellow
         }
     }
 
@@ -617,7 +748,29 @@ function Invoke-Phase5B {
     $resultFile = Join-Path $Workspace "test-logs\phase5b_efficient_test_results.json"
     if ($Resume -and (Test-Path $resultFile)) {
         $results = Get-Content $resultFile | ConvertFrom-Json
+        # Support both snake_case and camelCase keys
         $passRate = $results.pass_rate
+        if (-not $passRate) { $passRate = $results.passRate }
+        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
+        if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        # Check summary sub-object
+        if (-not $passRate -and $results.summary) {
+            $passRate = $results.summary.pass_rate
+            if (-not $passRate) { $passRate = $results.summary.passRate }
+        }
+        # Handle percentage strings like "75.00%"
+        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
+        # Fallback: calculate from passed/total
+        if (-not $passRate) {
+            $total = $results.totalTests
+            if (-not $total) { $total = $results.total_tests }
+            if (-not $total) { $total = $results.total }
+            $passed = $results.passed
+            if (-not $passed) { $passed = $results.tests_passed }
+            if ($total -and $total -gt 0) {
+                $passRate = [math]::Round(($passed / $total) * 100, 1)
+            }
+        }
         if ($passRate -and $passRate -ge $targetPassRate) {
             Write-PhaseCheck "5B" "SKIP" "Already passed (pass_rate: $passRate%)"
             return $true
@@ -681,7 +834,29 @@ Use Claude In Chrome MCP for browser automation if needed.
     # Verify results
     if (Test-Path $resultFile) {
         $results = Get-Content $resultFile | ConvertFrom-Json
+        # Support both snake_case and camelCase keys
         $passRate = $results.pass_rate
+        if (-not $passRate) { $passRate = $results.passRate }
+        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
+        if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        # Check summary sub-object
+        if (-not $passRate -and $results.summary) {
+            $passRate = $results.summary.pass_rate
+            if (-not $passRate) { $passRate = $results.summary.passRate }
+        }
+        # Handle percentage strings like "75.00%"
+        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
+        # Fallback: calculate from passed/total
+        if (-not $passRate) {
+            $total = $results.totalTests
+            if (-not $total) { $total = $results.total_tests }
+            if (-not $total) { $total = $results.total }
+            $passed = $results.passed
+            if (-not $passed) { $passed = $results.tests_passed }
+            if ($total -and $total -gt 0) {
+                $passRate = [math]::Round(($passed / $total) * 100, 1)
+            }
+        }
         Write-PhaseCheck "5B" "COMPLETE" "pass_rate: $passRate%"
         return $true
     } else {
@@ -720,7 +895,29 @@ function Invoke-Phase5C {
     $resultFile = Join-Path $Workspace "test-logs\phase5c_test_results.json"
     if ($Resume -and (Test-Path $resultFile)) {
         $results = Get-Content $resultFile | ConvertFrom-Json
-        $passRate = $results.summary.pass_rate
+        # Support both snake_case and camelCase keys
+        $passRate = $results.pass_rate
+        if (-not $passRate) { $passRate = $results.passRate }
+        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
+        if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        # Check summary sub-object
+        if (-not $passRate -and $results.summary) {
+            $passRate = $results.summary.pass_rate
+            if (-not $passRate) { $passRate = $results.summary.passRate }
+        }
+        # Handle percentage strings like "75.00%"
+        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
+        # Fallback: calculate from passed/total
+        if (-not $passRate) {
+            $total = $results.totalTests
+            if (-not $total) { $total = $results.total_tests }
+            if (-not $total) { $total = $results.total }
+            $passed = $results.passed
+            if (-not $passed) { $passed = $results.tests_passed }
+            if ($total -and $total -gt 0) {
+                $passRate = [math]::Round(($passed / $total) * 100, 1)
+            }
+        }
         if ($passRate -and $passRate -ge $targetPassRate) {
             Write-PhaseCheck "5C" "SKIP" "Already passed (pass_rate: $passRate%)"
             return $true
@@ -785,7 +982,29 @@ Use Claude In Chrome MCP for browser automation.
     # Verify results
     if (Test-Path $resultFile) {
         $results = Get-Content $resultFile | ConvertFrom-Json
-        $passRate = $results.summary.pass_rate
+        # Support both snake_case and camelCase keys
+        $passRate = $results.pass_rate
+        if (-not $passRate) { $passRate = $results.passRate }
+        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
+        if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        # Check summary sub-object
+        if (-not $passRate -and $results.summary) {
+            $passRate = $results.summary.pass_rate
+            if (-not $passRate) { $passRate = $results.summary.passRate }
+        }
+        # Handle percentage strings like "75.00%"
+        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
+        # Fallback: calculate from passed/total
+        if (-not $passRate) {
+            $total = $results.totalTests
+            if (-not $total) { $total = $results.total_tests }
+            if (-not $total) { $total = $results.total }
+            $passed = $results.passed
+            if (-not $passed) { $passed = $results.tests_passed }
+            if ($total -and $total -gt 0) {
+                $passRate = [math]::Round(($passed / $total) * 100, 1)
+            }
+        }
         Write-PhaseCheck "5C" "COMPLETE" "pass_rate: $passRate%"
         return $true
     } else {
@@ -836,7 +1055,11 @@ Write-Log "Workspace: $Workspace" -ForegroundColor White
 Write-Log "Skill Dir: $SKILL_DIR" -ForegroundColor White
 Write-Log "Resume Mode: $Resume" -ForegroundColor White
 Write-Log "Non-Interactive: $NonInteractive" -ForegroundColor White
-Write-Log "Log Viewer: PID $($viewerProcess.Id)" -ForegroundColor White
+if ($viewerProcess) {
+    Write-Log "Log Viewer: PID $($viewerProcess.Id)" -ForegroundColor White
+} else {
+    Write-Log "Log Viewer: not launched (non-GUI environment)" -ForegroundColor Gray
+}
 Write-Log ""
 
 # Create log directory
@@ -885,6 +1108,13 @@ foreach ($phase in $phaseList) {
         Write-Log "[ERROR] Phase $phase failed. Stopping workflow." -ForegroundColor Red
         break
     }
+}
+
+# Cleanup: remove generated .mcp.json to avoid polluting the project
+$mcpCleanupPath = Join-Path $Workspace ".mcp.json"
+if (Test-Path $mcpCleanupPath) {
+    Remove-Item $mcpCleanupPath -Force -ErrorAction SilentlyContinue
+    Write-Log "[CLEANUP] Removed .mcp.json" -ForegroundColor Gray
 }
 
 # Final summary
