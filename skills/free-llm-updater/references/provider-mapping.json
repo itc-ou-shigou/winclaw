@@ -1,0 +1,133 @@
+{
+  "openrouter": {
+    "winclaw_key": "openrouter",
+    "base_url": "https://openrouter.ai/api/v1",
+    "env_var": "OPENROUTER_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "20 req/min, 50 req/day (free tier)",
+    "signup_url": "https://openrouter.ai"
+  },
+  "google ai studio": {
+    "winclaw_key": "google",
+    "base_url": "https://generativelanguage.googleapis.com",
+    "env_var": "GEMINI_API_KEY",
+    "api": "google-generative-ai",
+    "models_endpoint": "/v1beta/models",
+    "auth_query_param": "key",
+    "rate_limits": "250K tokens/min (Gemini), 30 req/min (Gemma)",
+    "signup_url": "https://aistudio.google.com"
+  },
+  "nvidia nim": {
+    "winclaw_key": "nvidia-nim",
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "env_var": "NVIDIA_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "40 req/min",
+    "signup_url": "https://build.nvidia.com"
+  },
+  "mistral la plateforme": {
+    "winclaw_key": "mistral",
+    "base_url": "https://api.mistral.ai/v1",
+    "env_var": "MISTRAL_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "1 req/sec, 500K tokens/min",
+    "signup_url": "https://console.mistral.ai"
+  },
+  "mistral codestral": {
+    "winclaw_key": "mistral-codestral",
+    "base_url": "https://codestral.mistral.ai/v1",
+    "env_var": "MISTRAL_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "30 req/min",
+    "signup_url": "https://console.mistral.ai"
+  },
+  "huggingface inference providers": {
+    "winclaw_key": "huggingface",
+    "base_url": "https://router.huggingface.co/v1",
+    "env_var": "HF_TOKEN",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "$0.10/month free credits",
+    "signup_url": "https://huggingface.co"
+  },
+  "vercel ai gateway": {
+    "winclaw_key": "vercel-ai-gateway",
+    "base_url": "https://ai-gateway.vercel.sh/v1",
+    "env_var": "AI_GATEWAY_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "$5/month credit",
+    "signup_url": "https://vercel.com/docs/ai-gateway"
+  },
+  "cerebras": {
+    "winclaw_key": "cerebras",
+    "base_url": "https://api.cerebras.ai/v1",
+    "env_var": "CEREBRAS_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "30 req/min, 1M tokens/day",
+    "signup_url": "https://cloud.cerebras.ai"
+  },
+  "groq": {
+    "winclaw_key": "groq",
+    "base_url": "https://api.groq.com/openai/v1",
+    "env_var": "GROQ_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "Varies per model, up to 14.4K req/day",
+    "signup_url": "https://console.groq.com"
+  },
+  "cohere": {
+    "winclaw_key": "cohere",
+    "base_url": "https://api.cohere.com/v2",
+    "env_var": "COHERE_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "20 req/min, 1K req/month",
+    "signup_url": "https://cohere.com"
+  },
+  "github models": {
+    "winclaw_key": "github-models",
+    "base_url": "https://models.inference.ai.azure.com",
+    "env_var": "GH_TOKEN,GITHUB_TOKEN",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "Depends on GitHub Copilot tier",
+    "signup_url": "https://github.com/marketplace/models"
+  },
+  "cloudflare workers ai": {
+    "winclaw_key": "cloudflare-workers-ai",
+    "base_url": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+    "env_var": "CLOUDFLARE_AI_GATEWAY_API_KEY",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "auth_header": "Authorization",
+    "rate_limits": "10K neurons/day",
+    "signup_url": "https://developers.cloudflare.com/workers-ai",
+    "note": "Requires CLOUDFLARE_ACCOUNT_ID env var for the URL"
+  },
+  "google cloud vertex ai": {
+    "winclaw_key": "google-vertex",
+    "base_url": "https://us-central1-aiplatform.googleapis.com/v1",
+    "env_var": "GOOGLE_APPLICATION_CREDENTIALS",
+    "api": "openai-completions",
+    "models_endpoint": "/models",
+    "rate_limits": "30-60 req/min during preview",
+    "signup_url": "https://console.cloud.google.com/vertex-ai",
+    "note": "Requires gcloud ADC; complex auth - skipped by validator"
+  }
+}
