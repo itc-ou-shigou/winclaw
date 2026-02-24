@@ -228,6 +228,117 @@ winclaw tui
 Run `winclaw doctor` at any time
 to verify your installation and diagnose issues.
 
+## ⭐ Featured Skills
+
+WinClaw ships with two powerful automation skills that supercharge your development workflow on Windows.
+
+### 🧪 AI Dev System Testing — Automated Web Application Testing
+
+Automatically test your web applications with AI-powered code analysis, API testing, and browser UI testing. The AI agent analyzes your codebase, performs code review with auto-fix, tests API endpoints, and validates UI flows — all without writing a single test script.
+
+**Supported Languages (Auto-Fix):** Python, PHP, Go, JavaScript/Node.js, TypeScript/React, and other interpreted languages.
+
+> **Note:** Automated testing and bug auto-fix for compiled languages (Java, C++, C#, etc.) is not included in the OSS edition. For enterprise support, contact us at **info@itccloudsoft.com**.
+
+#### Prerequisites
+
+1. **WinClaw** installed on your Windows PC
+2. **Claude in Chrome** extension installed from the [Chrome Web Store](https://chromewebstore.google.com/) (required for browser UI testing in Phase 5C)
+3. **Claude subscription** (Pro/Max recommended for best results), OR use an alternative model (see below)
+
+#### Using Alternative Models (e.g., GLM-5)
+
+You don't need a Claude subscription — any OpenAI-compatible model works. For example, to use **GLM-5** (Zhipu AI):
+
+```cmd
+Set ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
+Set ANTHROPIC_AUTH_TOKEN=your-glm-api-key
+Set ANTHROPIC_MODEL=glm-5
+```
+
+#### How to Use
+
+**Interactive mode (recommended for first run):**
+
+```powershell
+# Tell WinClaw to test your project
+# In the WinClaw Chat tab, simply say:
+"Test my web project at C:\path\to\my-project, frontend is http://localhost:3000, backend is http://localhost:8000"
+```
+
+**Direct script execution:**
+
+```powershell
+# Basic usage (interactive — asks for URLs)
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project"
+
+# Full parameters (non-interactive)
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" `
+    -FrontendUrl "http://localhost:3000" `
+    -BackendUrl "http://localhost:8000" `
+    -NonInteractive
+
+# Resume mode (skip completed phases)
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" -Resume
+```
+
+#### Test Phases
+
+| Phase | What It Does | Output |
+|-------|-------------|--------|
+| Phase 2 | Code structure analysis | `CODE_ANALYSIS.md` |
+| Phase 3 | Code review + auto-fix | `CODE_REVIEW_REPORT.md` |
+| Phase 5B | API endpoint testing (iterative) | `test-logs/phase5b_*.json` |
+| Phase 5C | Browser UI testing via Chrome | `test-logs/phase5c_*.json` |
+| Phase 6 | Documentation generation | `docs/` |
+
+Phase 5B/5C run up to 15 iterations, automatically fixing failing tests until the pass rate reaches 95%+ (API) or 100% (UI).
+
+#### Test Account Configuration
+
+For Phase 5 testing, you need test credentials:
+
+```powershell
+$env:TEST_USER_EMAIL = "test@example.com"
+$env:TEST_USER_PASSWORD = "YourTestPassword123"
+```
+
+---
+
+### 🆓 Free LLM Updater — 10+ Free Model APIs, Auto-Updated Daily
+
+Automatically discover and register free LLM API providers into WinClaw. The skill fetches the latest free providers from [cheahjs/free-llm-api-resources](https://github.com/cheahjs/free-llm-api-resources), validates each API key and endpoint, and adds working providers to your model list. A daily cron job keeps the list fresh — every morning at 10:00 AM, WinClaw automatically checks for new free providers.
+
+**Available Free Providers:**
+
+| Provider | Models | Signup |
+|----------|--------|--------|
+| Groq | LLaMA, Mixtral | [console.groq.com](https://console.groq.com) |
+| OpenRouter | 100+ models | [openrouter.ai](https://openrouter.ai) |
+| Google AI Studio | Gemini Pro/Flash | [aistudio.google.com](https://aistudio.google.com) |
+| Cerebras | LLaMA 70B | [cloud.cerebras.ai](https://cloud.cerebras.ai) |
+| Mistral | Mistral/Mixtral | [console.mistral.ai](https://console.mistral.ai) |
+| GitHub Models | GPT-4o, LLaMA | [github.com/marketplace/models](https://github.com/marketplace/models) |
+| NVIDIA NIM | LLaMA, Mixtral | [build.nvidia.com](https://build.nvidia.com) |
+| HuggingFace | Open-source models | [huggingface.co](https://huggingface.co) |
+| Cohere | Command R+ | [cohere.com](https://cohere.com) |
+| ...and more | Auto-discovered | Updated daily |
+
+#### How to Use
+
+1. Sign up for free API keys from the providers above
+2. Set the API keys as environment variables (e.g., `GROQ_API_KEY`, `GEMINI_API_KEY`)
+3. Tell WinClaw: **"Update my free LLM providers"**
+4. WinClaw validates each provider and adds working ones to your model list
+5. Switch between free models in the **WinClaw model selection dropdown**
+
+The daily auto-update cron job is registered automatically on first run — no manual setup needed.
+
+---
+
 ## Configuration
 
 ### Config file locations

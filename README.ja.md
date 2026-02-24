@@ -213,6 +213,116 @@ winclaw tui
 | `winclaw config set <key> <value>`          | 設定値の変更                           |
 | `winclaw update`                            | アップデート                           |
 
+## ⭐ おすすめスキル
+
+WinClaw には、Windows PC での開発ワークフローを大幅に強化する 2 つの強力な自動化スキルが搭載されています。
+
+### 🧪 AI Dev System Testing — Web アプリ自動テスト
+
+AI エージェントが Web アプリケーションを全自動でテストします。コード構造分析、コードレビュー＆バグ自動修正、API エンドポイントテスト、ブラウザ UI 自動テスト —— **テストスクリプトを一行も書くことなく**、AI が全工程を実行します。
+
+**自動修正対応言語:** Python、PHP、Go、JavaScript/Node.js、TypeScript/React など、インタープリタ型言語。
+
+> **注意:** コンパイル型言語（Java、C++、C# など）の自動テスト・バグ自動修正は OSS 版には含まれていません。エンタープライズサポートが必要な場合は **info@itccloudsoft.com** にお問い合わせください。
+
+#### 前提条件
+
+1. **WinClaw** が Windows PC にインストール済み
+2. **Claude in Chrome** 拡張機能を [Chrome ウェブストア](https://chromewebstore.google.com/) からインストール（Phase 5C ブラウザ UI テストに必須）
+3. **Claude サブスクリプション**（Pro/Max 推奨）、または代替モデルを使用（下記参照）
+
+#### 代替モデルの使用（GLM-5 など）
+
+Claude サブスクリプションは必須ではありません。OpenAI 互換の任意のモデルが使えます。例えば **GLM-5**（智譜 AI）を使用する場合：
+
+```cmd
+Set ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
+Set ANTHROPIC_AUTH_TOKEN=あなたのGLM APIキー
+Set ANTHROPIC_MODEL=glm-5
+```
+
+#### 使い方
+
+**チャットモード（初回推奨）：**
+
+```powershell
+# WinClaw の Chat タブで AI に直接伝える：
+"C:\path\to\my-project のプロジェクトをテストして。フロントエンドは http://localhost:3000、バックエンドは http://localhost:8000"
+```
+
+**スクリプト直接実行：**
+
+```powershell
+# 基本使用法（対話式 — URL 設定を質問されます）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project"
+
+# 全パラメータ指定（非対話式）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" `
+    -FrontendUrl "http://localhost:3000" `
+    -BackendUrl "http://localhost:8000" `
+    -NonInteractive
+
+# Resume モード（完了済みフェーズをスキップ）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" -Resume
+```
+
+#### テストフェーズ
+
+| フェーズ | 機能 | 出力ファイル |
+|----------|------|-------------|
+| Phase 2 | コード構造分析 | `CODE_ANALYSIS.md` |
+| Phase 3 | コードレビュー＋バグ自動修正 | `CODE_REVIEW_REPORT.md` |
+| Phase 5B | API エンドポイントテスト（反復式） | `test-logs/phase5b_*.json` |
+| Phase 5C | Chrome ブラウザ UI 自動テスト | `test-logs/phase5c_*.json` |
+| Phase 6 | ドキュメント自動生成 | `docs/` |
+
+Phase 5B/5C は最大 15 回の反復を実行し、失敗したテストを自動修正して合格率が 95%+（API）または 100%（UI）に達するまで繰り返します。
+
+#### テストアカウントの設定
+
+Phase 5 テストにはテスト用アカウントの認証情報が必要です：
+
+```powershell
+$env:TEST_USER_EMAIL = "test@example.com"
+$env:TEST_USER_PASSWORD = "YourTestPassword123"
+```
+
+---
+
+### 🆓 Free LLM Updater — 10 以上の無料モデル API、毎日自動更新
+
+無料 LLM API プロバイダーを自動発見し、WinClaw に登録します。[cheahjs/free-llm-api-resources](https://github.com/cheahjs/free-llm-api-resources) から最新の無料プロバイダー情報を取得し、各 API キーとエンドポイントの動作を検証した上で、利用可能なプロバイダーをモデルリストに追加します。**毎朝 10 時に自動更新** —— cron ジョブが新しい無料プロバイダーを自動チェックします。手動操作は不要です。
+
+**利用可能な無料プロバイダー：**
+
+| プロバイダー | 利用可能モデル | 登録先 |
+|-------------|--------------|--------|
+| Groq | LLaMA, Mixtral | [console.groq.com](https://console.groq.com) |
+| OpenRouter | 100 以上のモデル | [openrouter.ai](https://openrouter.ai) |
+| Google AI Studio | Gemini Pro/Flash | [aistudio.google.com](https://aistudio.google.com) |
+| Cerebras | LLaMA 70B | [cloud.cerebras.ai](https://cloud.cerebras.ai) |
+| Mistral | Mistral/Mixtral | [console.mistral.ai](https://console.mistral.ai) |
+| GitHub Models | GPT-4o, LLaMA | [github.com/marketplace/models](https://github.com/marketplace/models) |
+| NVIDIA NIM | LLaMA, Mixtral | [build.nvidia.com](https://build.nvidia.com) |
+| HuggingFace | オープンソースモデル | [huggingface.co](https://huggingface.co) |
+| Cohere | Command R+ | [cohere.com](https://cohere.com) |
+| …その他 | 自動発見 | 毎日更新 |
+
+#### 使い方
+
+1. 上記の無料プロバイダーで無料 API キーを取得
+2. 環境変数に設定（例：`GROQ_API_KEY`、`GEMINI_API_KEY`）
+3. WinClaw Chat で **「無料 LLM プロバイダーを更新して」** と伝える
+4. WinClaw が各プロバイダーを検証し、利用可能なものをモデルリストに追加
+5. **WinClaw モデル選択ドロップダウン** で無料モデルを切り替えて使用
+
+初回実行時に毎日更新の cron ジョブが自動登録されるため、手動設定は不要です。
+
+---
+
 ## 設定
 
 ### 設定ファイルパス

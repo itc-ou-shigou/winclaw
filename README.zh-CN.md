@@ -207,6 +207,116 @@ winclaw tui
 
 ---
 
+## ⭐ 重点推荐技能
+
+WinClaw 内置了两个强大的自动化技能，大幅提升你在 Windows PC 上的开发效率。
+
+### 🧪 AI Dev System Testing — Web 应用自动化测试
+
+AI 驱动的全自动 Web 应用测试：代码结构分析、代码审查并自动修复 BUG、API 端点测试、浏览器 UI 自动化测试 —— **无需编写任何测试脚本**，AI agent 全程自动完成。
+
+**支持自动修复的语言：** Python、PHP、Go、JavaScript/Node.js、TypeScript/React 等解释型语言。
+
+> **注意：** 编译型语言（Java、C++、C# 等）的自动化测试和 BUG 自动修复不包含在开源版本中。如需企业级支持，请联系 **info@itccloudsoft.com**。
+
+#### 前置条件
+
+1. **WinClaw** 已安装在你的 Windows PC 上
+2. **Claude in Chrome** 浏览器扩展 — 从 [Chrome 应用商店](https://chromewebstore.google.com/) 安装（Phase 5C 浏览器 UI 测试必需）
+3. **Claude 订阅**（推荐 Pro/Max 以获得最佳效果），或使用替代模型（见下文）
+
+#### 使用替代模型（如 GLM-5 智谱清言）
+
+不一定需要 Claude 订阅 —— 任何 OpenAI 兼容模型都可以。例如使用**智谱 GLM-5**：
+
+```cmd
+Set ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
+Set ANTHROPIC_AUTH_TOKEN=你的GLM API Key
+Set ANTHROPIC_MODEL=glm-5
+```
+
+#### 使用方法
+
+**对话模式（推荐首次使用）：**
+
+```powershell
+# 在 WinClaw Chat 标签页中直接告诉 AI：
+"帮我测试 C:\path\to\my-project 这个项目，前端是 http://localhost:3000，后端是 http://localhost:8000"
+```
+
+**直接运行脚本：**
+
+```powershell
+# 基本用法（交互式 — 会询问 URL 配置）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project"
+
+# 完整参数（非交互式）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" `
+    -FrontendUrl "http://localhost:3000" `
+    -BackendUrl "http://localhost:8000" `
+    -NonInteractive
+
+# Resume 模式（跳过已完成的阶段）
+& "C:\Users\USER\AppData\Local\Programs\WinClaw\app\skills\ai-dev-system-testing\scripts\run-all.ps1" `
+    -Workspace "C:\path\to\my-project" -Resume
+```
+
+#### 测试阶段
+
+| 阶段 | 功能 | 输出文件 |
+|------|------|----------|
+| Phase 2 | 代码结构分析 | `CODE_ANALYSIS.md` |
+| Phase 3 | 代码审查 + 自动修复 BUG | `CODE_REVIEW_REPORT.md` |
+| Phase 5B | API 端点测试（迭代式） | `test-logs/phase5b_*.json` |
+| Phase 5C | 浏览器 UI 自动化测试 | `test-logs/phase5c_*.json` |
+| Phase 6 | 自动生成文档 | `docs/` |
+
+Phase 5B/5C 最多运行 15 次迭代，自动修复失败的测试用例，直到通过率达到 95%+（API）或 100%（UI）。
+
+#### 测试账号配置
+
+Phase 5 测试需要测试账号凭据：
+
+```powershell
+$env:TEST_USER_EMAIL = "test@example.com"
+$env:TEST_USER_PASSWORD = "YourTestPassword123"
+```
+
+---
+
+### 🆓 Free LLM Updater — 10+ 免费模型 API，每天自动更新
+
+自动发现并注册免费 LLM API 提供商到 WinClaw。技能从 [cheahjs/free-llm-api-resources](https://github.com/cheahjs/free-llm-api-resources) 获取最新的免费提供商列表，验证每个 API Key 和端点是否可用，然后将可用的提供商添加到你的模型列表中。**每天早上 10 点自动更新** —— 通过 cron 定时任务自动检查新的免费提供商，无需手动操作。
+
+**可用的免费提供商：**
+
+| 提供商 | 可用模型 | 注册地址 |
+|--------|----------|----------|
+| Groq | LLaMA, Mixtral | [console.groq.com](https://console.groq.com) |
+| OpenRouter | 100+ 模型 | [openrouter.ai](https://openrouter.ai) |
+| Google AI Studio | Gemini Pro/Flash | [aistudio.google.com](https://aistudio.google.com) |
+| Cerebras | LLaMA 70B | [cloud.cerebras.ai](https://cloud.cerebras.ai) |
+| Mistral | Mistral/Mixtral | [console.mistral.ai](https://console.mistral.ai) |
+| GitHub Models | GPT-4o, LLaMA | [github.com/marketplace/models](https://github.com/marketplace/models) |
+| NVIDIA NIM | LLaMA, Mixtral | [build.nvidia.com](https://build.nvidia.com) |
+| HuggingFace | 开源模型 | [huggingface.co](https://huggingface.co) |
+| Cohere | Command R+ | [cohere.com](https://cohere.com) |
+| …更多 | 自动发现 | 每日更新 |
+
+#### 使用方法
+
+1. 在上面的免费提供商注册免费 API Key
+2. 设置环境变量（如 `GROQ_API_KEY`、`GEMINI_API_KEY`）
+3. 在 WinClaw Chat 中说：**"更新免费 LLM 提供商"**
+4. WinClaw 自动验证每个提供商，将可用的添加到模型列表
+5. 在 **WinClaw 模型切换下拉菜单** 中选择使用免费模型
+
+首次运行时自动注册每日更新定时任务，无需手动配置。
+
+---
+
 ## 配置说明
 
 ### 配置文件路径
