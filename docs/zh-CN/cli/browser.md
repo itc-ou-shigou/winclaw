@@ -63,7 +63,7 @@ winclaw browser --browser-profile work tabs
 
 ```bash
 winclaw browser tabs
-winclaw browser open https://docs.openclaw.ai
+winclaw browser open https://docs.winclaw.ai
 winclaw browser focus <targetId>
 winclaw browser close <targetId>
 ```

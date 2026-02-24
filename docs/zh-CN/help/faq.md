@@ -27,7 +27,7 @@ x-i18n:
   - [卡在 "wake up my friend" / 新手引导无法启动，怎么办？](#it-is-stuck-on-wake-up-my-friend-onboarding-will-not-hatch-what-now)
   - [能否将我的设置迁移到新机器（Mac mini）而不重新进行新手引导？](#can-i-migrate-my-setup-to-a-new-machine-mac-mini-without-redoing-onboarding)
   - [在哪里查看最新版本的更新内容？](#where-do-i-see-whats-new-in-the-latest-version)
-  - [无法访问 docs.openclaw.ai（SSL 错误），怎么办？](#i-cant-access-docswinclawai-ssl-error-what-now)
+  - [无法访问 docs.winclaw.ai（SSL 错误），怎么办？](#i-cant-access-docswinclawai-ssl-error-what-now)
   - [stable 和 beta 有什么区别？](#whats-the-difference-between-stable-and-beta)
 - [如何安装 beta 版本，beta 和 dev 有什么区别？](#how-do-i-install-the-beta-version-and-whats-the-difference-between-beta-and-dev)
   - [如何试用最新代码？](#how-do-i-try-the-latest-bits)
@@ -277,7 +277,7 @@ x-i18n:
 这些工具可以读取仓库、运行命令、检查日志，并帮助修复你的机器级别设置（PATH、服务、权限、认证文件）。通过可编辑（git）安装提供**完整源代码**：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git
 ```
 
 这会从 **git checkout** 安装 WinClaw，这样智能体可以读取代码 + 文档，并推理你正在运行的确切版本。你可以随时通过不带 `--install-method git` 重新运行安装程序切回稳定版。
@@ -313,7 +313,7 @@ winclaw doctor
 仓库推荐从源码运行并使用新手引导向导：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://winclaw.ai/install.sh | bash
 winclaw onboard --install-daemon
 ```
 
@@ -425,9 +425,9 @@ https://github.com/winclaw/winclaw/blob/main/CHANGELOG.md
 
 最新条目在顶部。如果顶部部分标记为 **Unreleased**，则下一个带日期的部分是最新发布版本。条目按**亮点**、**变更**和**修复**分组（需要时还有文档/其他部分）。
 
-### 无法访问 docs.openclaw.ai（SSL 错误），怎么办
+### 无法访问 docs.winclaw.ai（SSL 错误），怎么办
 
-一些 Comcast/Xfinity 连接通过 Xfinity Advanced Security 错误地拦截了 `docs.openclaw.ai`。禁用该功能或将 `docs.openclaw.ai` 加入白名单，然后重试。更多详情：[故障排除](/help/troubleshooting#docswinclawai-shows-an-ssl-error-comcastxfinity)。
+一些 Comcast/Xfinity 连接通过 Xfinity Advanced Security 错误地拦截了 `docs.winclaw.ai`。禁用该功能或将 `docs.winclaw.ai` 加入白名单，然后重试。更多详情：[故障排除](/help/troubleshooting#docswinclawai-shows-an-ssl-error-comcastxfinity)。
 请帮助我们在此处报告以解除封锁：https://spa.xfinity.com/check_url_status。
 
 如果仍然无法访问该网站，文档在 GitHub 上有镜像：
@@ -453,15 +453,15 @@ https://github.com/winclaw/winclaw/blob/main/CHANGELOG.md
 一行命令（macOS/Linux）：
 
 ```bash
-curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --beta
+curl -fsSL --proto '=https' --tlsv1.2 https://winclaw.ai/install.sh | bash -s -- --beta
 ```
 
 ```bash
-curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
+curl -fsSL --proto '=https' --tlsv1.2 https://winclaw.ai/install.sh | bash -s -- --install-method git
 ```
 
 Windows 安装程序（PowerShell）：
-https://openclaw.ai/install.ps1
+https://winclaw.ai/install.ps1
 
 更多详情：[开发渠道](/install/development-channels)和[安装程序标志](/install/installer)。
 
@@ -489,7 +489,7 @@ winclaw update --channel dev
 2. **可编辑安装（从安装程序网站）：**
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git
 ```
 
 这会给你一个可编辑的本地仓库，然后通过 git 更新。
@@ -511,19 +511,19 @@ pnpm build
 使用**详细输出**重新运行安装程序：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --verbose
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --verbose
 ```
 
 带详细输出的 Beta 安装：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --beta --verbose
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --beta --verbose
 ```
 
 可编辑（git）安装：
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --verbose
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git --verbose
 ```
 
 更多选项：[安装程序标志](/install/installer)。
@@ -555,7 +555,7 @@ curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --ve
 使用**可编辑（git）安装**，这样你在本地拥有完整的源码和文档，然后从该文件夹向你的机器人（或 Claude/Codex）提问，这样它可以读取仓库并精确回答。
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git
 ```
 
 更多详情：[安装](/install)和[安装程序标志](/install/installer)。
@@ -928,7 +928,7 @@ WinClaw 是一个**个人助手**和协调层，不是 IDE 替代品。使用 Cl
 - **常开 Gateway 网关**（在 VPS 上运行，从任何地方交互）
 - 用于本地浏览器/屏幕/摄像头/执行的**节点**
 
-展示：https://openclaw.ai/showcase
+展示：https://winclaw.ai/showcase
 
 ## Skills 与自动化
 

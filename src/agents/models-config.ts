@@ -29,22 +29,41 @@ function mergeProviderModels(implicit: ProviderConfig, explicit: ProviderConfig)
     const id = (model as { id?: unknown }).id;
     return typeof id === "string" ? id.trim() : "";
   };
-  const seen = new Set(explicitModels.map(getId).filter(Boolean));
+  const implicitById = new Map(
+    implicitModels.map((model) => [getId(model), model] as const).filter(([id]) => Boolean(id)),
+  );
+  const seen = new Set<string>();
 
-  const mergedModels = [
-    ...explicitModels,
-    ...implicitModels.filter((model) => {
-      const id = getId(model);
-      if (!id) {
-        return false;
-      }
-      if (seen.has(id)) {
-        return false;
-      }
-      seen.add(id);
-      return true;
-    }),
-  ];
+  const mergedModels = explicitModels.map((explicitModel) => {
+    const id = getId(explicitModel);
+    if (!id) {
+      return explicitModel;
+    }
+    seen.add(id);
+    const implicitModel = implicitById.get(id);
+    if (!implicitModel) {
+      return explicitModel;
+    }
+
+    // Refresh capability metadata from the implicit catalog while preserving
+    // user-specific fields (cost, headers, compat, etc.) on explicit entries.
+    return {
+      ...explicitModel,
+      input: implicitModel.input,
+      reasoning: implicitModel.reasoning,
+      contextWindow: implicitModel.contextWindow,
+      maxTokens: implicitModel.maxTokens,
+    };
+  });
+
+  for (const implicitModel of implicitModels) {
+    const id = getId(implicitModel);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    mergedModels.push(implicitModel);
+  }
 
   return {
     ...implicit,
@@ -86,40 +105,27 @@ export async function ensureWinClawModelsJson(
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveWinClawAgentDir();
 
   const explicitProviders = cfg.models?.providers ?? {};
-  const mode = cfg.models?.mode ?? DEFAULT_MODE;
-
-  let providers: Record<string, ProviderConfig>;
-  if (mode === "replace") {
-    // replace mode: only use providers explicitly defined in winclaw.json,
-    // skip all implicit/auto-discovered providers (copilot, bedrock, etc.)
-    providers = {};
-    for (const [key, val] of Object.entries(explicitProviders)) {
-      const k = key.trim();
-      if (k) providers[k] = val;
-    }
-  } else {
-    // merge mode (default): combine implicit + explicit + bedrock + copilot
-    const implicitProviders = await resolveImplicitProviders({ agentDir });
-    providers = mergeProviders({
-      implicit: implicitProviders,
-      explicit: explicitProviders,
-    });
-    const implicitBedrock = await resolveImplicitBedrockProvider({ agentDir, config: cfg });
-    if (implicitBedrock) {
-      const existing = providers["amazon-bedrock"];
-      providers["amazon-bedrock"] = existing
-        ? mergeProviderModels(implicitBedrock, existing)
-        : implicitBedrock;
-    }
-    const implicitCopilot = await resolveImplicitCopilotProvider({ agentDir });
-    if (implicitCopilot && !providers["github-copilot"]) {
-      providers["github-copilot"] = implicitCopilot;
-    }
+  const implicitProviders = await resolveImplicitProviders({ agentDir, explicitProviders });
+  const providers: Record<string, ProviderConfig> = mergeProviders({
+    implicit: implicitProviders,
+    explicit: explicitProviders,
+  });
+  const implicitBedrock = await resolveImplicitBedrockProvider({ agentDir, config: cfg });
+  if (implicitBedrock) {
+    const existing = providers["amazon-bedrock"];
+    providers["amazon-bedrock"] = existing
+      ? mergeProviderModels(implicitBedrock, existing)
+      : implicitBedrock;
+  }
+  const implicitCopilot = await resolveImplicitCopilotProvider({ agentDir });
+  if (implicitCopilot && !providers["github-copilot"]) {
+    providers["github-copilot"] = implicitCopilot;
   }
 
   if (Object.keys(providers).length === 0) {
     return { agentDir, wrote: false };
   }
+  const mode = cfg.models?.mode ?? DEFAULT_MODE;
   const targetPath = path.join(agentDir, "models.json");
 
   let mergedProviders = providers;

@@ -1,12 +1,9 @@
 {
   "name": "@winclaw/open-prose",
-  "version": "2026.2.20",
+  "version": "2026.2.23",
   "private": true,
   "description": "OpenProse VM skill pack plugin (slash command + telemetry).",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
   "winclaw": {
     "extensions": [
       "./index.ts"

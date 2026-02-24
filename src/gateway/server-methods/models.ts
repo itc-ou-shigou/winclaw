@@ -1,13 +1,13 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import type { GatewayRequestHandlers } from "./types.js";
-import { resolveWinClawAgentDir } from "../../agents/agent-paths.js";
+import { DEFAULT_PROVIDER } from "../../agents/defaults.js";
+import { buildAllowedModelSet } from "../../agents/model-selection.js";
+import { loadConfig } from "../../config/config.js";
 import {
   ErrorCodes,
   errorShape,
   formatValidationErrors,
   validateModelsListParams,
 } from "../protocol/index.js";
+import type { GatewayRequestHandlers } from "./types.js";
 
 /**
  * Read models.json and extract the set of explicitly configured model keys
@@ -53,13 +53,14 @@ export const modelsHandlers: GatewayRequestHandlers = {
       return;
     }
     try {
-      const allModels = await context.loadGatewayModelCatalog();
-      // Filter to only models explicitly defined in models.json
-      const configuredIds = loadConfiguredModelIds();
-      const models =
-        configuredIds != null
-          ? allModels.filter((m) => configuredIds.has(`${m.provider}/${m.id}`))
-          : allModels;
+      const catalog = await context.loadGatewayModelCatalog();
+      const cfg = loadConfig();
+      const { allowedCatalog } = buildAllowedModelSet({
+        cfg,
+        catalog,
+        defaultProvider: DEFAULT_PROVIDER,
+      });
+      const models = allowedCatalog.length > 0 ? allowedCatalog : catalog;
       respond(true, { models }, undefined);
     } catch (err) {
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));

@@ -1,14 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { RuntimeEnv } from "../runtime.js";
-import type { DoctorPrompter } from "./doctor-prompter.js";
 import {
   resolveControlUiDistIndexHealth,
   resolveControlUiDistIndexPathForRoot,
 } from "../infra/control-ui-assets.js";
 import { resolveWinClawPackageRoot } from "../infra/winclaw-root.js";
 import { runCommandWithTimeout } from "../process/exec.js";
+import type { RuntimeEnv } from "../runtime.js";
 import { note } from "../terminal/note.js";
+import type { DoctorPrompter } from "./doctor-prompter.js";
 
 export async function maybeRepairUiProtocolFreshness(
   _runtime: RuntimeEnv,

@@ -59,6 +59,12 @@ Browser settings live in `~/.winclaw/winclaw.json`.
 {
   browser: {
     enabled: true, // default: true
+    ssrfPolicy: {
+      dangerouslyAllowPrivateNetwork: true, // default trusted-network mode
+      // allowPrivateNetwork: true, // legacy alias
+      // hostnameAllowlist: ["*.example.com", "example.com"],
+      // allowedHostnames: ["localhost"],
+    },
     // cdpUrl: "http://127.0.0.1:18792", // legacy single-profile override
     remoteCdpTimeoutMs: 1500, // remote CDP HTTP timeout (ms)
     remoteCdpHandshakeTimeoutMs: 3000, // remote CDP WebSocket handshake timeout (ms)
@@ -86,6 +92,9 @@ Notes:
 - `cdpUrl` defaults to the relay port when unset.
 - `remoteCdpTimeoutMs` applies to remote (non-loopback) CDP reachability checks.
 - `remoteCdpHandshakeTimeoutMs` applies to remote CDP WebSocket reachability checks.
+- Browser navigation/open-tab is SSRF-guarded before navigation and best-effort re-checked on final `http(s)` URL after navigation.
+- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` defaults to `true` (trusted-network model). Set it to `false` for strict public-only browsing.
+- `browser.ssrfPolicy.allowPrivateNetwork` remains supported as a legacy alias for compatibility.
 - `attachOnly: true` means “never launch a local browser; only attach if it is already running.”
 - `color` + per-profile `color` tint the browser UI so you can see which profile is active.
 - Default profile is `chrome` (extension relay). Use `defaultProfile: "winclaw"` for the managed browser.
@@ -192,6 +201,7 @@ Notes:
 Key ideas:
 
 - Browser control is loopback-only; access flows through the Gateway’s auth or node pairing.
+- If browser control is enabled and no auth is configured, WinClaw auto-generates `gateway.auth.token` on startup and persists it to config.
 - Keep the Gateway and any node hosts on a private network (Tailscale); avoid public exposure.
 - Treat remote CDP URLs/tokens as secrets; prefer env vars or a secrets manager.
 
@@ -315,6 +325,11 @@ For local integrations only, the Gateway exposes a small loopback HTTP API:
 
 All endpoints accept `?profile=<name>`.
 
+If gateway auth is configured, browser HTTP routes require auth too:
+
+- `Authorization: Bearer <gateway token>`
+- `x-winclaw-password: <gateway password>` or HTTP Basic auth with that password
+
 ### Playwright requirement
 
 Some features (navigate/act/AI snapshot/role snapshot, element screenshots, PDF) require
@@ -403,9 +418,9 @@ Actions:
 - `winclaw browser scrollintoview e12`
 - `winclaw browser drag 10 11`
 - `winclaw browser select 9 OptionA OptionB`
-- `winclaw browser download e12 /tmp/report.pdf`
-- `winclaw browser waitfordownload /tmp/report.pdf`
-- `winclaw browser upload /tmp/file.pdf`
+- `winclaw browser download e12 report.pdf`
+- `winclaw browser waitfordownload report.pdf`
+- `winclaw browser upload /tmp/winclaw/uploads/file.pdf`
 - `winclaw browser fill --fields '[{"ref":"1","type":"text","value":"Ada"}]'`
 - `winclaw browser dialog --accept`
 - `winclaw browser wait --text "Done"`
@@ -424,7 +439,7 @@ State:
 - `winclaw browser storage local set theme dark`
 - `winclaw browser storage session clear`
 - `winclaw browser set offline on`
-- `winclaw browser set headers --json '{"X-Debug":"1"}'`
+- `winclaw browser set headers --headers-json '{"X-Debug":"1"}'`
 - `winclaw browser set credentials user pass`
 - `winclaw browser set credentials --clear`
 - `winclaw browser set geo 37.7749 -122.4194 --origin "https://example.com"`
@@ -438,6 +453,11 @@ Notes:
 
 - `upload` and `dialog` are **arming** calls; run them before the click/press
   that triggers the chooser/dialog.
+- Download and trace output paths are constrained to WinClaw temp roots:
+  - traces: `/tmp/winclaw` (fallback: `${os.tmpdir()}/winclaw`)
+  - downloads: `/tmp/winclaw/downloads` (fallback: `${os.tmpdir()}/winclaw/downloads`)
+- Upload paths are constrained to an WinClaw temp uploads root:
+  - uploads: `/tmp/winclaw/uploads` (fallback: `${os.tmpdir()}/winclaw/uploads`)
 - `upload` can also set file inputs directly via `--input-ref` or `--element`.
 - `snapshot`:
   - `--format ai` (default when Playwright is installed): returns an AI snapshot with numeric refs (`aria-ref="<n>"`).
@@ -531,7 +551,7 @@ These are useful for “make the site behave like X” workflows:
 - Cookies: `cookies`, `cookies set`, `cookies clear`
 - Storage: `storage local|session get|set|clear`
 - Offline: `set offline on|off`
-- Headers: `set headers --json '{"X-Debug":"1"}'` (or `--clear`)
+- Headers: `set headers --headers-json '{"X-Debug":"1"}'` (legacy `set headers --json '{"X-Debug":"1"}'` remains supported)
 - HTTP basic auth: `set credentials user pass` (or `--clear`)
 - Geolocation: `set geo <lat> <lon> --origin "https://example.com"` (or `--clear`)
 - Media: `set media dark|light|no-preference|none`
@@ -549,6 +569,20 @@ These are useful for “make the site behave like X” workflows:
 - For logins and anti-bot notes (X/Twitter, etc.), see [Browser login + X/Twitter posting](/tools/browser-login).
 - Keep the Gateway/node host private (loopback or tailnet-only).
 - Remote CDP endpoints are powerful; tunnel and protect them.
+
+Strict-mode example (block private/internal destinations by default):
+
+```json5
+{
+  browser: {
+    ssrfPolicy: {
+      dangerouslyAllowPrivateNetwork: false,
+      hostnameAllowlist: ["*.example.com", "example.com"],
+      allowedHostnames: ["localhost"], // optional exact allow
+    },
+  },
+}
+```
 
 ## Troubleshooting
 

@@ -1,7 +1,7 @@
 import type { WinClawConfig } from "winclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk";
-import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk/account-id";
 import { resolveZaloToken } from "./token.js";
+import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
 
 export type { ResolvedZaloAccount };
 

@@ -1,6 +1,6 @@
-import type { WinClawConfig } from "../config/config.js";
 import { DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { resolveAllowlistModelKey } from "../agents/model-selection.js";
+import type { WinClawConfig } from "../config/config.js";
 
 export function ensureModelAllowlistEntry(params: {
   cfg: WinClawConfig;

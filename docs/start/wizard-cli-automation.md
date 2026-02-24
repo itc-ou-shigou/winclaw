@@ -86,6 +86,16 @@ Add `--json` for a machine-readable summary.
       --gateway-bind loopback
     ```
   </Accordion>
+  <Accordion title="Mistral example">
+    ```bash
+    winclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice mistral-api-key \
+      --mistral-api-key "$MISTRAL_API_KEY" \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+  </Accordion>
   <Accordion title="Synthetic example">
     ```bash
     winclaw onboard --non-interactive \
@@ -105,6 +115,23 @@ Add `--json` for a machine-readable summary.
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
+  </Accordion>
+  <Accordion title="Custom provider example">
+    ```bash
+    winclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice custom-api-key \
+      --custom-base-url "https://llm.example.com/v1" \
+      --custom-model-id "foo-large" \
+      --custom-api-key "$CUSTOM_API_KEY" \
+      --custom-provider-id "my-custom" \
+      --custom-compatibility anthropic \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+
+    `--custom-api-key` is optional. If omitted, onboarding checks `CUSTOM_API_KEY`.
+
   </Accordion>
 </AccordionGroup>
 

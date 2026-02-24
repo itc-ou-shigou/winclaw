@@ -1,5 +1,5 @@
-import type { WinClawConfig } from "./types.js";
 import { applyLegacyMigrations } from "./legacy.js";
+import type { WinClawConfig } from "./types.js";
 import { validateConfigObjectWithPlugins } from "./validation.js";
 
 export function migrateLegacyConfig(raw: unknown): {

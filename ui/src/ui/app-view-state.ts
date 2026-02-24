@@ -1,6 +1,6 @@
 import type { EventLogEntry } from "./app-events.ts";
-import type { CompactionStatus } from "./app-tool-stream.ts";
-import type { ExecLogEntry } from "./components/exec-log-console.ts";
+import type { CompactionStatus, FallbackStatus } from "./app-tool-stream.ts";
+import type { CronFieldErrors } from "./controllers/cron.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
@@ -18,6 +18,13 @@ import type {
   ConfigSnapshot,
   ConfigUiHints,
   CronJob,
+  CronJobsEnabledFilter,
+  CronJobsSortBy,
+  CronDeliveryStatus,
+  CronRunScope,
+  CronSortDir,
+  CronRunsStatusValue,
+  CronRunsStatusFilter,
   CronRunLogEntry,
   CronStatus,
   HealthSnapshot,
@@ -31,6 +38,7 @@ import type {
   SessionUsageTimeSeries,
   SessionsListResult,
   SkillStatusReport,
+  ToolsCatalogResult,
   StatusSummary,
 } from "./types.ts";
 import type { ChatAttachment, ChatQueueItem, CronFormState } from "./ui-types.ts";
@@ -48,6 +56,7 @@ export type AppViewState = {
   themeResolved: "light" | "dark";
   hello: GatewayHelloOk | null;
   lastError: string | null;
+  lastErrorCode: string | null;
   eventLog: EventLogEntry[];
   assistantName: string;
   assistantAvatar: string | null;
@@ -63,6 +72,7 @@ export type AppViewState = {
   chatStreamStartedAt: number | null;
   chatRunId: string | null;
   compactionStatus: CompactionStatus | null;
+  fallbackStatus: FallbackStatus | null;
   chatAvatarUrl: string | null;
   chatThinkingLevel: string | null;
   chatQueue: ChatQueueItem[];
@@ -134,6 +144,9 @@ export type AppViewState = {
   agentsList: AgentsListResult | null;
   agentsError: string | null;
   agentsSelectedId: string | null;
+  toolsCatalogLoading: boolean;
+  toolsCatalogError: string | null;
+  toolsCatalogResult: ToolsCatalogResult | null;
   agentsPanel: "overview" | "files" | "tools" | "skills" | "channels" | "cron";
   agentFilesLoading: boolean;
   agentFilesError: string | null;
@@ -171,6 +184,8 @@ export type AppViewState = {
   usageTimeSeriesBreakdownMode: "total" | "by-type";
   usageTimeSeries: SessionUsageTimeSeries | null;
   usageTimeSeriesLoading: boolean;
+  usageTimeSeriesCursorStart: number | null;
+  usageTimeSeriesCursorEnd: number | null;
   usageSessionLogs: SessionLogEntry[] | null;
   usageSessionLogsLoading: boolean;
   usageSessionLogsExpanded: boolean;
@@ -190,12 +205,35 @@ export type AppViewState = {
   usageLogFilterHasTools: boolean;
   usageLogFilterQuery: string;
   cronLoading: boolean;
+  cronJobsLoadingMore: boolean;
   cronJobs: CronJob[];
+  cronJobsTotal: number;
+  cronJobsHasMore: boolean;
+  cronJobsNextOffset: number | null;
+  cronJobsLimit: number;
+  cronJobsQuery: string;
+  cronJobsEnabledFilter: CronJobsEnabledFilter;
+  cronJobsSortBy: CronJobsSortBy;
+  cronJobsSortDir: CronSortDir;
   cronStatus: CronStatus | null;
   cronError: string | null;
   cronForm: CronFormState;
+  cronFieldErrors: CronFieldErrors;
+  cronEditingJobId: string | null;
   cronRunsJobId: string | null;
+  cronRunsLoadingMore: boolean;
   cronRuns: CronRunLogEntry[];
+  cronRunsTotal: number;
+  cronRunsHasMore: boolean;
+  cronRunsNextOffset: number | null;
+  cronRunsLimit: number;
+  cronRunsScope: CronRunScope;
+  cronRunsStatuses: CronRunsStatusValue[];
+  cronRunsDeliveryStatuses: CronDeliveryStatus[];
+  cronRunsStatusFilter: CronRunsStatusFilter;
+  cronRunsQuery: string;
+  cronRunsSortDir: CronSortDir;
+  cronModelSuggestions: string[];
   cronBusy: boolean;
   skillsLoading: boolean;
   skillsReport: SkillStatusReport | null;
@@ -228,6 +266,7 @@ export type AppViewState = {
   logsLimit: number;
   logsMaxBytes: number;
   logsAtBottom: boolean;
+  updateAvailable: import("./types.js").UpdateAvailable | null;
   client: GatewayBrowserClient | null;
   refreshSessionsAfterChat: Set<string>;
   connect: () => void;

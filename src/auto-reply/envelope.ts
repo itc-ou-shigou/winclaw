@@ -1,7 +1,7 @@
-import type { WinClawConfig } from "../config/config.js";
 import { resolveUserTimezone } from "../agents/date-time.js";
 import { normalizeChatType } from "../channels/chat-type.js";
 import { resolveSenderLabel, type SenderLabelParams } from "../channels/sender-label.js";
+import type { WinClawConfig } from "../config/config.js";
 import {
   resolveTimezone,
   formatUtcTimestamp,

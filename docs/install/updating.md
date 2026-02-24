@@ -17,7 +17,7 @@ detects existing installs, upgrades in place, and runs `winclaw doctor` when
 needed.
 
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://winclaw.ai/install.sh | bash
 ```
 
 Notes:
@@ -26,7 +26,7 @@ Notes:
 - For **source installs**, use:
 
   ```bash
-  curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --no-onboard
+  curl -fsSL https://winclaw.ai/install.sh | bash -s -- --install-method git --no-onboard
   ```
 
   The installer will `git pull --rebase` **only** if the repo is clean.
@@ -70,6 +70,32 @@ Use `--tag <dist-tag|version>` for a one-off install tag/version.
 See [Development channels](/install/development-channels) for channel semantics and release notes.
 
 Note: on npm installs, the gateway logs an update hint on startup (checks the current channel tag). Disable via `update.checkOnStart: false`.
+
+### Core auto-updater (optional)
+
+Auto-updater is **off by default** and is a core Gateway feature (not a plugin).
+
+```json
+{
+  "update": {
+    "channel": "stable",
+    "auto": {
+      "enabled": true,
+      "stableDelayHours": 6,
+      "stableJitterHours": 12,
+      "betaCheckIntervalHours": 1
+    }
+  }
+}
+```
+
+Behavior:
+
+- `stable`: when a new version is seen, WinClaw waits `stableDelayHours` and then applies a deterministic per-install jitter in `stableJitterHours` (spread rollout).
+- `beta`: checks on `betaCheckIntervalHours` cadence (default: hourly) and applies when an update is available.
+- `dev`: no automatic apply; use manual `winclaw update`.
+
+Use `winclaw update --dry-run` to preview update actions before enabling automation.
 
 Then:
 

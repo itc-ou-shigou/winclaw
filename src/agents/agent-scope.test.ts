@@ -4,6 +4,9 @@ import type { WinClawConfig } from "../config/config.js";
 import {
   resolveAgentConfig,
   resolveAgentDir,
+  resolveAgentEffectiveModelPrimary,
+  resolveAgentExplicitModelPrimary,
+  resolveEffectiveModelFallbacks,
   resolveAgentModelFallbacksOverride,
   resolveAgentModelPrimary,
   resolveAgentWorkspaceDir,
@@ -58,6 +61,43 @@ describe("resolveAgentConfig", () => {
     });
   });
 
+  it("resolves explicit and effective model primary separately", () => {
+    const cfgWithStringDefault = {
+      agents: {
+        defaults: {
+          model: "anthropic/claude-sonnet-4",
+        },
+        list: [{ id: "main" }],
+      },
+    } as unknown as WinClawConfig;
+    expect(resolveAgentExplicitModelPrimary(cfgWithStringDefault, "main")).toBeUndefined();
+    expect(resolveAgentEffectiveModelPrimary(cfgWithStringDefault, "main")).toBe(
+      "anthropic/claude-sonnet-4",
+    );
+
+    const cfgWithObjectDefault: WinClawConfig = {
+      agents: {
+        defaults: {
+          model: {
+            primary: "openai/gpt-5.2",
+            fallbacks: ["anthropic/claude-sonnet-4"],
+          },
+        },
+        list: [{ id: "main" }],
+      },
+    };
+    expect(resolveAgentExplicitModelPrimary(cfgWithObjectDefault, "main")).toBeUndefined();
+    expect(resolveAgentEffectiveModelPrimary(cfgWithObjectDefault, "main")).toBe("openai/gpt-5.2");
+
+    const cfgNoDefaults: WinClawConfig = {
+      agents: {
+        list: [{ id: "main" }],
+      },
+    };
+    expect(resolveAgentExplicitModelPrimary(cfgNoDefaults, "main")).toBeUndefined();
+    expect(resolveAgentEffectiveModelPrimary(cfgNoDefaults, "main")).toBeUndefined();
+  });
+
   it("supports per-agent model primary+fallbacks", () => {
     const cfg: WinClawConfig = {
       agents: {
@@ -80,6 +120,8 @@ describe("resolveAgentConfig", () => {
     };
 
     expect(resolveAgentModelPrimary(cfg, "linus")).toBe("anthropic/claude-opus-4");
+    expect(resolveAgentExplicitModelPrimary(cfg, "linus")).toBe("anthropic/claude-opus-4");
+    expect(resolveAgentEffectiveModelPrimary(cfg, "linus")).toBe("anthropic/claude-opus-4");
     expect(resolveAgentModelFallbacksOverride(cfg, "linus")).toEqual(["openai/gpt-5.2"]);
 
     // If fallbacks isn't present, we don't override the global fallbacks.
@@ -112,6 +154,60 @@ describe("resolveAgentConfig", () => {
       },
     };
     expect(resolveAgentModelFallbacksOverride(cfgDisable, "linus")).toEqual([]);
+
+    expect(
+      resolveEffectiveModelFallbacks({
+        cfg,
+        agentId: "linus",
+        hasSessionModelOverride: false,
+      }),
+    ).toEqual(["openai/gpt-5.2"]);
+    expect(
+      resolveEffectiveModelFallbacks({
+        cfg,
+        agentId: "linus",
+        hasSessionModelOverride: true,
+      }),
+    ).toEqual(["openai/gpt-5.2"]);
+    expect(
+      resolveEffectiveModelFallbacks({
+        cfg: cfgNoOverride,
+        agentId: "linus",
+        hasSessionModelOverride: true,
+      }),
+    ).toEqual([]);
+
+    const cfgInheritDefaults: WinClawConfig = {
+      agents: {
+        defaults: {
+          model: {
+            fallbacks: ["openai/gpt-4.1"],
+          },
+        },
+        list: [
+          {
+            id: "linus",
+            model: {
+              primary: "anthropic/claude-opus-4",
+            },
+          },
+        ],
+      },
+    };
+    expect(
+      resolveEffectiveModelFallbacks({
+        cfg: cfgInheritDefaults,
+        agentId: "linus",
+        hasSessionModelOverride: true,
+      }),
+    ).toEqual(["openai/gpt-4.1"]);
+    expect(
+      resolveEffectiveModelFallbacks({
+        cfg: cfgDisable,
+        agentId: "linus",
+        hasSessionModelOverride: true,
+      }),
+    ).toEqual([]);
   });
 
   it("should return agent-specific sandbox config", () => {

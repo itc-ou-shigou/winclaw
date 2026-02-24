@@ -82,6 +82,12 @@ See [Configuration: Env var substitution](/gateway/configuration#env-var-substit
 | `WINCLAW_STATE_DIR`   | Override the state directory (default `~/.winclaw`).                                                                                                                           |
 | `WINCLAW_CONFIG_PATH` | Override the config file path (default `~/.winclaw/winclaw.json`).                                                                                                             |
 
+## Logging
+
+| Variable             | Purpose                                                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WINCLAW_LOG_LEVEL` | Override log level for both file and console (e.g. `debug`, `trace`). Takes precedence over `logging.level` and `logging.consoleLevel` in config. Invalid values are ignored with a warning. |
+
 ### `WINCLAW_HOME`
 
 When set, `WINCLAW_HOME` replaces the system home directory (`$HOME` / `os.homedir()`) for all internal path resolution. This enables full filesystem isolation for headless service accounts.

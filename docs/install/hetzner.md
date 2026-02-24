@@ -17,6 +17,14 @@ Run a persistent WinClaw Gateway on a Hetzner VPS using Docker, with durable sta
 If you want “WinClaw 24/7 for ~$5”, this is the simplest reliable setup.
 Hetzner pricing changes; pick the smallest Debian/Ubuntu VPS and scale up if you hit OOMs.
 
+Security model reminder:
+
+- Company-shared agents are fine when everyone is in the same trust boundary and the runtime is business-only.
+- Keep strict separation: dedicated VPS/runtime + dedicated accounts; no personal Apple/Google/browser/password-manager profiles on that host.
+- If users are adversarial to each other, split by gateway/host/OS user.
+
+See [Security](/gateway/security) and [VPS hosting](/vps).
+
 ## What are we doing (simple terms)?
 
 - Rent a small Linux server (Hetzner VPS)
@@ -177,10 +185,6 @@ services:
       # Recommended: keep the Gateway loopback-only on the VPS; access via SSH tunnel.
       # To expose it publicly, remove the `127.0.0.1:` prefix and firewall accordingly.
       - "127.0.0.1:${WINCLAW_GATEWAY_PORT}:18789"
-
-      # Optional: only if you run iOS/Android nodes against this VPS and need Canvas host.
-      # If you expose this publicly, read /gateway/security and firewall accordingly.
-      # - "18793:18793"
     command:
       [
         "node",
@@ -317,15 +321,36 @@ Paste your gateway token.
 WinClaw runs in Docker, but Docker is not the source of truth.
 All long-lived state must survive restarts, rebuilds, and reboots.
 
-| Component           | Location                         | Persistence mechanism  | Notes                           |
-| ------------------- | -------------------------------- | ---------------------- | ------------------------------- |
+| Component           | Location                          | Persistence mechanism  | Notes                            |
+| ------------------- | --------------------------------- | ---------------------- | -------------------------------- |
 | Gateway config      | `/home/node/.winclaw/`           | Host volume mount      | Includes `winclaw.json`, tokens |
-| Model auth profiles | `/home/node/.winclaw/`           | Host volume mount      | OAuth tokens, API keys          |
-| Skill configs       | `/home/node/.winclaw/skills/`    | Host volume mount      | Skill-level state               |
-| Agent workspace     | `/home/node/.winclaw/workspace/` | Host volume mount      | Code and agent artifacts        |
-| WhatsApp session    | `/home/node/.winclaw/`           | Host volume mount      | Preserves QR login              |
-| Gmail keyring       | `/home/node/.winclaw/`           | Host volume + password | Requires `GOG_KEYRING_PASSWORD` |
-| External binaries   | `/usr/local/bin/`                | Docker image           | Must be baked at build time     |
-| Node runtime        | Container filesystem             | Docker image           | Rebuilt every image build       |
-| OS packages         | Container filesystem             | Docker image           | Do not install at runtime       |
-| Docker container    | Ephemeral                        | Restartable            | Safe to destroy                 |
+| Model auth profiles | `/home/node/.winclaw/`           | Host volume mount      | OAuth tokens, API keys           |
+| Skill configs       | `/home/node/.winclaw/skills/`    | Host volume mount      | Skill-level state                |
+| Agent workspace     | `/home/node/.winclaw/workspace/` | Host volume mount      | Code and agent artifacts         |
+| WhatsApp session    | `/home/node/.winclaw/`           | Host volume mount      | Preserves QR login               |
+| Gmail keyring       | `/home/node/.winclaw/`           | Host volume + password | Requires `GOG_KEYRING_PASSWORD`  |
+| External binaries   | `/usr/local/bin/`                 | Docker image           | Must be baked at build time      |
+| Node runtime        | Container filesystem              | Docker image           | Rebuilt every image build        |
+| OS packages         | Container filesystem              | Docker image           | Do not install at runtime        |
+| Docker container    | Ephemeral                         | Restartable            | Safe to destroy                  |
+
+---
+
+## Infrastructure as Code (Terraform)
+
+For teams preferring infrastructure-as-code workflows, a community-maintained Terraform setup provides:
+
+- Modular Terraform configuration with remote state management
+- Automated provisioning via cloud-init
+- Deployment scripts (bootstrap, deploy, backup/restore)
+- Security hardening (firewall, UFW, SSH-only access)
+- SSH tunnel configuration for gateway access
+
+**Repositories:**
+
+- Infrastructure: [winclaw-terraform-hetzner](https://github.com/andreesg/winclaw-terraform-hetzner)
+- Docker config: [winclaw-docker-config](https://github.com/andreesg/winclaw-docker-config)
+
+This approach complements the Docker setup above with reproducible deployments, version-controlled infrastructure, and automated disaster recovery.
+
+> **Note:** Community-maintained. For issues or contributions, see the repository links above.

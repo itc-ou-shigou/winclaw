@@ -3,6 +3,39 @@ import type { WinClawConfig } from "../config/config.js";
 import { resolveHeartbeatVisibility } from "./heartbeat-visibility.js";
 
 describe("resolveHeartbeatVisibility", () => {
+  function createChannelDefaultsHeartbeatConfig(heartbeat: {
+    showOk?: boolean;
+    showAlerts?: boolean;
+    useIndicator?: boolean;
+  }): WinClawConfig {
+    return {
+      channels: {
+        defaults: {
+          heartbeat,
+        },
+      },
+    } as WinClawConfig;
+  }
+
+  function createTelegramAccountHeartbeatConfig(): WinClawConfig {
+    return {
+      channels: {
+        telegram: {
+          heartbeat: {
+            showOk: true,
+          },
+          accounts: {
+            primary: {
+              heartbeat: {
+                showOk: false,
+              },
+            },
+          },
+        },
+      },
+    } as WinClawConfig;
+  }
+
   it("returns default values when no config is provided", () => {
     const cfg = {} as WinClawConfig;
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
@@ -15,17 +48,11 @@ describe("resolveHeartbeatVisibility", () => {
   });
 
   it("uses channel defaults when provided", () => {
-    const cfg = {
-      channels: {
-        defaults: {
-          heartbeat: {
-            showOk: true,
-            showAlerts: false,
-            useIndicator: false,
-          },
-        },
-      },
-    } as WinClawConfig;
+    const cfg = createChannelDefaultsHeartbeatConfig({
+      showOk: true,
+      showAlerts: false,
+      useIndicator: false,
+    });
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
@@ -136,46 +163,14 @@ describe("resolveHeartbeatVisibility", () => {
   });
 
   it("handles missing accountId gracefully", () => {
-    const cfg = {
-      channels: {
-        telegram: {
-          heartbeat: {
-            showOk: true,
-          },
-          accounts: {
-            primary: {
-              heartbeat: {
-                showOk: false,
-              },
-            },
-          },
-        },
-      },
-    } as WinClawConfig;
-
+    const cfg = createTelegramAccountHeartbeatConfig();
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
     expect(result.showOk).toBe(true);
   });
 
   it("handles non-existent account gracefully", () => {
-    const cfg = {
-      channels: {
-        telegram: {
-          heartbeat: {
-            showOk: true,
-          },
-          accounts: {
-            primary: {
-              heartbeat: {
-                showOk: false,
-              },
-            },
-          },
-        },
-      },
-    } as WinClawConfig;
-
+    const cfg = createTelegramAccountHeartbeatConfig();
     const result = resolveHeartbeatVisibility({
       cfg,
       channel: "telegram",
@@ -249,17 +244,11 @@ describe("resolveHeartbeatVisibility", () => {
   });
 
   it("webchat uses channel defaults only (no per-channel config)", () => {
-    const cfg = {
-      channels: {
-        defaults: {
-          heartbeat: {
-            showOk: true,
-            showAlerts: false,
-            useIndicator: false,
-          },
-        },
-      },
-    } as WinClawConfig;
+    const cfg = createChannelDefaultsHeartbeatConfig({
+      showOk: true,
+      showAlerts: false,
+      useIndicator: false,
+    });
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "webchat" });
 

@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/zalouser",
-  "version": "2026.2.20",
+  "version": "2026.2.23",
   "description": "WinClaw Zalo Personal Account plugin via zca-cli",
   "type": "module",
   "dependencies": {

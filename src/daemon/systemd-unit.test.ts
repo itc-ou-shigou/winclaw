@@ -1,37 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { parseSystemdExecStart } from "./systemd-unit.js";
+import { buildSystemdUnit } from "./systemd-unit.js";
 
-describe("parseSystemdExecStart", () => {
-  it("splits on whitespace outside quotes", () => {
-    const execStart = "/usr/bin/winclaw gateway start --foo bar";
-    expect(parseSystemdExecStart(execStart)).toEqual([
-      "/usr/bin/winclaw",
-      "gateway",
-      "start",
-      "--foo",
-      "bar",
-    ]);
+describe("buildSystemdUnit", () => {
+  it("quotes arguments with whitespace", () => {
+    const unit = buildSystemdUnit({
+      description: "WinClaw Gateway",
+      programArguments: ["/usr/bin/winclaw", "gateway", "--name", "My Bot"],
+      environment: {},
+    });
+    const execStart = unit.split("\n").find((line) => line.startsWith("ExecStart="));
+    expect(execStart).toBe('ExecStart=/usr/bin/winclaw gateway --name "My Bot"');
   });
 
-  it("preserves quoted arguments", () => {
-    const execStart = '/usr/bin/winclaw gateway start --name "My Bot"';
-    expect(parseSystemdExecStart(execStart)).toEqual([
-      "/usr/bin/winclaw",
-      "gateway",
-      "start",
-      "--name",
-      "My Bot",
-    ]);
-  });
-
-  it("parses path arguments", () => {
-    const execStart = "/usr/bin/winclaw gateway start --path /tmp/winclaw";
-    expect(parseSystemdExecStart(execStart)).toEqual([
-      "/usr/bin/winclaw",
-      "gateway",
-      "start",
-      "--path",
-      "/tmp/winclaw",
-    ]);
+  it("rejects environment values with line breaks", () => {
+    expect(() =>
+      buildSystemdUnit({
+        description: "WinClaw Gateway",
+        programArguments: ["/usr/bin/winclaw", "gateway", "start"],
+        environment: {
+          INJECT: "ok\nExecStartPre=/bin/touch /tmp/oc15789_rce",
+        },
+      }),
+    ).toThrow(/CR or LF/);
   });
 });

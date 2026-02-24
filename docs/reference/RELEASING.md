@@ -23,7 +23,7 @@ When the operator says “release”, immediately do this preflight (no extra qu
 
 - [ ] Bump `package.json` version (e.g., `2026.1.29`).
 - [ ] Run `pnpm plugins:sync` to align extension package versions + changelogs.
-- [ ] Update CLI/version strings: [`src/cli/program.ts`](https://github.com/winclaw/winclaw/blob/main/src/cli/program.ts) and the Baileys user agent in [`src/provider-web.ts`](https://github.com/winclaw/winclaw/blob/main/src/provider-web.ts).
+- [ ] Update CLI/version strings in [`src/version.ts`](https://github.com/winclaw/winclaw/blob/main/src/version.ts) and the Baileys user agent in [`src/web/session.ts`](https://github.com/winclaw/winclaw/blob/main/src/web/session.ts).
 - [ ] Confirm package metadata (name, description, repository, keywords, license) and `bin` map points to [`winclaw.mjs`](https://github.com/winclaw/winclaw/blob/main/winclaw.mjs) for `winclaw`.
 - [ ] If dependencies changed, run `pnpm install` so `pnpm-lock.yaml` is current.
 
@@ -49,7 +49,7 @@ When the operator says “release”, immediately do this preflight (no extra qu
 - [ ] `WINCLAW_INSTALL_SMOKE_SKIP_NONROOT=1 pnpm test:install:smoke` (Docker install smoke test, fast path; required before release)
   - If the immediate previous npm release is known broken, set `WINCLAW_INSTALL_SMOKE_PREVIOUS=<last-good-version>` or `WINCLAW_INSTALL_SMOKE_SKIP_PREVIOUS=1` for the preinstall step.
 - [ ] (Optional) Full installer smoke (adds non-root + CLI coverage): `pnpm test:install:smoke`
-- [ ] (Optional) Installer E2E (Docker, runs `curl -fsSL https://openclaw.ai/install.sh | bash`, onboards, then runs real tool calls):
+- [ ] (Optional) Installer E2E (Docker, runs `curl -fsSL https://winclaw.ai/install.sh | bash`, onboards, then runs real tool calls):
   - `pnpm test:install:e2e:openai` (requires `OPENAI_API_KEY`)
   - `pnpm test:install:e2e:anthropic` (requires `ANTHROPIC_API_KEY`)
   - `pnpm test:install:e2e` (requires both keys; runs both providers)

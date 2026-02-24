@@ -1,26 +1,15 @@
 import { type ChannelId, getChannelPlugin } from "../../channels/plugins/index.js";
-import { formatCliCommand } from "../../cli/command-format.js";
-import { type WinClawConfig, readConfigFileSnapshot } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import { DEFAULT_ACCOUNT_ID } from "../../routing/session-key.js";
 import { defaultRuntime, type RuntimeEnv } from "../../runtime.js";
+import { requireValidConfigSnapshot } from "../config-validation.js";
 
 export type ChatChannel = ChannelId;
 
 export async function requireValidConfig(
   runtime: RuntimeEnv = defaultRuntime,
 ): Promise<WinClawConfig | null> {
-  const snapshot = await readConfigFileSnapshot();
-  if (snapshot.exists && !snapshot.valid) {
-    const issues =
-      snapshot.issues.length > 0
-        ? snapshot.issues.map((issue) => `- ${issue.path}: ${issue.message}`).join("\n")
-        : "Unknown validation issue.";
-    runtime.error(`Config invalid:\n${issues}`);
-    runtime.error(`Fix the config or run ${formatCliCommand("winclaw doctor")}.`);
-    runtime.exit(1);
-    return null;
-  }
-  return snapshot.config;
+  return await requireValidConfigSnapshot(runtime);
 }
 
 export function formatAccountLabel(params: { accountId: string; name?: string }) {

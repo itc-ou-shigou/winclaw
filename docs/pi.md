@@ -1,5 +1,9 @@
 ---
 title: "Pi Integration Architecture"
+summary: "Architecture of WinClaw's embedded Pi agent integration and session lifecycle"
+read_when:
+  - Understanding Pi SDK integration design in WinClaw
+  - Modifying agent session lifecycle, tooling, or provider wiring for Pi
 ---
 
 # Pi Integration Architecture
@@ -33,7 +37,7 @@ WinClaw uses the pi SDK to embed an AI coding agent into its messaging gateway a
 | `pi-ai`           | Core LLM abstractions: `Model`, `streamSimple`, message types, provider APIs                           |
 | `pi-agent-core`   | Agent loop, tool execution, `AgentMessage` types                                                       |
 | `pi-coding-agent` | High-level SDK: `createAgentSession`, `SessionManager`, `AuthStorage`, `ModelRegistry`, built-in tools |
-| `pi-tui`          | Terminal UI components (used in WinClaw's local TUI mode)                                              |
+| `pi-tui`          | Terminal UI components (used in WinClaw's local TUI mode)                                             |
 
 ## File Structure
 
@@ -377,7 +381,7 @@ WinClaw loads custom pi extensions for specialized behavior:
 
 ### Compaction Safeguard
 
-`pi-extensions/compaction-safeguard.ts` adds guardrails to compaction, including adaptive token budgeting plus tool failure and file operation summaries:
+`src/agents/pi-extensions/compaction-safeguard.ts` adds guardrails to compaction, including adaptive token budgeting plus tool failure and file operation summaries:
 
 ```typescript
 if (resolveCompactionMode(params.cfg) === "safeguard") {
@@ -388,7 +392,7 @@ if (resolveCompactionMode(params.cfg) === "safeguard") {
 
 ### Context Pruning
 
-`pi-extensions/context-pruning.ts` implements cache-TTL based context pruning:
+`src/agents/pi-extensions/context-pruning.ts` implements cache-TTL based context pruning:
 
 ```typescript
 if (cfg?.agents?.defaults?.contextPruning?.mode === "cache-ttl") {
@@ -511,15 +515,15 @@ This provides the interactive terminal experience similar to pi's native mode.
 
 ## Key Differences from Pi CLI
 
-| Aspect          | Pi CLI                  | WinClaw Embedded                                                                             |
-| --------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
-| Invocation      | `pi` command / RPC      | SDK via `createAgentSession()`                                                               |
-| Tools           | Default coding tools    | Custom WinClaw tool suite                                                                    |
-| System prompt   | AGENTS.md + prompts     | Dynamic per-channel/context                                                                  |
+| Aspect          | Pi CLI                  | WinClaw Embedded                                                                              |
+| --------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Invocation      | `pi` command / RPC      | SDK via `createAgentSession()`                                                                 |
+| Tools           | Default coding tools    | Custom WinClaw tool suite                                                                     |
+| System prompt   | AGENTS.md + prompts     | Dynamic per-channel/context                                                                    |
 | Session storage | `~/.pi/agent/sessions/` | `~/.winclaw/agents/<agentId>/sessions/` (or `$WINCLAW_STATE_DIR/agents/<agentId>/sessions/`) |
-| Auth            | Single credential       | Multi-profile with rotation                                                                  |
-| Extensions      | Loaded from disk        | Programmatic + disk paths                                                                    |
-| Event handling  | TUI rendering           | Callback-based (onBlockReply, etc.)                                                          |
+| Auth            | Single credential       | Multi-profile with rotation                                                                    |
+| Extensions      | Loaded from disk        | Programmatic + disk paths                                                                      |
+| Event handling  | TUI rendering           | Callback-based (onBlockReply, etc.)                                                            |
 
 ## Future Considerations
 
@@ -533,80 +537,22 @@ Areas for potential rework:
 
 ## Tests
 
-All existing tests that cover the pi integration and its extensions:
+Pi integration coverage spans these suites:
 
-- `src/agents/pi-embedded-block-chunker.test.ts`
-- `src/agents/pi-embedded-helpers.buildbootstrapcontextfiles.test.ts`
-- `src/agents/pi-embedded-helpers.classifyfailoverreason.test.ts`
-- `src/agents/pi-embedded-helpers.downgradeopenai-reasoning.test.ts`
-- `src/agents/pi-embedded-helpers.formatassistanterrortext.test.ts`
-- `src/agents/pi-embedded-helpers.formatrawassistanterrorforui.test.ts`
-- `src/agents/pi-embedded-helpers.image-dimension-error.test.ts`
-- `src/agents/pi-embedded-helpers.image-size-error.test.ts`
-- `src/agents/pi-embedded-helpers.isautherrormessage.test.ts`
-- `src/agents/pi-embedded-helpers.isbillingerrormessage.test.ts`
-- `src/agents/pi-embedded-helpers.iscloudcodeassistformaterror.test.ts`
-- `src/agents/pi-embedded-helpers.iscompactionfailureerror.test.ts`
-- `src/agents/pi-embedded-helpers.iscontextoverflowerror.test.ts`
-- `src/agents/pi-embedded-helpers.isfailovererrormessage.test.ts`
-- `src/agents/pi-embedded-helpers.islikelycontextoverflowerror.test.ts`
-- `src/agents/pi-embedded-helpers.ismessagingtoolduplicate.test.ts`
-- `src/agents/pi-embedded-helpers.messaging-duplicate.test.ts`
-- `src/agents/pi-embedded-helpers.normalizetextforcomparison.test.ts`
-- `src/agents/pi-embedded-helpers.resolvebootstrapmaxchars.test.ts`
-- `src/agents/pi-embedded-helpers.sanitize-session-messages-images.keeps-tool-call-tool-result-ids-unchanged.test.ts`
-- `src/agents/pi-embedded-helpers.sanitize-session-messages-images.removes-empty-assistant-text-blocks-but-preserves.test.ts`
-- `src/agents/pi-embedded-helpers.sanitizegoogleturnordering.test.ts`
-- `src/agents/pi-embedded-helpers.sanitizesessionmessagesimages-thought-signature-stripping.test.ts`
-- `src/agents/pi-embedded-helpers.sanitizetoolcallid.test.ts`
-- `src/agents/pi-embedded-helpers.sanitizeuserfacingtext.test.ts`
-- `src/agents/pi-embedded-helpers.stripthoughtsignatures.test.ts`
-- `src/agents/pi-embedded-helpers.validate-turns.test.ts`
-- `src/agents/pi-embedded-runner-extraparams.live.test.ts` (live)
-- `src/agents/pi-embedded-runner-extraparams.test.ts`
-- `src/agents/pi-embedded-runner.applygoogleturnorderingfix.test.ts`
-- `src/agents/pi-embedded-runner.buildembeddedsandboxinfo.test.ts`
-- `src/agents/pi-embedded-runner.createsystempromptoverride.test.ts`
-- `src/agents/pi-embedded-runner.get-dm-history-limit-from-session-key.falls-back-provider-default-per-dm-not.test.ts`
-- `src/agents/pi-embedded-runner.get-dm-history-limit-from-session-key.returns-undefined-sessionkey-is-undefined.test.ts`
-- `src/agents/pi-embedded-runner.google-sanitize-thinking.test.ts`
-- `src/agents/pi-embedded-runner.guard.test.ts`
-- `src/agents/pi-embedded-runner.limithistoryturns.test.ts`
-- `src/agents/pi-embedded-runner.resolvesessionagentids.test.ts`
-- `src/agents/pi-embedded-runner.run-embedded-pi-agent.auth-profile-rotation.test.ts`
-- `src/agents/pi-embedded-runner.sanitize-session-history.test.ts`
-- `src/agents/pi-embedded-runner.splitsdktools.test.ts`
-- `src/agents/pi-embedded-runner.test.ts`
-- `src/agents/pi-embedded-subscribe.code-span-awareness.test.ts`
-- `src/agents/pi-embedded-subscribe.reply-tags.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.calls-onblockreplyflush-before-tool-execution-start-preserve.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.does-not-append-text-end-content-is.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.does-not-call-onblockreplyflush-callback-is-not.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.does-not-duplicate-text-end-repeats-full.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.does-not-emit-duplicate-block-replies-text.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.emits-block-replies-text-end-does-not.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.emits-reasoning-as-separate-message-enabled.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.filters-final-suppresses-output-without-start-tag.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.includes-canvas-action-metadata-tool-summaries.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.keeps-assistanttexts-final-answer-block-replies-are.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.keeps-indented-fenced-blocks-intact.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.reopens-fenced-blocks-splitting-inside-them.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.splits-long-single-line-fenced-blocks-reopen.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.streams-soft-chunks-paragraph-preference.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.subscribeembeddedpisession.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.suppresses-message-end-block-replies-message-tool.test.ts`
-- `src/agents/pi-embedded-subscribe.subscribe-embedded-pi-session.waits-multiple-compaction-retries-before-resolving.test.ts`
-- `src/agents/pi-embedded-subscribe.tools.test.ts`
-- `src/agents/pi-embedded-utils.test.ts`
-- `src/agents/pi-extensions/compaction-safeguard.test.ts`
-- `src/agents/pi-extensions/context-pruning.test.ts`
+- `src/agents/pi-*.test.ts`
+- `src/agents/pi-auth-json.test.ts`
+- `src/agents/pi-embedded-*.test.ts`
+- `src/agents/pi-embedded-helpers*.test.ts`
+- `src/agents/pi-embedded-runner*.test.ts`
+- `src/agents/pi-embedded-runner/**/*.test.ts`
+- `src/agents/pi-embedded-subscribe*.test.ts`
+- `src/agents/pi-tools*.test.ts`
+- `src/agents/pi-tool-definition-adapter*.test.ts`
 - `src/agents/pi-settings.test.ts`
-- `src/agents/pi-tool-definition-adapter.test.ts`
-- `src/agents/pi-tools-agent-config.test.ts`
-- `src/agents/pi-tools.create-winclaw-coding-tools.adds-claude-style-aliases-schemas-without-dropping-b.test.ts`
-- `src/agents/pi-tools.create-winclaw-coding-tools.adds-claude-style-aliases-schemas-without-dropping-d.test.ts`
-- `src/agents/pi-tools.create-winclaw-coding-tools.adds-claude-style-aliases-schemas-without-dropping-f.test.ts`
-- `src/agents/pi-tools.create-winclaw-coding-tools.adds-claude-style-aliases-schemas-without-dropping.test.ts`
-- `src/agents/pi-tools.policy.test.ts`
-- `src/agents/pi-tools.safe-bins.test.ts`
-- `src/agents/pi-tools.workspace-paths.test.ts`
+- `src/agents/pi-extensions/**/*.test.ts`
+
+Live/opt-in:
+
+- `src/agents/pi-embedded-runner-extraparams.live.test.ts` (enable `WINCLAW_LIVE_TEST=1`)
+
+For current run commands, see [Pi Development Workflow](/pi-dev).

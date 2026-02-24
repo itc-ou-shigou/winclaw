@@ -3,7 +3,7 @@ import type { WinClawConfig } from "../config/config.js";
 import "./test-helpers/fast-coding-tools.js";
 import { createWinClawCodingTools } from "./pi-tools.js";
 
-const defaultTools = createWinClawCodingTools();
+const defaultTools = createWinClawCodingTools({ senderIsOwner: true });
 
 describe("createWinClawCodingTools", () => {
   it("preserves action enums in normalized schemas", () => {
@@ -51,13 +51,12 @@ describe("createWinClawCodingTools", () => {
       expect(values.size).toBeGreaterThanOrEqual(min);
     }
   });
-  it("includes exec and process tools by default", () => {
+  it("enforces apply_patch availability and canonical names across model/provider constraints", () => {
     expect(defaultTools.some((tool) => tool.name === "exec")).toBe(true);
     expect(defaultTools.some((tool) => tool.name === "process")).toBe(true);
     expect(defaultTools.some((tool) => tool.name === "apply_patch")).toBe(false);
-  });
-  it("gates apply_patch behind tools.exec.applyPatch for OpenAI models", () => {
-    const config: WinClawConfig = {
+
+    const enabledConfig: WinClawConfig = {
       tools: {
         exec: {
           applyPatch: { enabled: true },
@@ -65,21 +64,20 @@ describe("createWinClawCodingTools", () => {
       },
     };
     const openAiTools = createWinClawCodingTools({
-      config,
+      config: enabledConfig,
       modelProvider: "openai",
       modelId: "gpt-5.2",
     });
     expect(openAiTools.some((tool) => tool.name === "apply_patch")).toBe(true);
 
     const anthropicTools = createWinClawCodingTools({
-      config,
+      config: enabledConfig,
       modelProvider: "anthropic",
       modelId: "claude-opus-4-5",
     });
     expect(anthropicTools.some((tool) => tool.name === "apply_patch")).toBe(false);
-  });
-  it("respects apply_patch allowModels", () => {
-    const config: WinClawConfig = {
+
+    const allowModelsConfig: WinClawConfig = {
       tools: {
         exec: {
           applyPatch: { enabled: true, allowModels: ["gpt-5.2"] },
@@ -87,25 +85,24 @@ describe("createWinClawCodingTools", () => {
       },
     };
     const allowed = createWinClawCodingTools({
-      config,
+      config: allowModelsConfig,
       modelProvider: "openai",
       modelId: "gpt-5.2",
     });
     expect(allowed.some((tool) => tool.name === "apply_patch")).toBe(true);
 
     const denied = createWinClawCodingTools({
-      config,
+      config: allowModelsConfig,
       modelProvider: "openai",
       modelId: "gpt-5-mini",
     });
     expect(denied.some((tool) => tool.name === "apply_patch")).toBe(false);
-  });
-  it("keeps canonical tool names for Anthropic OAuth (pi-ai remaps on the wire)", () => {
-    const tools = createWinClawCodingTools({
+
+    const oauthTools = createWinClawCodingTools({
       modelProvider: "anthropic",
       modelAuthMode: "oauth",
     });
-    const names = new Set(tools.map((tool) => tool.name));
+    const names = new Set(oauthTools.map((tool) => tool.name));
     expect(names.has("exec")).toBe(true);
     expect(names.has("read")).toBe(true);
     expect(names.has("write")).toBe(true);

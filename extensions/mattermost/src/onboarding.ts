@@ -1,5 +1,5 @@
 import type { ChannelOnboardingAdapter, WinClawConfig, WizardPrompter } from "winclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk/account-id";
 import {
   listMattermostAccountIds,
   resolveDefaultMattermostAccountId,
@@ -16,10 +16,29 @@ async function noteMattermostSetup(prompter: WizardPrompter): Promise<void> {
       "2) Create a bot + copy its token",
       "3) Use your server base URL (e.g., https://chat.example.com)",
       "Tip: the bot must be a member of any channel you want it to monitor.",
-      "Docs: https://docs.openclaw.ai/channels/mattermost",
+      "Docs: https://docs.winclaw.ai/channels/mattermost",
     ].join("\n"),
     "Mattermost bot token",
   );
+}
+
+async function promptMattermostCredentials(prompter: WizardPrompter): Promise<{
+  botToken: string;
+  baseUrl: string;
+}> {
+  const botToken = String(
+    await prompter.text({
+      message: "Enter Mattermost bot token",
+      validate: (value) => (value?.trim() ? undefined : "Required"),
+    }),
+  ).trim();
+  const baseUrl = String(
+    await prompter.text({
+      message: "Enter Mattermost base URL",
+      validate: (value) => (value?.trim() ? undefined : "Required"),
+    }),
+  ).trim();
+  return { botToken, baseUrl };
 }
 
 export const mattermostOnboardingAdapter: ChannelOnboardingAdapter = {
@@ -90,18 +109,9 @@ export const mattermostOnboardingAdapter: ChannelOnboardingAdapter = {
           },
         };
       } else {
-        botToken = String(
-          await prompter.text({
-            message: "Enter Mattermost bot token",
-            validate: (value) => (value?.trim() ? undefined : "Required"),
-          }),
-        ).trim();
-        baseUrl = String(
-          await prompter.text({
-            message: "Enter Mattermost base URL",
-            validate: (value) => (value?.trim() ? undefined : "Required"),
-          }),
-        ).trim();
+        const entered = await promptMattermostCredentials(prompter);
+        botToken = entered.botToken;
+        baseUrl = entered.baseUrl;
       }
     } else if (accountConfigured) {
       const keep = await prompter.confirm({
@@ -109,32 +119,14 @@ export const mattermostOnboardingAdapter: ChannelOnboardingAdapter = {
         initialValue: true,
       });
       if (!keep) {
-        botToken = String(
-          await prompter.text({
-            message: "Enter Mattermost bot token",
-            validate: (value) => (value?.trim() ? undefined : "Required"),
-          }),
-        ).trim();
-        baseUrl = String(
-          await prompter.text({
-            message: "Enter Mattermost base URL",
-            validate: (value) => (value?.trim() ? undefined : "Required"),
-          }),
-        ).trim();
+        const entered = await promptMattermostCredentials(prompter);
+        botToken = entered.botToken;
+        baseUrl = entered.baseUrl;
       }
     } else {
-      botToken = String(
-        await prompter.text({
-          message: "Enter Mattermost bot token",
-          validate: (value) => (value?.trim() ? undefined : "Required"),
-        }),
-      ).trim();
-      baseUrl = String(
-        await prompter.text({
-          message: "Enter Mattermost base URL",
-          validate: (value) => (value?.trim() ? undefined : "Required"),
-        }),
-      ).trim();
+      const entered = await promptMattermostCredentials(prompter);
+      botToken = entered.botToken;
+      baseUrl = entered.baseUrl;
     }
 
     if (botToken || baseUrl) {

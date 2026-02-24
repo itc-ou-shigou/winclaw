@@ -67,7 +67,11 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
   // Auth profile metadata (secrets live in auth-profiles.json)
   auth: {
     profiles: {
-      "anthropic:me@example.com": { provider: "anthropic", mode: "oauth", email: "me@example.com" },
+      "anthropic:me@example.com": {
+        provider: "anthropic",
+        mode: "oauth",
+        email: "me@example.com",
+      },
       "anthropic:work": { provider: "anthropic", mode: "api_key" },
       "openai:default": { provider: "openai", mode: "api_key" },
       "openai-codex:default": { provider: "openai-codex", mode: "oauth" },
@@ -165,6 +169,9 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
       pruneAfter: "30d",
       maxEntries: 500,
       rotateBytes: "10mb",
+      resetArchiveRetention: "30d", // duration or false
+      maxDiskBytes: "500mb", // optional
+      highWaterBytes: "400mb", // optional (defaults to 80% of maxDiskBytes)
     },
     typingIntervalSeconds: 5,
     sendPolicy: {
@@ -195,7 +202,7 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
-      dm: { enabled: true, allowFrom: ["steipete"] },
+      dm: { enabled: true, allowFrom: ["123456789012345678"] },
       guilds: {
         "123456789012345678": {
           slug: "friends-of-winclaw",
@@ -310,7 +317,7 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
       allowFrom: {
         whatsapp: ["+15555550123"],
         telegram: ["123456789"],
-        discord: ["steipete"],
+        discord: ["123456789012345678"],
         slack: ["U123"],
         signal: ["+15555550123"],
         imessage: ["user@example.com"],
@@ -351,6 +358,10 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
     store: "~/.winclaw/cron/cron.json",
     maxConcurrentRuns: 2,
     sessionRetention: "24h",
+    runLog: {
+      maxBytes: "2mb",
+      keepLines: 2000,
+    },
   },
 
   // Webhooks
@@ -359,7 +370,7 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
     path: "/hooks",
     token: "shared-secret",
     presets: ["gmail"],
-    transformsDir: "~/.winclaw/hooks",
+    transformsDir: "~/.winclaw/hooks/transforms",
     mappings: [
       {
         id: "gmail-hook",
@@ -375,7 +386,10 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
         to: "+15555550123",
         thinking: "low",
         timeoutSeconds: 300,
-        transform: { module: "./transforms/gmail.js", export: "transformGmail" },
+        transform: {
+          module: "gmail.js",
+          export: "transformGmail",
+        },
       },
     ],
     gmail: {
@@ -447,7 +461,7 @@ Save to `~/.winclaw/winclaw.json` and you can DM the bot from that number.
     discord: {
       enabled: true,
       token: "YOUR_TOKEN",
-      dm: { allowFrom: ["yourname"] },
+      dm: { allowFrom: ["123456789012345678"] },
     },
   },
 }
@@ -473,11 +487,14 @@ If more than one person can DM your bot (multiple entries in `allowFrom`, pairin
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
-      dm: { enabled: true, allowFrom: ["alice", "bob"] },
+      dm: { enabled: true, allowFrom: ["123456789012345678", "987654321098765432"] },
     },
   },
 }
 ```
+
+For Discord/Slack/Google Chat/MS Teams/Mattermost/IRC, sender authorization is ID-first by default.
+Only enable direct mutable name/email/nick matching with each channel's `dangerouslyAllowNameMatching: true` if you explicitly accept that risk.
 
 ### OAuth with API key failover
 

@@ -59,6 +59,13 @@ export type MsgContext = {
   ReplyToBody?: string;
   ReplyToSender?: string;
   ReplyToIsQuote?: boolean;
+  /** Forward origin from the reply target (when reply_to_message is a forwarded message). */
+  ReplyToForwardedFrom?: string;
+  ReplyToForwardedFromType?: string;
+  ReplyToForwardedFromId?: string;
+  ReplyToForwardedFromUsername?: string;
+  ReplyToForwardedFromTitle?: string;
+  ReplyToForwardedDate?: number;
   ForwardedFrom?: string;
   ForwardedFromType?: string;
   ForwardedFromId?: string;
@@ -69,6 +76,9 @@ export type MsgContext = {
   ForwardedFromMessageId?: number;
   ForwardedDate?: number;
   ThreadStarterBody?: string;
+  /** Full thread history when starting a new thread session. */
+  ThreadHistoryBody?: string;
+  IsFirstThreadTurn?: boolean;
   ThreadLabel?: string;
   MediaPath?: string;
   MediaUrl?: string;

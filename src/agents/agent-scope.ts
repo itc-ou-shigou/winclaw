@@ -1,13 +1,23 @@
 import path from "node:path";
 import type { WinClawConfig } from "../config/config.js";
+import { resolveAgentModelFallbackValues } from "../config/model-input.js";
 import { resolveStateDir } from "../config/paths.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   DEFAULT_AGENT_ID,
   normalizeAgentId,
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
+import { normalizeSkillFilter } from "./skills/filter.js";
 import { resolveDefaultAgentWorkspaceDir } from "./workspace.js";
+const log = createSubsystemLogger("agent-scope");
+
+/** Strip null bytes from paths to prevent ENOTDIR errors. */
+function stripNullBytes(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/\0/g, "");
+}
 
 export { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
 
@@ -31,7 +41,7 @@ type ResolvedAgentConfig = {
 
 let defaultAgentWarned = false;
 
-function listAgents(cfg: WinClawConfig): AgentEntry[] {
+export function listAgentEntries(cfg: WinClawConfig): AgentEntry[] {
   const list = cfg.agents?.list;
   if (!Array.isArray(list)) {
     return [];
@@ -40,7 +50,7 @@ function listAgents(cfg: WinClawConfig): AgentEntry[] {
 }
 
 export function listAgentIds(cfg: WinClawConfig): string[] {
-  const agents = listAgents(cfg);
+  const agents = listAgentEntries(cfg);
   if (agents.length === 0) {
     return [DEFAULT_AGENT_ID];
   }
@@ -58,28 +68,36 @@ export function listAgentIds(cfg: WinClawConfig): string[] {
 }
 
 export function resolveDefaultAgentId(cfg: WinClawConfig): string {
-  const agents = listAgents(cfg);
+  const agents = listAgentEntries(cfg);
   if (agents.length === 0) {
     return DEFAULT_AGENT_ID;
   }
   const defaults = agents.filter((agent) => agent?.default);
   if (defaults.length > 1 && !defaultAgentWarned) {
     defaultAgentWarned = true;
-    console.warn("Multiple agents marked default=true; using the first entry as default.");
+    log.warn("Multiple agents marked default=true; using the first entry as default.");
   }
   const chosen = (defaults[0] ?? agents[0])?.id?.trim();
   return normalizeAgentId(chosen || DEFAULT_AGENT_ID);
 }
 
-export function resolveSessionAgentIds(params: { sessionKey?: string; config?: WinClawConfig }): {
+export function resolveSessionAgentIds(params: {
+  sessionKey?: string;
+  config?: WinClawConfig;
+  agentId?: string;
+}): {
   defaultAgentId: string;
   sessionAgentId: string;
 } {
   const defaultAgentId = resolveDefaultAgentId(params.config ?? {});
+  const explicitAgentIdRaw =
+    typeof params.agentId === "string" ? params.agentId.trim().toLowerCase() : "";
+  const explicitAgentId = explicitAgentIdRaw ? normalizeAgentId(explicitAgentIdRaw) : null;
   const sessionKey = params.sessionKey?.trim();
   const normalizedSessionKey = sessionKey ? sessionKey.toLowerCase() : undefined;
   const parsed = normalizedSessionKey ? parseAgentSessionKey(normalizedSessionKey) : null;
-  const sessionAgentId = parsed?.agentId ? normalizeAgentId(parsed.agentId) : defaultAgentId;
+  const sessionAgentId =
+    explicitAgentId ?? (parsed?.agentId ? normalizeAgentId(parsed.agentId) : defaultAgentId);
   return { defaultAgentId, sessionAgentId };
 }
 
@@ -92,7 +110,7 @@ export function resolveSessionAgentId(params: {
 
 function resolveAgentEntry(cfg: WinClawConfig, agentId: string): AgentEntry | undefined {
   const id = normalizeAgentId(agentId);
-  return listAgents(cfg).find((entry) => normalizeAgentId(entry.id) === id);
+  return listAgentEntries(cfg).find((entry) => normalizeAgentId(entry.id) === id);
 }
 
 export function resolveAgentConfig(
@@ -128,24 +146,46 @@ export function resolveAgentSkillsFilter(
   cfg: WinClawConfig,
   agentId: string,
 ): string[] | undefined {
-  const raw = resolveAgentConfig(cfg, agentId)?.skills;
-  if (!raw) {
-    return undefined;
-  }
-  const normalized = raw.map((entry) => String(entry).trim()).filter(Boolean);
-  return normalized.length > 0 ? normalized : [];
+  return normalizeSkillFilter(resolveAgentConfig(cfg, agentId)?.skills);
 }
 
-export function resolveAgentModelPrimary(cfg: WinClawConfig, agentId: string): string | undefined {
-  const raw = resolveAgentConfig(cfg, agentId)?.model;
-  if (!raw) {
+function resolveModelPrimary(raw: unknown): string | undefined {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return trimmed || undefined;
+  }
+  if (!raw || typeof raw !== "object") {
     return undefined;
   }
-  if (typeof raw === "string") {
-    return raw.trim() || undefined;
+  const primary = (raw as { primary?: unknown }).primary;
+  if (typeof primary !== "string") {
+    return undefined;
   }
-  const primary = raw.primary?.trim();
-  return primary || undefined;
+  const trimmed = primary.trim();
+  return trimmed || undefined;
+}
+
+export function resolveAgentExplicitModelPrimary(
+  cfg: WinClawConfig,
+  agentId: string,
+): string | undefined {
+  const raw = resolveAgentConfig(cfg, agentId)?.model;
+  return resolveModelPrimary(raw);
+}
+
+export function resolveAgentEffectiveModelPrimary(
+  cfg: WinClawConfig,
+  agentId: string,
+): string | undefined {
+  return (
+    resolveAgentExplicitModelPrimary(cfg, agentId) ??
+    resolveModelPrimary(cfg.agents?.defaults?.model)
+  );
+}
+
+// Backward-compatible alias. Prefer explicit/effective helpers at new call sites.
+export function resolveAgentModelPrimary(cfg: WinClawConfig, agentId: string): string | undefined {
+  return resolveAgentExplicitModelPrimary(cfg, agentId);
 }
 
 export function resolveAgentModelFallbacksOverride(
@@ -163,22 +203,35 @@ export function resolveAgentModelFallbacksOverride(
   return Array.isArray(raw.fallbacks) ? raw.fallbacks : undefined;
 }
 
+export function resolveEffectiveModelFallbacks(params: {
+  cfg: WinClawConfig;
+  agentId: string;
+  hasSessionModelOverride: boolean;
+}): string[] | undefined {
+  const agentFallbacksOverride = resolveAgentModelFallbacksOverride(params.cfg, params.agentId);
+  if (!params.hasSessionModelOverride) {
+    return agentFallbacksOverride;
+  }
+  const defaultFallbacks = resolveAgentModelFallbackValues(params.cfg.agents?.defaults?.model);
+  return agentFallbacksOverride ?? defaultFallbacks;
+}
+
 export function resolveAgentWorkspaceDir(cfg: WinClawConfig, agentId: string) {
   const id = normalizeAgentId(agentId);
   const configured = resolveAgentConfig(cfg, id)?.workspace?.trim();
   if (configured) {
-    return resolveUserPath(configured);
+    return stripNullBytes(resolveUserPath(configured));
   }
   const defaultAgentId = resolveDefaultAgentId(cfg);
   if (id === defaultAgentId) {
     const fallback = cfg.agents?.defaults?.workspace?.trim();
     if (fallback) {
-      return resolveUserPath(fallback);
+      return stripNullBytes(resolveUserPath(fallback));
     }
-    return resolveDefaultAgentWorkspaceDir(process.env);
+    return stripNullBytes(resolveDefaultAgentWorkspaceDir(process.env));
   }
   const stateDir = resolveStateDir(process.env);
-  return path.join(stateDir, `workspace-${id}`);
+  return stripNullBytes(path.join(stateDir, `workspace-${id}`));
 }
 
 export function resolveAgentDir(cfg: WinClawConfig, agentId: string) {

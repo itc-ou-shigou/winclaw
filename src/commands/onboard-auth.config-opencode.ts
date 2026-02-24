@@ -1,5 +1,6 @@
-import type { WinClawConfig } from "../config/config.js";
 import { OPENCODE_ZEN_DEFAULT_MODEL_REF } from "../agents/opencode-zen-models.js";
+import type { WinClawConfig } from "../config/config.js";
+import { applyAgentDefaultModelPrimary } from "./onboard-auth.config-shared.js";
 
 export function applyOpencodeZenProviderConfig(cfg: WinClawConfig): WinClawConfig {
   // Use the built-in opencode provider from pi-ai; only seed the allowlist alias.
@@ -23,22 +24,5 @@ export function applyOpencodeZenProviderConfig(cfg: WinClawConfig): WinClawConfi
 
 export function applyOpencodeZenConfig(cfg: WinClawConfig): WinClawConfig {
   const next = applyOpencodeZenProviderConfig(cfg);
-  return {
-    ...next,
-    agents: {
-      ...next.agents,
-      defaults: {
-        ...next.agents?.defaults,
-        model: {
-          ...(next.agents?.defaults?.model &&
-          "fallbacks" in (next.agents.defaults.model as Record<string, unknown>)
-            ? {
-                fallbacks: (next.agents.defaults.model as { fallbacks?: string[] }).fallbacks,
-              }
-            : undefined),
-          primary: OPENCODE_ZEN_DEFAULT_MODEL_REF,
-        },
-      },
-    },
-  };
+  return applyAgentDefaultModelPrimary(next, OPENCODE_ZEN_DEFAULT_MODEL_REF);
 }

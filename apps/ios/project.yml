@@ -29,9 +29,15 @@ targets:
   WinClaw:
     type: application
     platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
     sources:
       - path: Sources
     dependencies:
+      - target: WinClawShareExtension
+        embed: true
+      - target: WinClawWatchApp
       - package: WinClawKit
       - package: WinClawKit
         product: WinClawChatUI
@@ -69,10 +75,11 @@ targets:
     settings:
       base:
         CODE_SIGN_IDENTITY: "Apple Development"
-        CODE_SIGN_STYLE: Manual
-        DEVELOPMENT_TEAM: Y5PE65HELJ
-        PRODUCT_BUNDLE_IDENTIFIER: ai.winclaw.ios
-        PROVISIONING_PROFILE_SPECIFIER: "ai.winclaw.ios Development"
+        CODE_SIGN_ENTITLEMENTS: Sources/WinClaw.entitlements
+        CODE_SIGN_STYLE: "$(WINCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(WINCLAW_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(WINCLAW_APP_PROFILE)"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_APPINTENTS_METADATA: NO
@@ -81,13 +88,20 @@ targets:
       properties:
         CFBundleDisplayName: WinClaw
         CFBundleIconName: AppIcon
-        CFBundleShortVersionString: "2026.2.9"
-        CFBundleVersion: "20260202"
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.winclaw.ios
+            CFBundleURLSchemes:
+              - winclaw
+        CFBundleShortVersionString: "2026.2.23"
+        CFBundleVersion: "20260223"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UIBackgroundModes:
           - audio
+          - remote-notification
+        BGTaskSchedulerPermittedIdentifiers:
+          - ai.winclaw.ios.bgrefresh
         NSLocalNetworkUsageDescription: WinClaw discovers and connects to your WinClaw gateway on the local network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
@@ -108,6 +122,90 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+
+  WinClawShareExtension:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ShareExtension
+    dependencies:
+      - package: WinClawKit
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(WINCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(WINCLAW_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_SHARE_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(WINCLAW_SHARE_PROFILE)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: WinClaw Share
+        CFBundleShortVersionString: "2026.2.23"
+        CFBundleVersion: "20260223"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+              NSExtensionActivationSupportsMovieWithMaxCount: 1
+
+  WinClawWatchApp:
+    type: application.watchapp2
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchApp
+    dependencies:
+      - target: WinClawWatchExtension
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_WATCH_APP_BUNDLE_ID)"
+    info:
+      path: WatchApp/Info.plist
+      properties:
+        CFBundleDisplayName: WinClaw
+        CFBundleShortVersionString: "2026.2.23"
+        CFBundleVersion: "20260223"
+        WKCompanionAppBundleIdentifier: "$(WINCLAW_APP_BUNDLE_ID)"
+        WKWatchKitApp: true
+
+  WinClawWatchExtension:
+    type: watchkit2-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchExtension/Sources
+    dependencies:
+      - sdk: WatchConnectivity.framework
+      - sdk: UserNotifications.framework
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_WATCH_EXTENSION_BUNDLE_ID)"
+    info:
+      path: WatchExtension/Info.plist
+      properties:
+        CFBundleDisplayName: WinClaw
+        CFBundleShortVersionString: "2026.2.23"
+        CFBundleVersion: "20260223"
+        NSExtension:
+          NSExtensionAttributes:
+            WKAppBundleIdentifier: "$(WINCLAW_WATCH_APP_BUNDLE_ID)"
+          NSExtensionPointIdentifier: com.apple.watchkit
 
   WinClawTests:
     type: bundle.unit-test
@@ -130,5 +228,5 @@ targets:
       path: Tests/Info.plist
       properties:
         CFBundleDisplayName: WinClawTests
-        CFBundleShortVersionString: "2026.2.9"
-        CFBundleVersion: "20260202"
+        CFBundleShortVersionString: "2026.2.23"
+        CFBundleVersion: "20260223"
