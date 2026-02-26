@@ -1,7 +1,7 @@
 import { html, nothing } from "lit";
-import { icons } from "../icons.ts";
 import type { ConfigUiHints } from "../types.ts";
-import { matchesNodeSearch, parseConfigSearchQuery, renderNode } from "./config-form.node.ts";
+import { icons } from "../icons.ts";
+import { renderNode } from "./config-form.node.ts";
 import { hintForPath, humanize, schemaType, type JsonSchema } from "./config-form.shared.ts";
 
 export type ConfigFormProps = {
@@ -278,27 +278,20 @@ function getSectionIcon(key: string) {
   return sectionIcons[key as keyof typeof sectionIcons] ?? sectionIcons.default;
 }
 
-function matchesSearch(params: {
-  key: string;
-  schema: JsonSchema;
-  sectionValue: unknown;
-  uiHints: ConfigUiHints;
-  query: string;
-}): boolean {
-  if (!params.query) {
+function matchesSearch(key: string, schema: JsonSchema, query: string): boolean {
+  if (!query) {
     return true;
   }
-  const criteria = parseConfigSearchQuery(params.query);
-  const q = criteria.text;
-  const meta = SECTION_META[params.key];
+  const q = query.toLowerCase();
+  const meta = SECTION_META[key];
 
   // Check key name
-  if (q && params.key.toLowerCase().includes(q)) {
+  if (key.toLowerCase().includes(q)) {
     return true;
   }
 
   // Check label and description
-  if (q && meta) {
+  if (meta) {
     if (meta.label.toLowerCase().includes(q)) {
       return true;
     }
@@ -307,13 +300,56 @@ function matchesSearch(params: {
     }
   }
 
-  return matchesNodeSearch({
-    schema: params.schema,
-    value: params.sectionValue,
-    path: [params.key],
-    hints: params.uiHints,
-    criteria,
-  });
+  return schemaMatches(schema, q);
+}
+
+function schemaMatches(schema: JsonSchema, query: string): boolean {
+  if (schema.title?.toLowerCase().includes(query)) {
+    return true;
+  }
+  if (schema.description?.toLowerCase().includes(query)) {
+    return true;
+  }
+  if (schema.enum?.some((value) => String(value).toLowerCase().includes(query))) {
+    return true;
+  }
+
+  if (schema.properties) {
+    for (const [propKey, propSchema] of Object.entries(schema.properties)) {
+      if (propKey.toLowerCase().includes(query)) {
+        return true;
+      }
+      if (schemaMatches(propSchema, query)) {
+        return true;
+      }
+    }
+  }
+
+  if (schema.items) {
+    const items = Array.isArray(schema.items) ? schema.items : [schema.items];
+    for (const item of items) {
+      if (item && schemaMatches(item, query)) {
+        return true;
+      }
+    }
+  }
+
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    if (schemaMatches(schema.additionalProperties, query)) {
+      return true;
+    }
+  }
+
+  const unions = schema.anyOf ?? schema.oneOf ?? schema.allOf;
+  if (unions) {
+    for (const entry of unions) {
+      if (entry && schemaMatches(entry, query)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export function renderConfigForm(props: ConfigFormProps) {
@@ -332,7 +368,6 @@ export function renderConfigForm(props: ConfigFormProps) {
   const unsupported = new Set(props.unsupportedPaths ?? []);
   const properties = schema.properties;
   const searchQuery = props.searchQuery ?? "";
-  const searchCriteria = parseConfigSearchQuery(searchQuery);
   const activeSection = props.activeSection;
   const activeSubsection = props.activeSubsection ?? null;
 
@@ -349,16 +384,7 @@ export function renderConfigForm(props: ConfigFormProps) {
     if (activeSection && key !== activeSection) {
       return false;
     }
-    if (
-      searchQuery &&
-      !matchesSearch({
-        key,
-        schema: node,
-        sectionValue: value[key],
-        uiHints: props.uiHints,
-        query: searchQuery,
-      })
-    ) {
+    if (searchQuery && !matchesSearch(key, node, searchQuery)) {
       return false;
     }
     return true;
@@ -430,7 +456,6 @@ export function renderConfigForm(props: ConfigFormProps) {
                     unsupported,
                     disabled: props.disabled ?? false,
                     showLabel: false,
-                    searchCriteria,
                     onPatch: props.onPatch,
                   })}
                 </div>
@@ -465,7 +490,6 @@ export function renderConfigForm(props: ConfigFormProps) {
                     unsupported,
                     disabled: props.disabled ?? false,
                     showLabel: false,
-                    searchCriteria,
                     onPatch: props.onPatch,
                   })}
                 </div>

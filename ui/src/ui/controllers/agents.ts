@@ -1,5 +1,5 @@
 import type { GatewayBrowserClient } from "../gateway.ts";
-import type { AgentsListResult, ToolsCatalogResult } from "../types.ts";
+import type { AgentsListResult } from "../types.ts";
 
 export type AgentsState = {
   client: GatewayBrowserClient | null;
@@ -8,9 +8,6 @@ export type AgentsState = {
   agentsError: string | null;
   agentsList: AgentsListResult | null;
   agentsSelectedId: string | null;
-  toolsCatalogLoading: boolean;
-  toolsCatalogError: string | null;
-  toolsCatalogResult: ToolsCatalogResult | null;
 };
 
 export async function loadAgents(state: AgentsState, opts?: { force?: boolean }) {
@@ -36,29 +33,5 @@ export async function loadAgents(state: AgentsState, opts?: { force?: boolean })
     state.agentsError = String(err);
   } finally {
     state.agentsLoading = false;
-  }
-}
-
-export async function loadToolsCatalog(state: AgentsState, agentId?: string | null) {
-  if (!state.client || !state.connected) {
-    return;
-  }
-  if (state.toolsCatalogLoading) {
-    return;
-  }
-  state.toolsCatalogLoading = true;
-  state.toolsCatalogError = null;
-  try {
-    const res = await state.client.request<ToolsCatalogResult>("tools.catalog", {
-      agentId: agentId ?? state.agentsSelectedId ?? undefined,
-      includePlugins: true,
-    });
-    if (res) {
-      state.toolsCatalogResult = res;
-    }
-  } catch (err) {
-    state.toolsCatalogError = String(err);
-  } finally {
-    state.toolsCatalogLoading = false;
   }
 }

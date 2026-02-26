@@ -1,3 +1,5 @@
+import type { WinClawApp } from "./app.ts";
+import type { AgentsListResult } from "./types.ts";
 import { refreshChat } from "./app-chat.ts";
 import {
   startLogsPolling,
@@ -6,18 +8,12 @@ import {
   stopDebugPolling,
 } from "./app-polling.ts";
 import { scheduleChatScroll, scheduleLogsScroll } from "./app-scroll.ts";
-import type { WinClawApp } from "./app.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
-import { loadAgents, loadToolsCatalog } from "./controllers/agents.ts";
+import { loadAgents } from "./controllers/agents.ts";
 import { loadChannels } from "./controllers/channels.ts";
 import { loadConfig, loadConfigSchema } from "./controllers/config.ts";
-import {
-  loadCronJobs,
-  loadCronModelSuggestions,
-  loadCronRuns,
-  loadCronStatus,
-} from "./controllers/cron.ts";
+import { loadCronJobs, loadCronStatus } from "./controllers/cron.ts";
 import { loadDebug } from "./controllers/debug.ts";
 import { loadDevices } from "./controllers/devices.ts";
 import { loadExecApprovals } from "./controllers/exec-approvals.ts";
@@ -37,7 +33,6 @@ import {
 import { saveSettings, type UiSettings } from "./storage.ts";
 import { startThemeTransition, type ThemeTransitionContext } from "./theme-transition.ts";
 import { resolveTheme, type ResolvedTheme, type ThemeMode } from "./theme.ts";
-import type { AgentsListResult } from "./types.ts";
 
 type SettingsHost = {
   settings: UiSettings;
@@ -111,7 +106,10 @@ export function applySettingsFromUrl(host: SettingsHost) {
   }
 
   if (passwordRaw != null) {
-    // Never hydrate password from URL params; strip only.
+    const password = passwordRaw.trim();
+    if (password) {
+      (host as { password: string }).password = password;
+    }
     params.delete("password");
     hashParams.delete("password");
     shouldCleanUrl = true;
@@ -204,7 +202,6 @@ export async function refreshActiveTab(host: SettingsHost) {
   }
   if (host.tab === "agents") {
     await loadAgents(host as unknown as WinClawApp);
-    await loadToolsCatalog(host as unknown as WinClawApp);
     await loadConfig(host as unknown as WinClawApp);
     const agentIds = host.agentsList?.agents?.map((entry) => entry.id) ?? [];
     if (agentIds.length > 0) {
@@ -427,18 +424,9 @@ export async function loadChannelsTab(host: SettingsHost) {
 }
 
 export async function loadCron(host: SettingsHost) {
-  const cronHost = host as unknown as WinClawApp;
   await Promise.all([
     loadChannels(host as unknown as WinClawApp, false),
-    loadCronStatus(cronHost),
-    loadCronJobs(cronHost),
-    loadCronModelSuggestions(cronHost),
+    loadCronStatus(host as unknown as WinClawApp),
+    loadCronJobs(host as unknown as WinClawApp),
   ]);
-  if (cronHost.cronRunsScope === "all") {
-    await loadCronRuns(cronHost, null);
-    return;
-  }
-  if (cronHost.cronRunsJobId) {
-    await loadCronRuns(cronHost, cronHost.cronRunsJobId);
-  }
 }

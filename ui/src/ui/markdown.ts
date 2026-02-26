@@ -33,15 +33,9 @@ const allowedTags = [
   "thead",
   "tr",
   "ul",
-  "img",
 ];
 
-const allowedAttrs = ["class", "href", "rel", "target", "title", "start", "src", "alt"];
-const sanitizeOptions = {
-  ALLOWED_TAGS: allowedTags,
-  ALLOWED_ATTR: allowedAttrs,
-  ADD_DATA_URI_TAGS: ["img"],
-};
+const allowedAttrs = ["class", "href", "rel", "target", "title", "start"];
 
 let hooksInstalled = false;
 const MARKDOWN_CHAR_LIMIT = 140_000;
@@ -109,28 +103,25 @@ export function toSanitizedMarkdownHtml(markdown: string): string {
   if (truncated.text.length > MARKDOWN_PARSE_LIMIT) {
     const escaped = escapeHtml(`${truncated.text}${suffix}`);
     const html = `<pre class="code-block">${escaped}</pre>`;
-    const sanitized = DOMPurify.sanitize(html, sanitizeOptions);
+    const sanitized = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: allowedTags,
+      ALLOWED_ATTR: allowedAttrs,
+    });
     if (input.length <= MARKDOWN_CACHE_MAX_CHARS) {
       setCachedMarkdown(input, sanitized);
     }
     return sanitized;
   }
-  const rendered = marked.parse(`${truncated.text}${suffix}`, {
-    renderer: htmlEscapeRenderer,
-  }) as string;
-  const sanitized = DOMPurify.sanitize(rendered, sanitizeOptions);
+  const rendered = marked.parse(`${truncated.text}${suffix}`) as string;
+  const sanitized = DOMPurify.sanitize(rendered, {
+    ALLOWED_TAGS: allowedTags,
+    ALLOWED_ATTR: allowedAttrs,
+  });
   if (input.length <= MARKDOWN_CACHE_MAX_CHARS) {
     setCachedMarkdown(input, sanitized);
   }
   return sanitized;
 }
-
-// Prevent raw HTML in chat messages from being rendered as formatted HTML.
-// Display it as escaped text so users see the literal markup.
-// Security is handled by DOMPurify, but rendering pasted HTML (e.g. error
-// pages) as formatted output is confusing UX (#13937).
-const htmlEscapeRenderer = new marked.Renderer();
-htmlEscapeRenderer.html = ({ text }: { text: string }) => escapeHtml(text);
 
 function escapeHtml(value: string): string {
   return value

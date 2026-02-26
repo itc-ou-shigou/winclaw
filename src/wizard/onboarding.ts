@@ -67,11 +67,20 @@ export async function runOnboardingWizard(
   prompter: WizardPrompter,
 ) {
   const onboardHelpers = await import("../commands/onboard-helpers.js");
+
+  const snapshot = await readConfigFileSnapshot();
+
+  // Skip wizard entirely when config is already complete (has been onboarded before)
+  // unless --reset is explicitly passed.
+  if (!opts.reset && snapshot.exists && snapshot.valid && snapshot.config.wizard?.lastRunAt) {
+    runtime.log("Configuration already complete. Use `winclaw onboard --reset` to reconfigure.");
+    return;
+  }
+
   onboardHelpers.printWizardHeader(runtime);
   await prompter.intro("WinClaw onboarding");
   await requireRiskAcknowledgement({ opts, prompter });
 
-  const snapshot = await readConfigFileSnapshot();
   let baseConfig: WinClawConfig = snapshot.valid ? snapshot.config : {};
 
   if (snapshot.exists && !snapshot.valid) {

@@ -10,6 +10,13 @@ export type AssistantIdentity = {
   avatar: string | null;
 };
 
+declare global {
+  interface Window {
+    __WINCLAW_ASSISTANT_NAME__?: string;
+    __WINCLAW_ASSISTANT_AVATAR__?: string;
+  }
+}
+
 function coerceIdentityValue(value: string | undefined, maxLength: number): string | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -32,4 +39,14 @@ export function normalizeAssistantIdentity(
   const agentId =
     typeof input?.agentId === "string" && input.agentId.trim() ? input.agentId.trim() : null;
   return { agentId, name, avatar };
+}
+
+export function resolveInjectedAssistantIdentity(): AssistantIdentity {
+  if (typeof window === "undefined") {
+    return normalizeAssistantIdentity({});
+  }
+  return normalizeAssistantIdentity({
+    name: window.__WINCLAW_ASSISTANT_NAME__,
+    avatar: window.__WINCLAW_ASSISTANT_AVATAR__,
+  });
 }

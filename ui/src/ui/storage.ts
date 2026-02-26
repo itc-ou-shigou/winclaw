@@ -1,6 +1,5 @@
 const KEY = "winclaw.control.settings.v1";
 
-import { isSupportedLocale } from "../i18n/index.ts";
 import type { ThemeMode } from "./theme.ts";
 
 export type UiSettings = {
@@ -12,9 +11,11 @@ export type UiSettings = {
   chatFocusMode: boolean;
   chatShowThinking: boolean;
   splitRatio: number; // Sidebar split ratio (0.4 to 0.7, default 0.6)
-  navCollapsed: boolean; // Collapsible sidebar state
-  navGroupsCollapsed: Record<string, boolean>; // Which nav groups are collapsed
-  locale?: string;
+  navCollapsed: boolean; // Legacy – kept for compat, unused in Notion-style layout
+  navGroupsCollapsed: Record<string, boolean>; // Legacy – kept for compat
+  openTabs: string[]; // Session tabs (Notion-style layout)
+  recentCommands: string[]; // Command palette recent commands
+  openChatSessions: string[]; // Open chat session keys (multi-session tabs)
 };
 
 export function loadSettings(): UiSettings {
@@ -82,7 +83,20 @@ export function loadSettings(): UiSettings {
         typeof parsed.navGroupsCollapsed === "object" && parsed.navGroupsCollapsed !== null
           ? parsed.navGroupsCollapsed
           : defaults.navGroupsCollapsed,
-      locale: isSupportedLocale(parsed.locale) ? parsed.locale : undefined,
+      openTabs:
+        Array.isArray(parsed.openTabs) && parsed.openTabs.every((t) => typeof t === "string")
+          ? parsed.openTabs
+          : defaults.openTabs,
+      recentCommands:
+        Array.isArray(parsed.recentCommands) &&
+        parsed.recentCommands.every((c) => typeof c === "string")
+          ? parsed.recentCommands
+          : defaults.recentCommands,
+      openChatSessions:
+        Array.isArray(parsed.openChatSessions) &&
+        parsed.openChatSessions.every((s) => typeof s === "string")
+          ? parsed.openChatSessions
+          : defaults.openChatSessions,
     };
   } catch {
     return defaults;

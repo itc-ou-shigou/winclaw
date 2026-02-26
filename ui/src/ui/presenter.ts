@@ -1,5 +1,5 @@
-import { formatRelativeTimestamp, formatDurationHuman, formatMs } from "./format.ts";
 import type { CronJob, GatewaySessionRow, PresenceEntry } from "./types.ts";
+import { formatRelativeTimestamp, formatDurationHuman, formatMs } from "./format.ts";
 
 export function formatPresenceSummary(entry: PresenceEntry): string {
   const host = entry.host ?? "unknown";
@@ -18,8 +18,7 @@ export function formatNextRun(ms?: number | null) {
   if (!ms) {
     return "n/a";
   }
-  const weekday = new Date(ms).toLocaleDateString(undefined, { weekday: "short" });
-  return `${weekday}, ${formatMs(ms)} (${formatRelativeTimestamp(ms)})`;
+  return `${formatMs(ms)} (${formatRelativeTimestamp(ms)})`;
 }
 
 export function formatSessionTokens(row: GatewaySessionRow) {
@@ -72,13 +71,9 @@ export function formatCronPayload(job: CronJob) {
   const delivery = job.delivery;
   if (delivery && delivery.mode !== "none") {
     const target =
-      delivery.mode === "webhook"
-        ? delivery.to
-          ? ` (${delivery.to})`
-          : ""
-        : delivery.channel || delivery.to
-          ? ` (${delivery.channel ?? "last"}${delivery.to ? ` -> ${delivery.to}` : ""})`
-          : "";
+      delivery.channel || delivery.to
+        ? ` (${delivery.channel ?? "last"}${delivery.to ? ` -> ${delivery.to}` : ""})`
+        : "";
     return `${base} · ${delivery.mode}${target}`;
   }
   return base;
