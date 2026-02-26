@@ -41,19 +41,13 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.i
 Name: "chinesetraditional"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
 
 [Files]
-; Node.js runtime
-Source: "{#StagingDir}\node\*"; DestDir: "{app}\node"; Flags: ignoreversion recursesubdirs
+; Electron desktop shell (Chromium + Node.js embedded)
+Source: "{#StagingDir}\desktop\*"; DestDir: "{app}\desktop"; Flags: ignoreversion recursesubdirs
 ; WinClaw app
 Source: "{#StagingDir}\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs
-; Desktop app (WinClawUI.exe — native WebView2 shell, optional)
-Source: "{#StagingDir}\WinClawUI.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-; Launchers (winclaw-ui.cmd kept as browser fallback)
+; Launchers (winclaw.cmd uses ELECTRON_RUN_AS_NODE=1, winclaw-ui.cmd is browser fallback)
 Source: "{#StagingDir}\winclaw.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\winclaw-ui.cmd"; DestDir: "{app}"; Flags: ignoreversion
-; WebView2 Evergreen Bootstrapper (~1.7MB, installs runtime if missing)
-; Copy to {tmp} for installer-time install, and to {app} for background install by WinClawUI
-Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall skipifsourcedoesntexist
-Source: "{#StagingDir}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 ; Assets
 Source: "{#StagingDir}\assets\winclaw.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "{#StagingDir}\assets\logo.png"; DestDir: "{app}\assets"; Flags: ignoreversion
@@ -68,16 +62,16 @@ Source: "{#StagingDir}\scripts\launch-chrome-devtools-mcp.ps1"; DestDir: "{app}\
 Source: "{#StagingDir}\scripts\ensure-chrome-debug.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
-; Start Menu — desktop app (preferred) or browser fallback
-Name: "{group}\WinClaw"; Filename: "{app}\WinClawUI.exe"; \
+; Start Menu — Electron desktop app (preferred) or browser fallback
+Name: "{group}\WinClaw"; Filename: "{app}\desktop\winclaw.exe"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
-  Comment: "Open WinClaw"; Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Comment: "Open WinClaw"; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{group}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
-  Comment: "Open WinClaw Control UI"; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Comment: "Open WinClaw Control UI"; Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{group}\WinClaw (Browser)"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
-  Comment: "Open WinClaw in browser"; Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Comment: "Open WinClaw in browser"; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{group}\WinClaw Gateway"; Filename: "{app}\winclaw.cmd"; Parameters: "gateway"; \
   WorkingDir: "{app}"; Comment: "Start WinClaw Gateway"
 Name: "{group}\WinClaw Onboard"; Filename: "{app}\winclaw.cmd"; Parameters: "onboard"; \
@@ -91,15 +85,15 @@ Name: "{group}\VNC Desktop - Stop"; Filename: "powershell.exe"; \
   Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\stop-vnc-desktop.ps1"""; \
   WorkingDir: "{app}\vnc"; Comment: "Stop VNC desktop streaming"
 Name: "{group}\Uninstall WinClaw"; Filename: "{uninstallexe}"
-; Desktop shortcut — desktop app (preferred) or browser fallback
-Name: "{autodesktop}\WinClaw"; Filename: "{app}\WinClawUI.exe"; \
+; Desktop shortcut — Electron desktop app (preferred) or browser fallback
+Name: "{autodesktop}\WinClaw"; Filename: "{app}\desktop\winclaw.exe"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
   Comment: "WinClaw - Personal AI Assistant"; Tasks: desktopicon; \
-  Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{autodesktop}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
   Comment: "WinClaw - Personal AI Assistant"; Tasks: desktopicon; \
-  Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"
@@ -114,18 +108,14 @@ Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; \
   ValueData: "{olddata};{app}"; Tasks: addtopath; Check: NeedsAddPath(ExpandConstant('{app}'))
 
 [Run]
-; Step 1: Install WebView2 runtime if not already present (silent, no restart)
-Filename: "{tmp}\MicrosoftEdgeWebview2Setup.exe"; Parameters: "/silent /install"; \
-  StatusMsg: "Installing WebView2 runtime..."; \
-  Flags: runhidden waituntilterminated; Check: not IsWebView2Installed
-; Step 2: Launch WinClaw desktop app after install (checked by default)
-Filename: "{app}\WinClawUI.exe"; \
+; Step 1: Launch WinClaw Electron desktop app after install (checked by default)
+Filename: "{app}\desktop\winclaw.exe"; \
   Description: "Launch WinClaw"; \
-  Flags: postinstall nowait skipifsilent; Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
-; Step 2b (fallback): Open in browser if no desktop app
+  Flags: postinstall nowait skipifsilent; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+; Step 1b (fallback): Open in browser if no desktop app
 Filename: "{app}\winclaw-ui.cmd"; \
   Description: "Open WinClaw in browser"; \
-  Flags: postinstall nowait skipifsilent; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe'))
+  Flags: postinstall nowait skipifsilent; Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 ; Step 2c: Run interactive onboarding wizard (visible console for user input)
 Filename: "{app}\winclaw.cmd"; Parameters: "onboard --flow quickstart"; \
   StatusMsg: "Starting WinClaw setup wizard..."; \
@@ -152,16 +142,6 @@ Filename: "{app}\winclaw.cmd"; Parameters: "daemon uninstall"; \
   Flags: runhidden waituntilterminated; RunOnceId: "RemoveDaemon"
 
 [Code]
-// Check if WebView2 Evergreen Runtime is already installed
-function IsWebView2Installed: boolean;
-var
-  Version: string;
-begin
-  Result := RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version)
-         or RegQueryStringValue(HKCU, 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version)
-         or RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version);
-end;
-
 // Check if {app} is already in PATH to avoid duplicates
 function NeedsAddPath(Param: string): boolean;
 var

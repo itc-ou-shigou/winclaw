@@ -65,6 +65,9 @@ importers:
       '@mariozechner/pi-tui':
         specifier: 0.54.1
         version: 0.54.1
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.26.0
+        version: 1.26.0(zod@4.3.6)
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -6753,7 +6756,6 @@ snapshots:
   '@hono/node-server@1.19.9(hono@4.11.10)':
     dependencies:
       hono: 4.11.10
-    optional: true
 
   '@huggingface/jinja@0.5.5': {}
 
@@ -7174,7 +7176,6 @@ snapshots:
       zod-to-json-schema: 3.25.1(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   '@mozilla/readability@0.6.0': {}
 
@@ -9232,7 +9233,6 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
-    optional: true
 
   croner@10.0.1: {}
 
@@ -9439,13 +9439,11 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
-  eventsource-parser@3.0.6:
-    optional: true
+  eventsource-parser@3.0.6: {}
 
   eventsource@3.0.7:
     dependencies:
       eventsource-parser: 3.0.6
-    optional: true
 
   expect-type@1.3.0: {}
 
@@ -9453,7 +9451,6 @@ snapshots:
     dependencies:
       express: 5.2.1
       ip-address: 10.0.1
-    optional: true
 
   express@4.22.1:
     dependencies:
@@ -9808,8 +9805,7 @@ snapshots:
 
   highlight.js@10.7.3: {}
 
-  hono@4.11.10:
-    optional: true
+  hono@4.11.10: {}
 
   hookable@6.0.1: {}
 
@@ -9916,8 +9912,7 @@ snapshots:
 
   ini@1.3.8: {}
 
-  ip-address@10.0.1:
-    optional: true
+  ip-address@10.0.1: {}
 
   ip-address@10.1.0: {}
 
@@ -10017,8 +10012,7 @@ snapshots:
 
   jose@4.15.9: {}
 
-  jose@6.1.3:
-    optional: true
+  jose@6.1.3: {}
 
   js-tokens@10.0.0: {}
 
@@ -10039,8 +10033,7 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  json-schema-typed@8.0.2:
-    optional: true
+  json-schema-typed@8.0.2: {}
 
   json-schema@0.4.0: {}
 
@@ -10791,8 +10784,7 @@ snapshots:
     dependencies:
       pngjs: 7.0.0
 
-  pkce-challenge@5.0.1:
-    optional: true
+  pkce-challenge@5.0.1: {}
 
   playwright-core@1.58.2: {}
 

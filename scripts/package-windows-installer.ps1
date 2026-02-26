@@ -224,6 +224,43 @@ if (Test-Path $appDocsRef) {
     Remove-Item "$STAGING\app\docs" -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# -- Post-cleanup integrity check: verify critical runtime files weren't removed --
+Write-Host "    Verifying critical runtime files..."
+$criticalFiles = @(
+    "$STAGING\app\docs\reference\templates\AGENTS.md",
+    "$STAGING\app\docs\reference\templates\SOUL.md",
+    "$STAGING\app\docs\reference\templates\TOOLS.md",
+    "$STAGING\app\docs\reference\templates\IDENTITY.md",
+    "$STAGING\app\docs\reference\templates\USER.md",
+    "$STAGING\app\docs\reference\templates\HEARTBEAT.md",
+    "$STAGING\app\docs\reference\templates\BOOTSTRAP.md",
+    "$STAGING\app\node_modules\@whiskeysockets\baileys\lib\Utils\history.js",
+    "$STAGING\app\node_modules\@whiskeysockets\baileys\lib\Utils\history.d.ts",
+    "$STAGING\app\node_modules\@modelcontextprotocol\sdk\dist\esm\client\index.js"
+)
+$missingCount = 0
+foreach ($cf in $criticalFiles) {
+    if (-not (Test-Path $cf)) {
+        $missingCount++
+        Write-Host "      MISSING: $($cf -replace [regex]::Escape($STAGING), '')" -ForegroundColor Red
+        # Attempt to restore from source tree
+        $relPath = ($cf -replace [regex]::Escape("$STAGING\app\"), "")
+        $srcPath = "$ROOT\$relPath"
+        if (Test-Path $srcPath) {
+            $destDir = Split-Path $cf -Parent
+            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+            Copy-Item $srcPath $cf -Force
+            Write-Host "      RESTORED from source: $relPath" -ForegroundColor Yellow
+            $missingCount--
+        }
+    }
+}
+if ($missingCount -gt 0) {
+    Write-Warning "  $missingCount critical file(s) could not be restored - installer may produce broken builds!"
+} else {
+    Write-Host "    All critical runtime files verified." -ForegroundColor Green
+}
+
 $appSizeMB = [math]::Round(((Get-ChildItem "$STAGING\app" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
 Write-Host "    App directory size after cleanup: $appSizeMB MB" -ForegroundColor Yellow
 

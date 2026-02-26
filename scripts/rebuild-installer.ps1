@@ -1,21 +1,25 @@
 $ErrorActionPreference = "Stop"
 $ROOT = "C:\work\winclaw"
 $STAGING = "$ROOT\dist\win-staging"
-$NODE_VERSION = "22.14.0"
 $PKG_VERSION = (Get-Content "$ROOT\package.json" | ConvertFrom-Json).version
 
-Write-Host "==> WinClaw Installer Rebuild v$PKG_VERSION" -ForegroundColor Cyan
+Write-Host "==> WinClaw Installer Rebuild v$PKG_VERSION (Electron)" -ForegroundColor Cyan
 
-# -- 1. Download Node.js portable --
-$zipPath = "$ROOT\dist\cache\node-v$NODE_VERSION-win-x64.zip"
-$nodeUrl = "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-win-x64.zip"
-if (-not (Test-Path $zipPath) -or (Get-Item $zipPath -ErrorAction SilentlyContinue).Length -lt 1000000) {
-    Write-Host "==> Downloading Node.js v$NODE_VERSION..."
-    New-Item -ItemType Directory -Path (Split-Path $zipPath) -Force | Out-Null
-    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-    Invoke-WebRequest -Uri $nodeUrl -OutFile $zipPath -UseBasicParsing
+# -- 0. Build Control UI assets (must run before npm pack so dist/control-ui/ is included in tarball) --
+$controlUiIndex = "$ROOT\dist\control-ui\index.html"
+if (-not (Test-Path $controlUiIndex)) {
+    Write-Host "==> Building Control UI assets..."
+    Push-Location $ROOT
+    pnpm ui:build
+    Pop-Location
+    if (-not (Test-Path $controlUiIndex)) {
+        Write-Error "Control UI build failed - dist/control-ui/index.html not found"
+        exit 1
+    }
+    Write-Host "    Control UI built successfully." -ForegroundColor Green
+} else {
+    Write-Host "==> Control UI assets already built (dist/control-ui/index.html exists)" -ForegroundColor Green
 }
-Write-Host "    Node.js zip: $([math]::Round((Get-Item $zipPath).Length / 1MB, 1)) MB"
 
 # -- 2. npm pack (BEFORE staging to avoid including staging in tarball) --
 # Remove old staging first so it doesn't get included in the tarball
@@ -43,16 +47,6 @@ if (-not (Test-Path $tarballPath)) { Write-Error "npm pack failed"; exit 1 }
 Write-Host "==> Staging installer files..."
 if (Test-Path $STAGING) { Remove-Item $STAGING -Recurse -Force }
 New-Item -ItemType Directory -Path $STAGING -Force | Out-Null
-
-# Extract Node.js
-Write-Host "    Extracting Node.js..."
-$tmpDir = "$STAGING\node-extract"
-Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
-$nodeDir = Get-ChildItem $tmpDir -Directory | Select-Object -First 1
-New-Item -ItemType Directory -Path "$STAGING\node" -Force | Out-Null
-& robocopy "$($nodeDir.FullName)" "$STAGING\node" /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
-Remove-Item $tmpDir -Recurse -Force
-Write-Host "    node/ items: $((Get-ChildItem "$STAGING\node").Count)"
 
 # App directory
 Write-Host "    Creating app directory..."
@@ -151,7 +145,7 @@ if ($pdbFiles) {
 }
 
 # 3. README/CHANGELOG/CONTRIBUTING etc in node_modules
-$docFiles = Get-ChildItem $nm -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(README|CHANGELOG|HISTORY|CONTRIBUTING|AUTHORS|CODE_OF_CONDUCT)' }
+$docFiles = Get-ChildItem $nm -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(README|CHANGELOG|HISTORY|CONTRIBUTING|AUTHORS|CODE_OF_CONDUCT)' -and $_.Extension -in @('.md', '.txt', '.rst', '.adoc', '') }
 if ($docFiles) {
     $sz = ($docFiles | Measure-Object -Property Length -Sum).Sum / 1MB
     $docFiles | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -159,12 +153,24 @@ if ($docFiles) {
     Write-Host "      Removed $($docFiles.Count) doc files ($([math]::Round($sz, 1)) MB)"
 }
 
-# 4. app/docs/ directory (internal dev docs, not needed for runtime)
+# 4. app/docs/ directory EXCEPT docs/reference/templates (workspace templates needed at runtime)
+$appDocsRef = "$STAGING\app\docs\reference\templates"
 if (Test-Path "$STAGING\app\docs") {
     $sz = (Get-ChildItem "$STAGING\app\docs" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
-    Remove-Item "$STAGING\app\docs" -Recurse -Force
+    if (Test-Path $appDocsRef) {
+        $tmpTemplates = "$STAGING\_templates_preserve"
+        Copy-Item $appDocsRef $tmpTemplates -Recurse -Force
+        Remove-Item "$STAGING\app\docs" -Recurse -Force
+        New-Item -ItemType Directory -Path $appDocsRef -Force | Out-Null
+        Copy-Item "$tmpTemplates\*" $appDocsRef -Recurse -Force
+        Remove-Item $tmpTemplates -Recurse -Force -ErrorAction SilentlyContinue
+        $keptCount = (Get-ChildItem $appDocsRef -File).Count
+        Write-Host "      Removed app/docs/ ($([math]::Round($sz, 1)) MB), kept docs/reference/templates/ ($keptCount files)"
+    } else {
+        Remove-Item "$STAGING\app\docs" -Recurse -Force
+        Write-Host "      Removed app/docs/ ($([math]::Round($sz, 1)) MB)"
+    }
     $saved += $sz
-    Write-Host "      Removed app/docs/ ($([math]::Round($sz, 1)) MB)"
 }
 
 # 5. Dev-only packages: bun-types, @types (type definitions not needed at runtime)
@@ -187,31 +193,238 @@ if (Test-Path $llamaMain) {
     Write-Host "      Removed node-llama-cpp ($([math]::Round($sz, 1)) MB)"
 }
 
-# 7. node/node_modules (bundled npm, not needed since we use app's own npm)
-$nodeNm = "$STAGING\node\node_modules"
-if (Test-Path $nodeNm) {
-    $sz = (Get-ChildItem $nodeNm -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
-    Remove-Item $nodeNm -Recurse -Force
+# 7. Platform-specific native binaries: keep only win32-x64 (koffi, etc.)
+# koffi ships ALL platform builds (darwin, linux, freebsd, musl, openbsd, win32_ia32, win32_arm64)
+$koffiBuild = "$nm\koffi\build\koffi"
+if (Test-Path $koffiBuild) {
+    $koffiDirs = Get-ChildItem $koffiBuild -Directory | Where-Object { $_.Name -ne "win32_x64" }
+    if ($koffiDirs.Count -gt 0) {
+        $sz = ($koffiDirs | ForEach-Object { (Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } | Measure-Object -Sum).Sum / 1MB
+        $koffiDirs | Remove-Item -Recurse -Force
+        $saved += $sz
+        Write-Host "      Removed koffi non-win64 platforms ($($koffiDirs.Count) dirs, $([math]::Round($sz, 1)) MB)"
+    }
+}
+# koffi/src (C source) and koffi/doc not needed at runtime
+foreach ($koffiExtra in @("$nm\koffi\src", "$nm\koffi\doc", "$nm\koffi\vendor")) {
+    if (Test-Path $koffiExtra) {
+        $sz = (Get-ChildItem $koffiExtra -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+        Remove-Item $koffiExtra -Recurse -Force
+        $saved += $sz
+        Write-Host "      Removed $(Split-Path $koffiExtra -Leaf)/ ($([math]::Round($sz, 1)) MB)"
+    }
+}
+
+# 8. pdfjs-dist/legacy (duplicate legacy build, not needed for modern Node/Electron)
+$pdfjsLegacy = "$nm\pdfjs-dist\legacy"
+if (Test-Path $pdfjsLegacy) {
+    $sz = (Get-ChildItem $pdfjsLegacy -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+    Remove-Item $pdfjsLegacy -Recurse -Force
     $saved += $sz
-    Write-Host "      Removed node/node_modules ($([math]::Round($sz, 1)) MB)"
+    Write-Host "      Removed pdfjs-dist/legacy ($([math]::Round($sz, 1)) MB)"
+}
+# pdfjs-dist/types (TypeScript declarations) not needed at runtime
+$pdfjsTypes = "$nm\pdfjs-dist\types"
+if (Test-Path $pdfjsTypes) {
+    $sz = (Get-ChildItem $pdfjsTypes -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+    Remove-Item $pdfjsTypes -Recurse -Force
+    $saved += $sz
+    Write-Host "      Removed pdfjs-dist/types ($([math]::Round($sz, 1)) MB)"
+}
+
+# 9. playwright-core/types (TypeScript declarations, ~1.7 MB)
+$pwTypes = "$nm\playwright-core\types"
+if (Test-Path $pwTypes) {
+    $sz = (Get-ChildItem $pwTypes -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+    Remove-Item $pwTypes -Recurse -Force
+    $saved += $sz
+    Write-Host "      Removed playwright-core/types ($([math]::Round($sz, 1)) MB)"
+}
+
+# 10. Remove all .d.ts and .d.cts declaration files in node_modules (not needed at runtime)
+$dtsFiles = Get-ChildItem $nm -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*.d.ts" -or $_.Name -like "*.d.cts" -or $_.Name -like "*.d.mts" }
+if ($dtsFiles) {
+    $sz = ($dtsFiles | Measure-Object -Property Length -Sum).Sum / 1MB
+    $dtsFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+    $saved += $sz
+    Write-Host "      Removed $($dtsFiles.Count) .d.ts/.d.cts declaration files ($([math]::Round($sz, 1)) MB)"
+}
+
+# 11. Test/spec directories in node_modules (not needed at runtime)
+$testDirs = Get-ChildItem $nm -Directory -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -in @("test", "tests", "__tests__", "spec", "__mocks__", "fixtures", "benchmark", "benchmarks", "examples", "example") }
+if ($testDirs) {
+    $sz = ($testDirs | ForEach-Object { (Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } | Measure-Object -Sum).Sum / 1MB
+    $testDirs | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    $saved += $sz
+    Write-Host "      Removed $($testDirs.Count) test/example directories ($([math]::Round($sz, 1)) MB)"
+}
+
+# 12. Dev config files in node_modules packages (tsconfig, eslint, prettier, etc.)
+$devConfigs = Get-ChildItem $nm -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(tsconfig.*\.json|\.eslintrc.*|\.prettierrc.*|jest\.config\.*|\.npmignore|\.gitignore|\.editorconfig|\.babelrc.*|rollup\.config\.*|webpack\.config\.*|vite\.config\.*|vitest\.config\.*|karma\.conf\.*|\.travis\.yml|\.github|Makefile|Gruntfile\.*|Gulpfile\.*)$' }
+if ($devConfigs) {
+    $sz = ($devConfigs | Measure-Object -Property Length -Sum).Sum / 1MB
+    $devConfigs | Remove-Item -Force -ErrorAction SilentlyContinue
+    $saved += $sz
+    Write-Host "      Removed $($devConfigs.Count) dev config files ($([math]::Round($sz, 1)) MB)"
+}
+
+# 13. LICENSE files in node_modules (legal text not needed at runtime, LICENSE in app root preserved)
+$licenseFiles = Get-ChildItem $nm -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(LICENSE|LICENCE|COPYING|NOTICE)(\..*)?$' }
+if ($licenseFiles) {
+    $sz = ($licenseFiles | Measure-Object -Property Length -Sum).Sum / 1MB
+    $licenseFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+    $saved += $sz
+    Write-Host "      Removed $($licenseFiles.Count) license files ($([math]::Round($sz, 1)) MB)"
+}
+
+# 14. Native addon build dependencies (source/headers not needed when prebuilt binaries exist)
+$nativeBuildDirs = @(
+    "$nm\@discordjs\opus\deps",    # opus C source headers (~5.5 MB), prebuild exists
+    "$nm\@discordjs\opus\src",     # C++ binding source
+    "$nm\sharp\src"                # sharp C++ source, prebuilt @img/sharp-win32-x64 exists
+)
+foreach ($nbd in $nativeBuildDirs) {
+    if (Test-Path $nbd) {
+        $sz = (Get-ChildItem $nbd -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+        Remove-Item $nbd -Recurse -Force
+        $saved += $sz
+        $relPath = $nbd -replace [regex]::Escape($nm + "\"), ""
+        Write-Host "      Removed native source: $relPath ($([math]::Round($sz, 1)) MB)"
+    }
+}
+
+# 15. Dual CJS/ESM builds: remove duplicate format when both exist
+# @larksuiteoapi ships both lib/ (CJS) and es/ (ESM) - keep lib/ only
+$dualBuildRemove = @(
+    "$nm\@larksuiteoapi\node-sdk\es"   # ESM duplicate (~4.6 MB), lib/ (CJS) is used
+)
+foreach ($dbr in $dualBuildRemove) {
+    if (Test-Path $dbr) {
+        $sz = (Get-ChildItem $dbr -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+        Remove-Item $dbr -Recurse -Force
+        $saved += $sz
+        $relPath = $dbr -replace [regex]::Escape($nm + "\"), ""
+        Write-Host "      Removed dual build: $relPath ($([math]::Round($sz, 1)) MB)"
+    }
 }
 
 Write-Host "    Total slimmed: $([math]::Round($saved, 0)) MB" -ForegroundColor Green
+
+# -- Post-cleanup integrity check: verify critical runtime files weren't removed --
+Write-Host "    Verifying critical runtime files..."
+$criticalFiles = @(
+    "$STAGING\app\dist\control-ui\index.html",
+    "$STAGING\app\docs\reference\templates\AGENTS.md",
+    "$STAGING\app\docs\reference\templates\SOUL.md",
+    "$STAGING\app\docs\reference\templates\TOOLS.md",
+    "$STAGING\app\docs\reference\templates\IDENTITY.md",
+    "$STAGING\app\docs\reference\templates\USER.md",
+    "$STAGING\app\docs\reference\templates\HEARTBEAT.md",
+    "$STAGING\app\docs\reference\templates\BOOTSTRAP.md",
+    "$nm\@whiskeysockets\baileys\lib\Utils\history.js",
+    "$nm\@whiskeysockets\baileys\lib\Utils\history.d.ts",
+    "$nm\@modelcontextprotocol\sdk\dist\esm\client\index.js"
+)
+$missingCount = 0
+foreach ($cf in $criticalFiles) {
+    if (-not (Test-Path $cf)) {
+        $missingCount++
+        Write-Host "      MISSING: $($cf -replace [regex]::Escape($STAGING), '')" -ForegroundColor Red
+        # Attempt to restore from source tree
+        $relPath = ($cf -replace [regex]::Escape("$STAGING\app\"), "")
+        $srcPath = "$ROOT\$relPath"
+        if (Test-Path $srcPath) {
+            $destDir = Split-Path $cf -Parent
+            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+            Copy-Item $srcPath $cf -Force
+            Write-Host "      RESTORED from source: $relPath" -ForegroundColor Yellow
+            $missingCount--
+        }
+    }
+}
+if ($missingCount -gt 0) {
+    Write-Warning "  $missingCount critical file(s) could not be restored - installer may produce broken builds!"
+} else {
+    Write-Host "    All critical runtime files verified." -ForegroundColor Green
+}
 
 # Assets + launcher
 New-Item -ItemType Directory -Path "$STAGING\assets" -Force | Out-Null
 Copy-Item "$ROOT\assets\winclaw.ico" "$STAGING\assets\" -Force
 Copy-Item "$ROOT\assets\logo.png" "$STAGING\assets\" -Force
+# winclaw.cmd uses system Node.js (requires Node >= 22.12)
+# Electron v33 embeds Node 20.x which is too old for winclaw
 @"
 @echo off
 setlocal
-set "WINCLAW_NODE=%~dp0node\node.exe"
 set "WINCLAW_APP=%~dp0app\winclaw.mjs"
-"%WINCLAW_NODE%" "%WINCLAW_APP%" %*
+node "%WINCLAW_APP%" %*
 "@ | Set-Content "$STAGING\winclaw.cmd" -Encoding ASCII
 
 # UI Launcher script (starts gateway + opens browser)
 Copy-Item "$ROOT\scripts\winclaw-ui.cmd" "$STAGING\winclaw-ui.cmd" -Force
+
+# Build and stage Electron desktop app (replaces C#/WebView2 shell)
+Write-Host "==> Building Electron desktop app..."
+$electronDir = "$ROOT\apps\electron"
+if (-not (Test-Path "$electronDir\node_modules")) {
+    Write-Host "    Installing Electron dependencies..."
+    Push-Location $electronDir
+    npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
+    Pop-Location
+}
+
+# Use a unique output dir to avoid EBUSY conflicts with previous runs
+$electronOut = "$ROOT\dist\electron-pkg-$([guid]::NewGuid().ToString('N').Substring(0,8))"
+Write-Host "    Packaging Electron app to $electronOut ..."
+Push-Location $electronDir
+$prevEAP2 = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+npx electron-packager . winclaw `
+    --platform=win32 --arch=x64 `
+    --overwrite `
+    "--out=$electronOut" `
+    "--icon=$ROOT\assets\winclaw.ico" `
+    "--app-version=$PKG_VERSION" `
+    --prune=true --asar 2>&1 | ForEach-Object { Write-Host "    $_" }
+$ErrorActionPreference = $prevEAP2
+Pop-Location
+
+$electronSrc = "$electronOut\winclaw-win32-x64"
+if (Test-Path $electronSrc) {
+    # Slim: remove unnecessary locales (keep en-US and ja only)
+    $localesDir = "$electronSrc\locales"
+    if (Test-Path $localesDir) {
+        Get-ChildItem "$localesDir\*.pak" | Where-Object { $_.Name -notin @("en-US.pak", "ja.pak") } | Remove-Item -Force
+        Write-Host "    Locales slimmed to en-US + ja"
+    }
+    # Remove Chromium license file (9 MB)
+    Remove-Item "$electronSrc\LICENSES.chromium.html" -Force -ErrorAction SilentlyContinue
+    Remove-Item "$electronSrc\LICENSE" -Force -ErrorAction SilentlyContinue
+    # Remove DLLs not needed for standard web UI rendering (~8 MB)
+    # vk_swiftshader/vulkan: Vulkan software renderer, not needed
+    # d3dcompiler_47: D3D shader compiler, not needed
+    # NOTE: ffmpeg.dll is REQUIRED by Electron — do NOT remove it
+    $electronJunk = @("vk_swiftshader.dll", "d3dcompiler_47.dll", "vulkan-1.dll", "vk_swiftshader_icd.json")
+    foreach ($ejf in $electronJunk) {
+        $ejPath = "$electronSrc\$ejf"
+        if (Test-Path $ejPath) {
+            $ejSize = [math]::Round((Get-Item $ejPath).Length / 1MB, 1)
+            Remove-Item $ejPath -Force
+            Write-Host "    Removed $ejf ($ejSize MB)"
+        }
+    }
+
+    # Copy to staging as desktop/
+    New-Item -ItemType Directory -Path "$STAGING\desktop" -Force | Out-Null
+    & robocopy "$electronSrc" "$STAGING\desktop" /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
+    $desktopSize = [math]::Round((Get-ChildItem "$STAGING\desktop" -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+    Write-Host "    desktop/ (Electron): $desktopSize MB" -ForegroundColor Green
+    # Cleanup temp electron packaging dir
+    Remove-Item $electronOut -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    Write-Warning "Electron packaging failed; desktop app will not be included"
+}
 
 # -- 4. Compile ISCC --
 Write-Host "==> Compiling Inno Setup installer..."

@@ -309,7 +309,9 @@ export const agentsHandlers: GatewayRequestHandlers = {
 
     const cfg = loadConfig();
     const agentId = normalizeAgentId(String(params.agentId ?? ""));
-    if (findAgentEntryIndex(listAgentEntries(cfg), agentId) < 0) {
+    const entries = listAgentEntries(cfg);
+    const isVirtualDefault = entries.length === 0 && agentId === normalizeAgentId(DEFAULT_AGENT_ID);
+    if (!isVirtualDefault && findAgentEntryIndex(entries, agentId) < 0) {
       respond(
         false,
         undefined,
