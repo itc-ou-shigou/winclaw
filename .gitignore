@@ -128,3 +128,4 @@ apps/windows/publish/
 apps/windows/publish-fd/
 apps/electron/
 releases/
+releases/*.exe
