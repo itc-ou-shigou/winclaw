@@ -339,6 +339,101 @@ The daily auto-update cron job is registered automatically on first run — no m
 
 ---
 
+## Featured Plugins
+
+WinClaw v2026.2.28 ships with **18 pre-built plugins** spanning 15 professional domains. Each plugin bundles curated skills, slash commands, and MCP server integrations — configured entirely through natural language in the Chat tab.
+
+### Plugin Overview
+
+| Plugin | Domain | Commands | Skills | Key MCP Integrations |
+|--------|--------|----------|--------|----------------------|
+| **bio-research** | Life Sciences R&D | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
+| **customer-support** | Support Ops | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
+| **data** | Data & Analytics | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
+| **design** | UX/UI Design | 6 | 6 | Figma, Linear, Notion |
+| **engineering** | Dev Workflow | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
+| **enterprise-search** | Cross-Tool Search | 2 | 3 | Slack, Notion, Guru, Atlassian |
+| **finance** | Accounting & FP&A | 5 | 6 | Snowflake, BigQuery |
+| **human-resources** | People Ops | 6 | 6 | Slack, Google Calendar, Notion |
+| **legal** | Contract & Compliance | 7 | 6 | Box, DocuSign, Atlassian |
+| **marketing** | Content & Campaigns | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
+| **operations** | Business Ops | 6 | 6 | ServiceNow, Asana, Atlassian |
+| **product-management** | Product Strategy | 7 | 6 | Linear, Amplitude, Pendo, Figma |
+| **productivity** | Task & Memory | 2 | 2 | Slack, Notion, Asana, Monday |
+| **sales** | Pipeline & Outreach | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
+| **partner-built/apollo** | Sales Automation | -- | 3 | Apollo |
+| **partner-built/brand-voice** | Brand Guardrails | 3 | 3 | Notion, Figma, Gong |
+| **partner-built/common-room** | GTM Intelligence | 2 | 6 | Common Room |
+| **partner-built/slack** | Slack Workflows | 5 | 2 | Slack |
+
+### How to Enable a Plugin
+
+Plugins are configured through natural language — just tell WinClaw what you need:
+
+```
+You:   I want to use the data analytics plugin
+AI:    I'll enable the data plugin for you. It includes 6 commands
+       (analyze, build-dashboard, create-viz, explore-data, validate, write-query)
+       and connects to Snowflake, Databricks, and BigQuery.
+       Which data source would you like to connect first?
+```
+
+Or configure manually in `winclaw.json`:
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "data": { "enabled": true },
+      "sales": { "enabled": true },
+      "engineering": { "enabled": true }
+    }
+  }
+}
+```
+
+### Plugin Usage Examples
+
+**Data Analysis:**
+
+```
+You:   Analyze our Q4 revenue data from Snowflake
+AI:    Running /data:analyze... Connected to Snowflake.
+       Q4 Revenue: $2.3M (+18% QoQ). Top segment: Enterprise (62%).
+       Want me to build a dashboard or create a visualization?
+```
+
+**Sales Pipeline:**
+
+```
+You:   Research Acme Corp and draft a personalized outreach email
+AI:    Running /sales:draft-outreach... Found Acme Corp on ZoomInfo:
+       Series B, 150 employees, using Salesforce. Key contact: Jane Doe (VP Sales).
+       Here's a personalized email draft based on their recent product launch...
+```
+
+**Legal Contract Review:**
+
+```
+You:   Review this NDA from our new vendor
+AI:    Running /legal:triage-nda... Classification: GREEN (standard).
+       Key terms: 2-year duration, mutual obligations, standard carve-outs.
+       One flag: non-compete clause in Section 7 is broader than typical.
+       Recommend negotiating to limit scope to direct competitors only.
+```
+
+**Bio-Research:**
+
+```
+You:   Find recent clinical trials for pembrolizumab in lung cancer
+AI:    Running /bio-research:start... Found 47 recruiting trials.
+       Top 3 Phase III trials: NCT04567890 (combo with chemo, n=800),
+       NCT04891234 (adjuvant setting, n=1200)...
+       Want me to analyze endpoints or find related PubMed articles?
+```
+
+---
+
 ## Configuration
 
 ### Config file locations

@@ -48,7 +48,7 @@ export default {
     alias: {
       "@a2ui/lit": path.resolve(a2uiLitDist, "index.js"),
       "@a2ui/lit/ui": path.resolve(a2uiLitDist, "0.8/ui/ui.js"),
-      "@openclaw/a2ui-theme-context": a2uiThemeContext,
+      "@winclaw/a2ui-theme-context": a2uiThemeContext,
       "@lit/context": resolveUiDependency("@lit/context"),
       "@lit/context/": resolveUiDependency("@lit/context/"),
       "@lit-labs/signals": resolveUiDependency("@lit-labs/signals"),

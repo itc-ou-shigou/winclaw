@@ -1,10 +1,10 @@
 {
-  "name": "@openclaw/imessage",
+  "name": "@winclaw/imessage",
   "version": "2026.2.26",
   "private": true,
-  "description": "OpenClaw iMessage channel plugin",
+  "description": "WinClaw iMessage channel plugin",
   "type": "module",
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

@@ -17,7 +17,7 @@ param(
     # Skip phases that already have output files
     [switch]$Resume,
     
-    # Run only specific phases (comma-separated: init,phase2,phase3,phase5b,phase5c,phase6)
+    # Run only specific phases (comma-separated: init,phase2,phase3,phase5a,phase5b,phase5c,phase6)
     [string]$Phases = "",
     
     # Non-interactive mode (use provided URLs without prompting)
@@ -28,6 +28,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Fix encoding: ensure UTF-8 output on Japanese Windows (CP932 → UTF-8)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+# Also set code page to UTF-8 for child processes (cmd.exe, bash, etc.)
+chcp 65001 | Out-Null
+
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SKILL_DIR = Split-Path -Parent $SCRIPT_DIR
 
@@ -69,13 +76,24 @@ $REALTIME_LOG = Join-Path $LOG_DIR "realtime.log"
 # Clear previous log
 "" | Set-Content $REALTIME_LOG -Encoding UTF8
 
-# Launch viewer window (may fail in non-GUI environments — that's OK)
+# Launch viewer window (write to temp script file for reliability)
 $startTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $viewerProcess = $null
 try {
+    $viewerScript = Join-Path $LOG_DIR "_log_viewer.ps1"
+    @"
+`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 | Out-Null
+Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan
+Write-Host 'Workspace: $Workspace' -ForegroundColor Gray
+Write-Host 'Started: $startTime' -ForegroundColor Gray
+Write-Host ''
+Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0 -Encoding UTF8
+"@ | Set-Content $viewerScript -Encoding UTF8
+
     $viewerProcess = Start-Process powershell -ArgumentList @(
-        "-NoProfile", "-Command",
-        "`$Host.UI.RawUI.WindowTitle = 'AI Dev System Testing - Log Viewer'; Write-Host '=== AI Dev System Testing - Real-time Log ===' -ForegroundColor Cyan; Write-Host 'Workspace: $Workspace' -ForegroundColor Gray; Write-Host 'Started: $startTime' -ForegroundColor Gray; Write-Host ''; Get-Content -Path '$REALTIME_LOG' -Wait -Tail 0"
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $viewerScript
     ) -PassThru -ErrorAction SilentlyContinue
 } catch {
     # Non-GUI environment — log viewer window not available
@@ -113,7 +131,7 @@ function Get-Timeout {
     if ($configTimeout) {
         return $configTimeout
     }
-    return 1800  # Final fallback
+    return 3600  # Final fallback (60 min for browser automation)
 }
 
 # ================================================================
@@ -123,9 +141,9 @@ function Get-Timeout {
 function Write-Header {
     param([string]$Title)
     Write-Log ""
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Log "============================================================" -ForegroundColor Cyan
     Write-Log "  $Title" -ForegroundColor Cyan
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Log "============================================================" -ForegroundColor Cyan
     Write-Log ""
 }
 
@@ -136,6 +154,56 @@ function Write-PhaseCheck {
     if ($Output) {
         Write-Log "  - Output: $Output" -ForegroundColor Gray
     }
+}
+
+function Get-PassRateFromFile {
+    param([string]$FilePath)
+    if (-not (Test-Path $FilePath)) { return $null }
+
+    $rawJson = Get-Content $FilePath -Raw -Encoding UTF8
+    $passRate = $null
+
+    # Try proper JSON parsing first
+    try {
+        $results = $rawJson | ConvertFrom-Json
+
+        # Support both snake_case and camelCase keys
+        $passRate = $results.pass_rate
+        if (-not $passRate) { $passRate = $results.passRate }
+        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
+        if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        # Check summary sub-object
+        if (-not $passRate -and $results.summary) {
+            $passRate = $results.summary.pass_rate
+            if (-not $passRate) { $passRate = $results.summary.passRate }
+        }
+        # Handle percentage strings like "75.00%"
+        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
+        # Fallback: calculate from passed/total
+        if (-not $passRate) {
+            $total = $results.totalTests
+            if (-not $total) { $total = $results.total_tests }
+            if (-not $total) { $total = $results.total }
+            $passed = $results.passed
+            if (-not $passed) { $passed = $results.tests_passed }
+            if ($total -and $total -gt 0) {
+                $passRate = [math]::Round(($passed / $total) * 100, 1)
+            }
+        }
+    } catch {
+        Write-Log "[WARN] JSON parse error in $FilePath - using regex fallback" -ForegroundColor Yellow
+
+        # Regex fallback: extract pass_rate from raw text even if JSON is malformed
+        if ($rawJson -match '"(?:pass_rate|passRate|adjusted_pass_rate|adjustedPassRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
+            $passRate = [double]$Matches[1]
+        }
+        # Try summary sub-object pattern
+        if (-not $passRate -and $rawJson -match '"summary"\s*:\s*\{[^}]*"(?:pass_rate|passRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
+            $passRate = [double]$Matches[1]
+        }
+    }
+
+    return $passRate
 }
 
 function Test-PhaseOutput {
@@ -719,11 +787,93 @@ Do NOT skip any files. Use actual code analysis tools.
 }
 
 # ================================================================
+# Phase 5A: Test Data Seeding (Code Analysis)
+# ================================================================
+function Invoke-Phase5A {
+    Write-Header "Phase 5A: Test Data Seeding (Code Analysis)"
+
+    # Resume check
+    if (Test-PhaseOutput "5A" @("test-logs/test_data_seed.json") -ResumeMode:$Resume) {
+        return $true
+    }
+
+    # Load backend URL from saved state or parameter
+    $configPath = Join-Path $Workspace "deployment-logs\workflow-state.json"
+    $backendUrl = $BackendUrl
+    if (Test-Path $configPath) {
+        $savedConfig = Get-Content $configPath | ConvertFrom-Json
+        if ($savedConfig.backend_url) { $backendUrl = $savedConfig.backend_url }
+    }
+
+    $promptFile = Join-Path $SKILL_DIR "references\prompts\phase5a-test-data-seeding.md"
+
+    # Load timeout from config (phase5a_seeding section) or use default
+    $seedingTimeout = $Config.phase5a_seeding.timeout_seconds
+    if (-not $seedingTimeout) { $seedingTimeout = 1800 }
+
+    $prompt = @"
+You are executing Phase 5A: Test Data Seeding.
+Backend URL: $backendUrl
+Workspace: $Workspace
+
+Read and execute ALL steps in: $promptFile
+
+CRITICAL RULES:
+1. Analyze model classes in the codebase (Read/Glob/Grep tools ONLY for discovery)
+2. Discover entity relationships and FK dependencies dynamically — NO hardcoded schemas
+3. Create test data via API calls (curl) or direct DB insertion (python3)
+4. Save results to: test-logs/test_data_seed.json
+5. Save auth credentials to: test-logs/phase5b_test_user.json
+6. Write summary to: test-logs/PHASE5A_SEEDING_REPORT.md
+7. Do NOT use browser automation — use Bash tool with curl/python3 only
+
+You MUST generate test-logs/test_data_seed.json before finishing.
+"@
+
+    $timeout = if ($TimeoutSeconds -gt 0) { $TimeoutSeconds } else { $seedingTimeout }
+    Invoke-ClaudeCommand $prompt -TimeoutSeconds $timeout | Out-Null
+
+    if (Test-Path (Join-Path $Workspace "test-logs\test_data_seed.json")) {
+        Write-PhaseCheck "5A" "COMPLETE" "test-logs/test_data_seed.json"
+        return $true
+    } else {
+        Write-PhaseCheck "5A" "FAILED" "Missing test_data_seed.json"
+        return $false
+    }
+}
+
+# ================================================================
+# Chrome Pre-Flight Check (for Phase 5B/5C)
+# ================================================================
+function Ensure-ChromeAvailable {
+    Write-Log "[CHECK] Pre-flight: verifying Chrome debug port..." -ForegroundColor Yellow
+    $chromePort = Find-ChromeDebugPort
+    if ($chromePort) {
+        Write-Log "[OK] Chrome debug port $chromePort is available" -ForegroundColor Green
+        return $true
+    }
+
+    Write-Log "[WARN] Chrome debug port lost — attempting restart..." -ForegroundColor Yellow
+    if (Start-ChromeWithDebugPort -Port 9222) {
+        $chromePort = Find-ChromeDebugPort
+        if ($chromePort) {
+            # Regenerate .mcp.json with the new port
+            New-McpConfigFile -ChromePort $chromePort | Out-Null
+            Write-Log "[OK] Chrome restarted on port $chromePort" -ForegroundColor Green
+            return $true
+        }
+    }
+
+    Write-Log "[ERROR] Failed to restore Chrome debug port" -ForegroundColor Red
+    return $false
+}
+
+# ================================================================
 # Phase 5B: API Testing
 # ================================================================
 function Invoke-Phase5B {
     Write-Header "Phase 5B: API Endpoint Testing"
-    
+
     # Load configuration from saved state (works even if Init was skipped)
     $configPath = Join-Path $Workspace "deployment-logs\workflow-state.json"
     if (Test-Path $configPath) {
@@ -733,53 +883,36 @@ function Invoke-Phase5B {
         # Fallback to parameter if no saved config
         $backendUrl = $BackendUrl
     }
-    
+
     # Check if we should run
     if (-not $backendUrl) {
         Write-PhaseCheck "5B" "SKIP" "No backend URL configured"
         return $true
     }
-    
+
+    # Pre-flight: ensure Chrome debug port is still available
+    if (-not (Ensure-ChromeAvailable)) {
+        Write-PhaseCheck "5B" "FAILED" "Chrome debug port unavailable"
+        return $false
+    }
+
     # Get target pass rate from config
     $targetPassRate = $Config.global.target_pass_rate_5b
     if (-not $targetPassRate) { $targetPassRate = 95 }
-    
+
     # Resume check
     $resultFile = Join-Path $Workspace "test-logs\phase5b_efficient_test_results.json"
     if ($Resume -and (Test-Path $resultFile)) {
-        $results = Get-Content $resultFile | ConvertFrom-Json
-        # Support both snake_case and camelCase keys
-        $passRate = $results.pass_rate
-        if (-not $passRate) { $passRate = $results.passRate }
-        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
-        if (-not $passRate) { $passRate = $results.adjustedPassRate }
-        # Check summary sub-object
-        if (-not $passRate -and $results.summary) {
-            $passRate = $results.summary.pass_rate
-            if (-not $passRate) { $passRate = $results.summary.passRate }
-        }
-        # Handle percentage strings like "75.00%"
-        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
-        # Fallback: calculate from passed/total
-        if (-not $passRate) {
-            $total = $results.totalTests
-            if (-not $total) { $total = $results.total_tests }
-            if (-not $total) { $total = $results.total }
-            $passed = $results.passed
-            if (-not $passed) { $passed = $results.tests_passed }
-            if ($total -and $total -gt 0) {
-                $passRate = [math]::Round(($passed / $total) * 100, 1)
-            }
-        }
+        $passRate = Get-PassRateFromFile $resultFile
         if ($passRate -and $passRate -ge $targetPassRate) {
             Write-PhaseCheck "5B" "SKIP" "Already passed (pass_rate: $passRate%)"
             return $true
         }
     }
-    
+
     # Run the official script (path relative to SKILL_DIR)
     $script5b = Join-Path $SKILL_DIR "references\scripts\phase5b-efficient-loop.sh"
-    
+
     if (Test-Path $script5b) {
         # Set environment variables
         $env:WORKSPACE_DIR = $Workspace
@@ -833,30 +966,7 @@ Use Claude In Chrome MCP for browser automation if needed.
     
     # Verify results
     if (Test-Path $resultFile) {
-        $results = Get-Content $resultFile | ConvertFrom-Json
-        # Support both snake_case and camelCase keys
-        $passRate = $results.pass_rate
-        if (-not $passRate) { $passRate = $results.passRate }
-        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
-        if (-not $passRate) { $passRate = $results.adjustedPassRate }
-        # Check summary sub-object
-        if (-not $passRate -and $results.summary) {
-            $passRate = $results.summary.pass_rate
-            if (-not $passRate) { $passRate = $results.summary.passRate }
-        }
-        # Handle percentage strings like "75.00%"
-        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
-        # Fallback: calculate from passed/total
-        if (-not $passRate) {
-            $total = $results.totalTests
-            if (-not $total) { $total = $results.total_tests }
-            if (-not $total) { $total = $results.total }
-            $passed = $results.passed
-            if (-not $passed) { $passed = $results.tests_passed }
-            if ($total -and $total -gt 0) {
-                $passRate = [math]::Round(($passed / $total) * 100, 1)
-            }
-        }
+        $passRate = Get-PassRateFromFile $resultFile
         Write-PhaseCheck "5B" "COMPLETE" "pass_rate: $passRate%"
         return $true
     } else {
@@ -870,7 +980,7 @@ Use Claude In Chrome MCP for browser automation if needed.
 # ================================================================
 function Invoke-Phase5C {
     Write-Header "Phase 5C: UI Testing (Browser Automation)"
-    
+
     # Load configuration from saved state (works even if Init was skipped)
     $configPath = Join-Path $Workspace "deployment-logs\workflow-state.json"
     if (Test-Path $configPath) {
@@ -880,13 +990,19 @@ function Invoke-Phase5C {
         # Fallback to parameter if no saved config
         $frontendUrl = $FrontendUrl
     }
-    
+
     # Check if we should run
     if (-not $frontendUrl) {
         Write-PhaseCheck "5C" "SKIP" "No frontend URL configured"
         return $true
     }
-    
+
+    # Pre-flight: ensure Chrome debug port is still available
+    if (-not (Ensure-ChromeAvailable)) {
+        Write-PhaseCheck "5C" "FAILED" "Chrome debug port unavailable"
+        return $false
+    }
+
     # Get target pass rate from config (100% for UI)
     $targetPassRate = $Config.global.target_pass_rate_5c
     if (-not $targetPassRate) { $targetPassRate = 100 }
@@ -894,36 +1010,13 @@ function Invoke-Phase5C {
     # Resume check
     $resultFile = Join-Path $Workspace "test-logs\phase5c_test_results.json"
     if ($Resume -and (Test-Path $resultFile)) {
-        $results = Get-Content $resultFile | ConvertFrom-Json
-        # Support both snake_case and camelCase keys
-        $passRate = $results.pass_rate
-        if (-not $passRate) { $passRate = $results.passRate }
-        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
-        if (-not $passRate) { $passRate = $results.adjustedPassRate }
-        # Check summary sub-object
-        if (-not $passRate -and $results.summary) {
-            $passRate = $results.summary.pass_rate
-            if (-not $passRate) { $passRate = $results.summary.passRate }
-        }
-        # Handle percentage strings like "75.00%"
-        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
-        # Fallback: calculate from passed/total
-        if (-not $passRate) {
-            $total = $results.totalTests
-            if (-not $total) { $total = $results.total_tests }
-            if (-not $total) { $total = $results.total }
-            $passed = $results.passed
-            if (-not $passed) { $passed = $results.tests_passed }
-            if ($total -and $total -gt 0) {
-                $passRate = [math]::Round(($passed / $total) * 100, 1)
-            }
-        }
+        $passRate = Get-PassRateFromFile $resultFile
         if ($passRate -and $passRate -ge $targetPassRate) {
             Write-PhaseCheck "5C" "SKIP" "Already passed (pass_rate: $passRate%)"
             return $true
         }
     }
-    
+
     # Run the official script (path relative to SKILL_DIR)
     $script5c = Join-Path $SKILL_DIR "references\scripts\phase5c-efficient-loop.sh"
     
@@ -981,30 +1074,7 @@ Use Claude In Chrome MCP for browser automation.
     
     # Verify results
     if (Test-Path $resultFile) {
-        $results = Get-Content $resultFile | ConvertFrom-Json
-        # Support both snake_case and camelCase keys
-        $passRate = $results.pass_rate
-        if (-not $passRate) { $passRate = $results.passRate }
-        if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
-        if (-not $passRate) { $passRate = $results.adjustedPassRate }
-        # Check summary sub-object
-        if (-not $passRate -and $results.summary) {
-            $passRate = $results.summary.pass_rate
-            if (-not $passRate) { $passRate = $results.summary.passRate }
-        }
-        # Handle percentage strings like "75.00%"
-        if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
-        # Fallback: calculate from passed/total
-        if (-not $passRate) {
-            $total = $results.totalTests
-            if (-not $total) { $total = $results.total_tests }
-            if (-not $total) { $total = $results.total }
-            $passed = $results.passed
-            if (-not $passed) { $passed = $results.tests_passed }
-            if ($total -and $total -gt 0) {
-                $passRate = [math]::Round(($passed / $total) * 100, 1)
-            }
-        }
+        $passRate = Get-PassRateFromFile $resultFile
         Write-PhaseCheck "5C" "COMPLETE" "pass_rate: $passRate%"
         return $true
     } else {
@@ -1043,11 +1113,11 @@ Use actual code analysis, do not hallucinate.
 
 Write-Log @"
 
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║     ai-dev-system-testing - Strict Workflow Executor         ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
++==============================================================+
+|                                                              |
+|     ai-dev-system-testing - Strict Workflow Executor         |
+|                                                              |
++==============================================================+
 
 "@ -ForegroundColor Cyan
 
@@ -1076,13 +1146,30 @@ if ($Phases) {
     $needs5b = $phaseList -contains "phase5b"
     $needs5c = $phaseList -contains "phase5c"
     $hasInit = $phaseList -contains "init"
+    $has5a = $phaseList -contains "phase5a"
 
     if (($needs5b -or $needs5c) -and -not $hasInit) {
         Write-Log "[AUTO] Injecting Phase Init (required for Phase 5B/5C MCP check)" -ForegroundColor Yellow
         $phaseList = @("init") + $phaseList
     }
+
+    # Auto-inject Phase 5A when Phase 5B/5C is included (test data seeding)
+    if (($needs5b -or $needs5c) -and -not $has5a) {
+        Write-Log "[AUTO] Injecting Phase 5A (test data seeding for Phase 5B/5C)" -ForegroundColor Yellow
+        # Insert phase5a before phase5b/phase5c
+        $newList = @()
+        $inserted = $false
+        foreach ($p in $phaseList) {
+            if (($p -eq "phase5b" -or $p -eq "phase5c") -and -not $inserted) {
+                $newList += "phase5a"
+                $inserted = $true
+            }
+            $newList += $p
+        }
+        $phaseList = $newList
+    }
 } else {
-    $phaseList = @("init", "phase2", "phase3", "phase5b", "phase5c", "phase6")
+    $phaseList = @("init", "phase2", "phase3", "phase5a", "phase5b", "phase5c", "phase6")
 }
 
 # Execute phases
@@ -1096,6 +1183,7 @@ foreach ($phase in $phaseList) {
         "init" { $success = Invoke-PhaseInit }
         "phase2" { $success = Invoke-Phase2 }
         "phase3" { $success = Invoke-Phase3 }
+        "phase5a" { $success = Invoke-Phase5A }
         "phase5b" { $success = Invoke-Phase5B }
         "phase5c" { $success = Invoke-Phase5C }
         "phase6" { $success = Invoke-Phase6 }
@@ -1123,15 +1211,15 @@ Write-Header "Workflow Summary"
 if ($allSuccess) {
     Write-Log "[OK] All phases completed successfully!" -ForegroundColor Green
     Write-Log ""
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Log "============================================================" -ForegroundColor Green
     Write-Log "  ALL PHASES COMPLETE - Log viewer will remain open" -ForegroundColor Green
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Log "============================================================" -ForegroundColor Green
     exit 0
 } else {
     Write-Log "[FAIL] Workflow failed. Check logs for details." -ForegroundColor Red
     Write-Log ""
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Log "============================================================" -ForegroundColor Red
     Write-Log "  WORKFLOW FAILED - Check log viewer for details" -ForegroundColor Red
-    Write-Log "════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Log "============================================================" -ForegroundColor Red
     exit 1
 }

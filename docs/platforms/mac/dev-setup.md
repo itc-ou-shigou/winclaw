@@ -84,7 +84,7 @@ If the app crashes when you try to allow **Speech Recognition** or **Microphone*
 1. Reset the TCC permissions:
 
    ```bash
-   tccutil reset All ai.openclaw.mac.debug
+   tccutil reset All ai.winclaw.mac.debug
    ```
 
 2. If that fails, change the `BUNDLE_ID` temporarily in [`scripts/package-mac-app.sh`](https://github.com/winclaw/winclaw/blob/main/scripts/package-mac-app.sh) to force a "clean slate" from macOS.

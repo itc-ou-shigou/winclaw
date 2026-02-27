@@ -58,7 +58,7 @@ winclaw models auth login --provider openai-codex
 
 ### Codex transport default
 
-OpenClaw uses `pi-ai` for model streaming. For `openai-codex/*` models you can set
+WinClaw uses `pi-ai` for model streaming. For `openai-codex/*` models you can set
 `agents.defaults.models.<provider/model>.params.transport` to select transport:
 
 - Default is `"auto"` (WebSocket-first, then SSE fallback).

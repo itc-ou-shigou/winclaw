@@ -11,11 +11,7 @@ RUN apt-get update \
 COPY run.sh /usr/local/bin/winclaw-install-e2e
 RUN chmod +x /usr/local/bin/winclaw-install-e2e
 
-<<<<<<< HEAD
-ENTRYPOINT ["/usr/local/bin/winclaw-install-e2e"]
-=======
 RUN useradd --create-home --shell /bin/bash appuser
 USER appuser
 
-ENTRYPOINT ["/usr/local/bin/openclaw-install-e2e"]
->>>>>>> upstream/main
+ENTRYPOINT ["/usr/local/bin/winclaw-install-e2e"]

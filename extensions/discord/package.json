@@ -1,9 +1,9 @@
 {
-  "name": "@openclaw/discord",
+  "name": "@winclaw/discord",
   "version": "2026.2.26",
-  "description": "OpenClaw Discord channel plugin",
+  "description": "WinClaw Discord channel plugin",
   "type": "module",
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

@@ -1,10 +1,10 @@
 {
-  "name": "@openclaw/copilot-proxy",
+  "name": "@winclaw/copilot-proxy",
   "version": "2026.2.26",
   "private": true,
-  "description": "OpenClaw Copilot Proxy provider plugin",
+  "description": "WinClaw Copilot Proxy provider plugin",
   "type": "module",
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

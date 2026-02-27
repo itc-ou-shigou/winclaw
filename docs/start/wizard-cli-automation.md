@@ -41,7 +41,7 @@ Passing inline key flags without the matching env var now fails fast.
 Example:
 
 ```bash
-openclaw onboard --non-interactive \
+winclaw onboard --non-interactive \
   --mode local \
   --auth-choice openai-api-key \
   --secret-input-mode ref \
@@ -153,7 +153,7 @@ openclaw onboard --non-interactive \
 
     ```bash
     export CUSTOM_API_KEY="your-key"
-    openclaw onboard --non-interactive \
+    winclaw onboard --non-interactive \
       --mode local \
       --auth-choice custom-api-key \
       --custom-base-url "https://llm.example.com/v1" \

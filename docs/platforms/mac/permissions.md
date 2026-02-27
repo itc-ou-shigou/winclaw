@@ -35,8 +35,8 @@ grants, and prompts can disappear entirely until the stale entries are cleared.
 Example resets (replace bundle ID as needed):
 
 ```bash
-sudo tccutil reset Accessibility ai.openclaw.mac
-sudo tccutil reset ScreenCapture ai.openclaw.mac
+sudo tccutil reset Accessibility ai.winclaw.mac
+sudo tccutil reset ScreenCapture ai.winclaw.mac
 sudo tccutil reset AppleEvents
 ```
 

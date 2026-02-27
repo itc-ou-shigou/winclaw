@@ -317,6 +317,100 @@ $env:TEST_USER_PASSWORD = "YourTestPassword123"
 
 ---
 
+## 内置插件
+
+WinClaw v2026.2.28 内置 **18 个预构建插件**，覆盖 15 个专业领域。每个插件包含精选技能、斜杠命令和 MCP 服务器集成 —— 完全通过聊天界面中的自然语言进行配置。
+
+### 插件概览
+
+| 插件 | 领域 | 命令数 | 技能数 | 主要 MCP 集成 |
+|------|------|--------|--------|---------------|
+| **bio-research** | 生命科学研发 | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
+| **customer-support** | 客户支持 | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
+| **data** | 数据分析 | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
+| **design** | UX/UI 设计 | 6 | 6 | Figma, Linear, Notion |
+| **engineering** | 开发工作流 | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
+| **enterprise-search** | 跨工具搜索 | 2 | 3 | Slack, Notion, Guru, Atlassian |
+| **finance** | 财务与会计 | 5 | 6 | Snowflake, BigQuery |
+| **human-resources** | 人力资源 | 6 | 6 | Slack, Google Calendar, Notion |
+| **legal** | 合同与合规 | 7 | 6 | Box, DocuSign, Atlassian |
+| **marketing** | 内容与营销 | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
+| **operations** | 运营管理 | 6 | 6 | ServiceNow, Asana, Atlassian |
+| **product-management** | 产品策略 | 7 | 6 | Linear, Amplitude, Pendo, Figma |
+| **productivity** | 任务与记忆 | 2 | 2 | Slack, Notion, Asana, Monday |
+| **sales** | 销售管道 | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
+| **partner-built/apollo** | 销售自动化 | -- | 3 | Apollo |
+| **partner-built/brand-voice** | 品牌护栏 | 3 | 3 | Notion, Figma, Gong |
+| **partner-built/common-room** | GTM 情报 | 2 | 6 | Common Room |
+| **partner-built/slack** | Slack 工作流 | 5 | 2 | Slack |
+
+### 如何启用插件
+
+通过自然语言配置 —— 直接告诉 WinClaw 你需要什么：
+
+```
+你：   我想用数据分析插件
+AI：   我来为你启用 data 插件。它包含 6 个命令
+       （analyze、build-dashboard、create-viz、explore-data、validate、write-query）
+       并可连接 Snowflake、Databricks 和 BigQuery。
+       你想先连接哪个数据源？
+```
+
+也可在 `winclaw.json` 中手动配置：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "data": { "enabled": true },
+      "sales": { "enabled": true },
+      "engineering": { "enabled": true }
+    }
+  }
+}
+```
+
+### 插件使用示例
+
+**数据分析：**
+
+```
+你：   分析 Snowflake 里的 Q4 收入数据
+AI：   正在运行 /data:analyze... 已连接 Snowflake。
+       Q4 收入：230 万美元（环比 +18%）。头部细分：企业客户（62%）。
+       需要我创建仪表盘或生成可视化图表吗？
+```
+
+**销售管道：**
+
+```
+你：   调查 Acme 公司并起草个性化外联邮件
+AI：   正在运行 /sales:draft-outreach... 在 ZoomInfo 上找到 Acme Corp：
+       B 轮融资，150 人，使用 Salesforce。关键联系人：Jane Doe（销售 VP）。
+       这是一封基于他们近期产品发布的个性化邮件草稿...
+```
+
+**法律合同审查：**
+
+```
+你：   审查供应商发来的这份保密协议
+AI：   正在运行 /legal:triage-nda... 分类：绿色（标准条款）。
+       关键条款：2 年期限、双向义务、标准例外条款。
+       注意：第 7 条竞业限制范围偏大，建议谈判缩小至直接竞争对手。
+```
+
+**生物研究：**
+
+```
+你：   查找 pembrolizumab 治疗肺癌的最新临床试验
+AI：   正在运行 /bio-research:start... 找到 47 项正在招募的试验。
+       前 3 项 III 期试验：NCT04567890（联合化疗，n=800），
+       NCT04891234（辅助治疗，n=1200）...
+       需要分析终点指标或查找相关 PubMed 论文吗？
+```
+
+---
+
 ## 配置说明
 
 ### 配置文件路径

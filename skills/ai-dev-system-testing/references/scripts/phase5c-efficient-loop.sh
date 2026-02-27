@@ -9,6 +9,11 @@
 # Note: set -e removed intentionally — Claude CLI may return non-zero exit codes
 # that should not terminate the iteration loop
 
+# Fix encoding: ensure UTF-8 on Japanese Windows (Git Bash inherits CP932)
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export PYTHONIOENCODING=utf-8
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_REF_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="$SKILL_REF_DIR/config/phase5-loop-control.json"
@@ -69,7 +74,7 @@ load_config() {
     MAX_ITERATIONS=15
     TARGET_PASS_RATE=100  # Phase 5C requires 100%
     EARLY_EXIT_THRESHOLD=3
-    ITERATION_TIMEOUT=1800
+    ITERATION_TIMEOUT=3600
 
     # Load from config file if exists
     # NOTE: pyenv-win .cmd shims break multiline python3 -c strings,
@@ -95,14 +100,14 @@ PYEOF
     TARGET_PASS_RATE="${BUGFIX_TARGET_PASS_RATE:-100}"
     EARLY_EXIT_THRESHOLD="${BUGFIX_EARLY_EXIT_THRESHOLD:-$EARLY_EXIT_THRESHOLD}"
 
-    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "============================================================"
     log_msg "Phase 5C Efficient Mode - Configuration"
-    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "============================================================"
     log_msg "Max Iterations: $MAX_ITERATIONS"
     log_msg "Target Pass Rate: $TARGET_PASS_RATE%"
     log_msg "Early Exit Threshold: $EARLY_EXIT_THRESHOLD"
     log_msg "Iteration Timeout: ${ITERATION_TIMEOUT}s"
-    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "============================================================"
 }
 
 # ================================================================
@@ -160,57 +165,106 @@ PYEOF
 run_iteration() {
     local iteration=$1
     log_msg ""
-    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "============================================================"
     log_msg "ITERATION $iteration/$MAX_ITERATIONS"
-    log_msg "════════════════════════════════════════════════════════════"
+    log_msg "============================================================"
     
     # Build prompt with iteration context
     local prompt_file_abs="$PROMPT_FILE"
     local frontend_url="${AIDEV_FRONTEND_URL:-http://localhost:3000}"
-    ITERATION_PROMPT="你正在执行 Phase 5C UI 测试的第 ${iteration} 次迭代。
 
-⚠️ 重要: フロントエンドは既に起動済みです。起動を試みないでください。
-フロントエンド URL: ${frontend_url}
-このURLにブラウザでアクセスしてテストを実施してください。
+    # Load Phase 5A test data directly into the prompt
+    local test_data_context=""
+    local seed_file="$LOG_DIR/test_data_seed.json"
+    local auth_file="$LOG_DIR/phase5b_test_user.json"
+    if [ -f "$seed_file" ]; then
+        test_data_context="
+=== PHASE 5A TEST DATA (ALREADY CREATED - USE THESE IDs) ===
+$(cat "$seed_file")
+=== END TEST DATA ===
+"
+        if [ -f "$auth_file" ]; then
+            test_data_context="${test_data_context}
+=== AUTH CREDENTIALS (use email/password to login) ===
+$(cat "$auth_file")
+=== END AUTH ===
+"
+        fi
+        log_msg "[INFO] Injected Phase 5A test data into prompt"
+    else
+        test_data_context="
+WARNING: test-logs/test_data_seed.json NOT FOUND.
+You MUST create test data yourself using javascript_tool:
+1. Navigate to the registration page and register a test user
+2. Login with the test user credentials
+3. Create entities needed for testing via the UI
+4. Record all entity IDs for use in subsequent tests
+"
+        log_msg "[WARN] Phase 5A test data not found - Claude will create data"
+    fi
 
-请阅读并执行以下测试提示词文件中的所有步骤：
+    ITERATION_PROMPT="You are executing Phase 5C UI Testing, iteration ${iteration}.
+
+IMPORTANT: The frontend is already running. Do NOT attempt to start it.
+Frontend URL: ${frontend_url}
+Navigate to this URL in the browser to perform UI tests.
+
+Read and execute ALL steps from the test specification file:
 ${prompt_file_abs}
 
-⛔ 必须遵守的执行方法 ⛔:
-所有 UI 测试必须且只能通过 Claude In Chrome MCP 工具进行浏览器自动化。
-严格禁止以下替代方法：
-- Playwright / Puppeteer / Selenium 等浏览器自动化框架
-- curl / wget / python requests / httpx
-- 无头浏览器 (headless browser)
-- 仅检查源代码而不在真实浏览器中渲染验证
-- Node.js fetch / axios
-- 任何非 MCP 的 HTTP 客户端
+${test_data_context}
 
-必须使用的 MCP 工具：
+MANDATORY EXECUTION METHOD:
+All UI tests MUST be performed via Claude In Chrome MCP browser automation ONLY.
+PROHIBITED methods (do NOT use):
+- Playwright / Puppeteer / Selenium
+- curl / wget / python requests / httpx
+- Headless browsers
+- Source code inspection without rendering in a real browser
+- Node.js fetch / axios
+- Any non-MCP HTTP client
+
+Required MCP tools:
 - mcp__Claude_in_Chrome__tabs_context_mcp
 - mcp__Claude_in_Chrome__navigate
 - mcp__Claude_in_Chrome__read_page / find
-- mcp__Claude_in_Chrome__computer (点击/截图)
+- mcp__Claude_in_Chrome__computer (click/screenshot)
 - mcp__Claude_in_Chrome__form_input
 - mcp__Claude_in_Chrome__javascript_tool
 - mcp__Claude_in_Chrome__read_network_requests
 - mcp__Claude_in_Chrome__read_console_messages
 
-第一步：调用 mcp__Claude_in_Chrome__tabs_context_mcp 验证 MCP 连接。
-如果不可用 → 立即停止并报告错误，不要使用替代方案。
+STEPS (execute in order):
 
-关键要求：
-1. 使用 Claude In Chrome MCP 进行浏览器自动化（唯一允许的方法）
-2. 对每个页面执行 4 CORE TESTS (Form/Link/Button/CSS)
-3. 对每个页面执行 6-GATE 验证
-4. 发现 bug 后立即修复
-5. 生成结果文件: test-logs/phase5c_test_results.json
-6. 目标通过率: ${TARGET_PASS_RATE}% (所有页面必须通过)
+Step 1: Call mcp__Claude_in_Chrome__tabs_context_mcp to verify MCP connection.
+  If unavailable -> stop immediately and report error. Do NOT use alternatives.
 
-测试前准备：
-- 使用 Phase 5B 创建的测试账号登录
+Step 2: Load test data from Phase 5A (provided above in the prompt).
+  - Parse the TEST DATA section above to extract auth credentials and entity IDs.
+  - Navigate to the login page and login with auth email/password.
+  - NEVER hardcode id=1 or id=999. Use ONLY real IDs from test data.
+  - If test data is missing or insufficient, create what you need using
+    javascript_tool or by filling forms in the UI, then record the new IDs.
 
-完成后请报告测试结果和 GATE 验证状态。"
+Step 3: Test all pages.
+  - Execute 4 CORE TESTS per page (Form/Link/Button/CSS).
+  - Execute 6-GATE verification per page.
+  - Fix bugs immediately when found.
+
+Step 4: Generate results file: test-logs/phase5c_test_results.json
+
+KEY REQUIREMENTS:
+1. Use Claude In Chrome MCP for browser automation (the ONLY allowed method).
+2. Login using Phase 5A auth credentials (injected above).
+3. Use entity IDs from test data. Never guess or hardcode IDs.
+4. If test data is insufficient for a specific test, create it via javascript_tool.
+5. Execute 4 CORE TESTS (Form/Link/Button/CSS) per page.
+6. Execute 6-GATE verification per page.
+7. Fix bugs immediately when found.
+8. Generate results file: test-logs/phase5c_test_results.json
+9. Target pass rate: ${TARGET_PASS_RATE}% (all pages must pass).
+
+Report test results and GATE verification status when done."
 
     # Run Claude CLI via stdin pipe (NOT -p flag, which disables tools/MCP)
     # On timeout, use taskkill /T to kill entire process tree (Git Bash lacks GNU timeout/pkill)
@@ -223,18 +277,35 @@ ${prompt_file_abs}
     local iteration_start_epoch
     iteration_start_epoch=$(date +%s)
 
-    if [ -n "$REALTIME_LOG" ]; then
-        echo "$ITERATION_PROMPT" | claude --dangerously-skip-permissions --verbose 2>&1 | tee "$LOG_DIR/phase5c_iteration_${iteration}.log" | tee -a "$REALTIME_LOG" &
-    else
-        echo "$ITERATION_PROMPT" | claude --dangerously-skip-permissions --verbose 2>&1 | tee "$LOG_DIR/phase5c_iteration_${iteration}.log" &
-    fi
+    # Write output directly to file (avoids tee buffering issue on MSYS2
+    # where tee uses full buffering in pipes and loses data on taskkill)
+    local ITER_LOG="$LOG_DIR/phase5c_iteration_${iteration}.log"
+    : > "$ITER_LOG"
+
+    echo "$ITERATION_PROMPT" | claude --dangerously-skip-permissions --verbose > "$ITER_LOG" 2>&1 &
     local bg_pid=$!
 
     # Manual timeout monitoring with result-file-based completion detection
+    # Also periodically streams new log lines to console and realtime log
     local elapsed=0
+    local last_line_count=0
     while kill -0 $bg_pid 2>/dev/null; do
         sleep 10
         elapsed=$((elapsed + 10))
+
+        # Stream new lines from iteration log to console and realtime log
+        if [ -f "$ITER_LOG" ]; then
+            local current_line_count
+            current_line_count=$(wc -l < "$ITER_LOG" 2>/dev/null || echo 0)
+            if [ "$current_line_count" -gt "$last_line_count" ]; then
+                local skip=$((last_line_count + 1))
+                tail -n +"$skip" "$ITER_LOG" 2>/dev/null | while IFS= read -r line; do
+                    echo "$line"
+                    [ -n "$REALTIME_LOG" ] && echo "[$(date +%H:%M:%S)] $line" >> "$REALTIME_LOG"
+                done
+                last_line_count=$current_line_count
+            fi
+        fi
 
         # MSYS2 workaround: check if result file was updated after iteration started
         # This catches the case where the subshell is zombie but work is already done
@@ -253,6 +324,18 @@ ${prompt_file_abs}
 
         if [ $elapsed -ge $ITERATION_TIMEOUT ]; then
             log_msg "[WARN] Iteration $iteration timed out after ${ITERATION_TIMEOUT}s — killing process tree"
+            # Dump remaining log lines before killing
+            if [ -f "$ITER_LOG" ]; then
+                local final_count
+                final_count=$(wc -l < "$ITER_LOG" 2>/dev/null || echo 0)
+                if [ "$final_count" -gt "$last_line_count" ]; then
+                    local skip=$((last_line_count + 1))
+                    tail -n +"$skip" "$ITER_LOG" 2>/dev/null | while IFS= read -r line; do
+                        echo "$line"
+                        [ -n "$REALTIME_LOG" ] && echo "[$(date +%H:%M:%S)] $line" >> "$REALTIME_LOG"
+                    done
+                fi
+            fi
             # Use Windows taskkill /T to kill subshell + all child processes (claude, tee, etc.)
             taskkill.exe /T /F /PID $bg_pid >/dev/null 2>&1
             # Fallback: also try kill in case taskkill missed anything
@@ -313,9 +396,9 @@ PYEOF
 # Main Loop
 # ================================================================
 main() {
-    log_msg "╔════════════════════════════════════════════════════════════╗"
-    log_msg "║  Phase 5C Efficient Mode - Iteration Loop Controller       ║"
-    log_msg "╚════════════════════════════════════════════════════════════╝"
+    log_msg "+============================================================+"
+    log_msg "|  Phase 5C Efficient Mode - Iteration Loop Controller       |"
+    log_msg "+============================================================+"
 
     load_config
 
@@ -344,11 +427,11 @@ main() {
         # Check if target achieved (100% for Phase 5C)
         if [ $(python3 -c "print(1 if $current_pass_rate >= $TARGET_PASS_RATE else 0)" 2>/dev/null || echo "0") -eq 1 ]; then
             log_msg ""
-            log_msg "╔════════════════════════════════════════════════════════════╗"
-            log_msg "║  ✅ SUCCESS: All pages passed!                              ║"
-            log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
-            log_msg "║  Iterations Used: $iteration                                        ║"
-            log_msg "╚════════════════════════════════════════════════════════════╝"
+            log_msg "+============================================================+"
+            log_msg "|  [OK] SUCCESS: All pages passed!                            |"
+            log_msg "|  Final Pass Rate: $current_pass_rate%                              |"
+            log_msg "|  Iterations Used: $iteration                                        |"
+            log_msg "+============================================================+"
             exit 0
         fi
 
@@ -359,11 +442,11 @@ main() {
 
             if [ $no_improvement_count -ge $EARLY_EXIT_THRESHOLD ]; then
                 log_msg ""
-                log_msg "╔════════════════════════════════════════════════════════════╗"
-                log_msg "║  ⚠️ EARLY EXIT: No improvement for $EARLY_EXIT_THRESHOLD iterations        ║"
-                log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
-                log_msg "║  Remaining pages need fixes                                ║"
-                log_msg "╚════════════════════════════════════════════════════════════╝"
+                log_msg "+============================================================+"
+                log_msg "|  [WARN] EARLY EXIT: No improvement for $EARLY_EXIT_THRESHOLD iterations    |"
+                log_msg "|  Final Pass Rate: $current_pass_rate%                              |"
+                log_msg "|  Remaining pages need fixes                                |"
+                log_msg "+============================================================+"
                 exit 1
             fi
         else
@@ -377,11 +460,11 @@ main() {
 
     # Max iterations reached
     log_msg ""
-    log_msg "╔════════════════════════════════════════════════════════════╗"
-    log_msg "║  ❌ MAX_ITERATIONS_REACHED: $MAX_ITERATIONS iterations completed        ║"
-    log_msg "║  Final Pass Rate: $current_pass_rate%                              ║"
-    log_msg "║  Some pages still have issues                              ║"
-    log_msg "╚════════════════════════════════════════════════════════════╝"
+    log_msg "+============================================================+"
+    log_msg "|  [FAIL] MAX_ITERATIONS_REACHED: $MAX_ITERATIONS iterations completed    |"
+    log_msg "|  Final Pass Rate: $current_pass_rate%                              |"
+    log_msg "|  Some pages still have issues                              |"
+    log_msg "+============================================================+"
     exit 1
 }
 

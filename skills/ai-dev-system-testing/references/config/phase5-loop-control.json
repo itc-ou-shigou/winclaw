@@ -12,13 +12,22 @@
   "iteration_control": {
     "max_iterations": 15,
     "early_exit_threshold": 3,
-    "iteration_timeout_seconds": 1800,
+    "iteration_timeout_seconds": 3600,
     "enable_early_exit": true
+  },
+
+  "phase5a_seeding": {
+    "timeout_seconds": 1800,
+    "output_files": ["test-logs/test_data_seed.json", "test-logs/phase5b_test_user.json"],
+    "fallback_to_api": true,
+    "fallback_to_db_insert": true,
+    "test_user_email": "phase5a_test@example.com",
+    "test_user_password": "Test@123456"
   },
 
   "phase5b_bugfix": {
     "max_iterations": 15,
-    "iteration_timeout_seconds": 1800,
+    "iteration_timeout_seconds": 3600,
     "early_exit_threshold": 3,
     "hint_document": ".claude/prompts/api-backend-common-issues.md",
     "dynamic_reseed_enabled": true,
@@ -28,7 +37,7 @@
 
   "phase5c_bugfix": {
     "max_iterations": 15,
-    "iteration_timeout_seconds": 1800,
+    "iteration_timeout_seconds": 3600,
     "early_exit_threshold": 3,
     "hint_document": ".claude/prompts/react-spa-common-issues.md",
     "frontend_rebuild_enabled": true,

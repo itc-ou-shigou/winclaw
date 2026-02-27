@@ -1,8 +1,8 @@
 import type {
   ChannelAccountSnapshot,
   ChannelGatewayContext,
-  OpenClawConfig,
-} from "openclaw/plugin-sdk";
+  WinClawConfig,
+} from "winclaw/plugin-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRuntimeEnv } from "../../test-utils/runtime-env.js";
 import type { ResolvedGoogleChatAccount } from "./accounts.js";
@@ -35,7 +35,7 @@ function createStartAccountCtx(params: {
   return {
     accountId: params.account.accountId,
     account: params.account,
-    cfg: {} as OpenClawConfig,
+    cfg: {} as WinClawConfig,
     runtime: createRuntimeEnv(),
     abortSignal: params.abortSignal,
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },

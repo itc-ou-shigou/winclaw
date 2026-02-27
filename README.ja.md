@@ -323,6 +323,101 @@ $env:TEST_USER_PASSWORD = "YourTestPassword123"
 
 ---
 
+## 組み込みプラグイン
+
+WinClaw v2026.2.28 には **18 個のビルトインプラグイン** が搭載されており、15 の専門分野をカバーしています。各プラグインには厳選されたスキル、スラッシュコマンド、MCP サーバー連携が含まれ、チャットタブでの自然言語で設定できます。
+
+### プラグイン一覧
+
+| プラグイン | 分野 | コマンド | スキル | 主要 MCP 連携 |
+|-----------|------|---------|--------|---------------|
+| **bio-research** | ライフサイエンス R&D | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
+| **customer-support** | カスタマーサポート | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
+| **data** | データ分析 | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
+| **design** | UX/UI デザイン | 6 | 6 | Figma, Linear, Notion |
+| **engineering** | 開発ワークフロー | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
+| **enterprise-search** | クロスツール検索 | 2 | 3 | Slack, Notion, Guru, Atlassian |
+| **finance** | 財務・会計 | 5 | 6 | Snowflake, BigQuery |
+| **human-resources** | 人事 | 6 | 6 | Slack, Google Calendar, Notion |
+| **legal** | 契約・コンプライアンス | 7 | 6 | Box, DocuSign, Atlassian |
+| **marketing** | コンテンツ・マーケティング | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
+| **operations** | 事業運営 | 6 | 6 | ServiceNow, Asana, Atlassian |
+| **product-management** | プロダクト戦略 | 7 | 6 | Linear, Amplitude, Pendo, Figma |
+| **productivity** | タスク・メモリ | 2 | 2 | Slack, Notion, Asana, Monday |
+| **sales** | セールスパイプライン | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
+| **partner-built/apollo** | 営業自動化 | -- | 3 | Apollo |
+| **partner-built/brand-voice** | ブランドガードレール | 3 | 3 | Notion, Figma, Gong |
+| **partner-built/common-room** | GTM インテリジェンス | 2 | 6 | Common Room |
+| **partner-built/slack** | Slack ワークフロー | 5 | 2 | Slack |
+
+### プラグインの有効化
+
+自然言語で設定できます — WinClaw に必要なことを伝えるだけです：
+
+```
+あなた：  データ分析プラグインを使いたい
+AI：      data プラグインを有効にします。6 つのコマンド
+          （analyze、build-dashboard、create-viz、explore-data、validate、write-query）
+          が含まれ、Snowflake、Databricks、BigQuery に接続できます。
+          最初にどのデータソースを接続しますか？
+```
+
+`winclaw.json` で手動設定することもできます：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "data": { "enabled": true },
+      "sales": { "enabled": true },
+      "engineering": { "enabled": true }
+    }
+  }
+}
+```
+
+### プラグイン使用例
+
+**データ分析：**
+
+```
+あなた：  Snowflake の Q4 売上データを分析して
+AI：      /data:analyze を実行中... Snowflake に接続しました。
+          Q4 売上: 230 万ドル（前期比 +18%）。トップセグメント: エンタープライズ（62%）。
+          ダッシュボードの作成またはビジュアライゼーションの生成を行いますか？
+```
+
+**セールスパイプライン：**
+
+```
+あなた：  Acme Corp を調査してパーソナライズされたアウトリーチメールを作成して
+AI：      /sales:draft-outreach を実行中... ZoomInfo で Acme Corp を発見：
+          シリーズ B、150 名、Salesforce を使用中。キーコンタクト: Jane Doe（VP Sales）。
+          最近の製品ローンチに基づいたパーソナライズメールを作成しました...
+```
+
+**法務 契約レビュー：**
+
+```
+あなた：  新しいベンダーからの NDA をレビューして
+AI：      /legal:triage-nda を実行中... 分類: GREEN（標準条項）。
+          主要条項: 2 年間、双方向義務、標準的な除外条項。
+          注意点: 第 7 条の競業避止条項が通常より広範。
+          直接的な競合他社に限定するよう交渉を推奨します。
+```
+
+**バイオリサーチ：**
+
+```
+あなた：  ペムブロリズマブの肺がん臨床試験を検索して
+AI：      /bio-research:start を実行中... 47 件の募集中の試験を発見。
+          上位 3 件の Phase III 試験: NCT04567890（化学療法併用、n=800）、
+          NCT04891234（術後補助療法、n=1200）...
+          エンドポイント分析または関連 PubMed 論文の検索を行いますか？
+```
+
+---
+
 ## 設定
 
 ### 設定ファイルパス

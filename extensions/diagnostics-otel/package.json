@@ -1,7 +1,7 @@
 {
-  "name": "@openclaw/diagnostics-otel",
+  "name": "@winclaw/diagnostics-otel",
   "version": "2026.2.26",
-  "description": "OpenClaw diagnostics OpenTelemetry exporter",
+  "description": "WinClaw diagnostics OpenTelemetry exporter",
   "type": "module",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -16,7 +16,7 @@
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@opentelemetry/semantic-conventions": "^1.39.0"
   },
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

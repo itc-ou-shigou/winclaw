@@ -6,11 +6,7 @@ WORKDIR /app
 
 ENV NODE_OPTIONS="--disable-warning=ExperimentalWarning"
 
-<<<<<<< HEAD
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsdown.config.ts vitest.config.ts vitest.e2e.config.ts winclaw.mjs ./
-=======
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.plugin-sdk.dts.json tsdown.config.ts vitest.config.ts vitest.e2e.config.ts openclaw.mjs ./
->>>>>>> upstream/main
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.plugin-sdk.dts.json tsdown.config.ts vitest.config.ts vitest.e2e.config.ts winclaw.mjs ./
 COPY src ./src
 COPY test ./test
 COPY scripts ./scripts
@@ -20,7 +16,7 @@ COPY patches ./patches
 COPY ui ./ui
 COPY extensions/memory-core ./extensions/memory-core
 COPY vendor/a2ui/renderers/lit ./vendor/a2ui/renderers/lit
-COPY apps/shared/OpenClawKit/Tools/CanvasA2UI ./apps/shared/OpenClawKit/Tools/CanvasA2UI
+COPY apps/shared/WinClawKit/Tools/CanvasA2UI ./apps/shared/WinClawKit/Tools/CanvasA2UI
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm build

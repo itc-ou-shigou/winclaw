@@ -32,7 +32,7 @@ For a general overview of onboarding paths, see [Onboarding Overview](/start/onb
 
 Security trust model:
 
-- By default, OpenClaw is a personal agent: one trusted operator boundary.
+- By default, WinClaw is a personal agent: one trusted operator boundary.
 - Shared/multi-user setups require lock-down (split trust boundaries, keep tool access minimal, and follow [Security](/gateway/security)).
 
 </Step>

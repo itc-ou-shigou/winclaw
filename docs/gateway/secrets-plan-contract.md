@@ -1,7 +1,7 @@
 ---
 summary: "Contract for `secrets apply` plans: allowed target paths, validation, and ref-only auth-profile behavior"
 read_when:
-  - Generating or reviewing `openclaw secrets apply` plan files
+  - Generating or reviewing `winclaw secrets apply` plan files
   - Debugging `Invalid plan target path` errors
   - Understanding how `keyRef` and `tokenRef` influence implicit provider discovery
 title: "Secrets Apply Plan Contract"
@@ -9,13 +9,13 @@ title: "Secrets Apply Plan Contract"
 
 # Secrets apply plan contract
 
-This page defines the strict contract enforced by `openclaw secrets apply`.
+This page defines the strict contract enforced by `winclaw secrets apply`.
 
 If a target does not match these rules, apply fails before mutating config.
 
 ## Plan file shape
 
-`openclaw secrets apply --from <plan.json>` expects a `targets` array of plan targets:
+`winclaw secrets apply --from <plan.json>` expects a `targets` array of plan targets:
 
 ```json5
 {
@@ -79,13 +79,13 @@ Behavior:
 
 ```bash
 # Validate plan without writes
-openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
+winclaw secrets apply --from /tmp/winclaw-secrets-plan.json --dry-run
 
 # Then apply for real
-openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
+winclaw secrets apply --from /tmp/winclaw-secrets-plan.json
 ```
 
-If apply fails with an invalid target path message, regenerate the plan with `openclaw secrets configure` or fix the target path to one of the allowed shapes above.
+If apply fails with an invalid target path message, regenerate the plan with `winclaw secrets configure` or fix the target path to one of the allowed shapes above.
 
 ## Related docs
 

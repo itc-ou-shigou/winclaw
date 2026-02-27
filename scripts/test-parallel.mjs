@@ -57,7 +57,7 @@ const unitIsolatedFilesRaw = [
   // Heavy runner/exec/archive suites are stable but contend on shared resources under vmForks.
   "src/agents/pi-embedded-runner.test.ts",
   "src/agents/bash-tools.test.ts",
-  "src/agents/openclaw-tools.subagents.sessions-spawn.lifecycle.test.ts",
+  "src/agents/winclaw-tools.subagents.sessions-spawn.lifecycle.test.ts",
   "src/agents/bash-tools.exec.background-abort.test.ts",
   "src/agents/subagent-announce.format.test.ts",
   "src/infra/archive.test.ts",
@@ -97,12 +97,12 @@ const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "", 10)
 // vmForks is a big win for transform/import heavy suites, but Node 24 had
 // regressions with Vitest's vm runtime in this repo, and low-memory local hosts
 // are more likely to hit per-worker V8 heap ceilings. Keep it opt-out via
-// OPENCLAW_TEST_VM_FORKS=0, and let users force-enable with =1.
+// WINCLAW_TEST_VM_FORKS=0, and let users force-enable with =1.
 const supportsVmForks = Number.isFinite(nodeMajor) ? nodeMajor !== 24 : true;
 const useVmForks =
-  process.env.OPENCLAW_TEST_VM_FORKS === "1" ||
-  (process.env.OPENCLAW_TEST_VM_FORKS !== "0" && !isWindows && supportsVmForks && !lowMemLocalHost);
-const disableIsolation = process.env.OPENCLAW_TEST_NO_ISOLATE === "1";
+  process.env.WINCLAW_TEST_VM_FORKS === "1" ||
+  (process.env.WINCLAW_TEST_VM_FORKS !== "0" && !isWindows && supportsVmForks && !lowMemLocalHost);
+const disableIsolation = process.env.WINCLAW_TEST_NO_ISOLATE === "1";
 const runs = [
   ...(useVmForks
     ? [
@@ -159,39 +159,39 @@ const runs = [
     ],
   },
 ];
-const shardOverride = Number.parseInt(process.env.OPENCLAW_TEST_SHARDS ?? "", 10);
+const shardOverride = Number.parseInt(process.env.WINCLAW_TEST_SHARDS ?? "", 10);
 const configuredShardCount =
   Number.isFinite(shardOverride) && shardOverride > 1 ? shardOverride : null;
 const shardCount = configuredShardCount ?? (isWindowsCi ? 2 : 1);
 const shardIndexOverride = (() => {
-  const parsed = Number.parseInt(process.env.OPENCLAW_TEST_SHARD_INDEX ?? "", 10);
+  const parsed = Number.parseInt(process.env.WINCLAW_TEST_SHARD_INDEX ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 })();
 
 if (shardIndexOverride !== null && shardCount <= 1) {
   console.error(
-    `[test-parallel] OPENCLAW_TEST_SHARD_INDEX=${String(
+    `[test-parallel] WINCLAW_TEST_SHARD_INDEX=${String(
       shardIndexOverride,
-    )} requires OPENCLAW_TEST_SHARDS>1.`,
+    )} requires WINCLAW_TEST_SHARDS>1.`,
   );
   process.exit(2);
 }
 
 if (shardIndexOverride !== null && shardIndexOverride > shardCount) {
   console.error(
-    `[test-parallel] OPENCLAW_TEST_SHARD_INDEX=${String(
+    `[test-parallel] WINCLAW_TEST_SHARD_INDEX=${String(
       shardIndexOverride,
-    )} exceeds OPENCLAW_TEST_SHARDS=${String(shardCount)}.`,
+    )} exceeds WINCLAW_TEST_SHARDS=${String(shardCount)}.`,
   );
   process.exit(2);
 }
 const windowsCiArgs = isWindowsCi ? ["--dangerouslyIgnoreUnhandledErrors"] : [];
 const silentArgs =
-  process.env.OPENCLAW_TEST_SHOW_PASSED_LOGS === "1" ? [] : ["--silent=passed-only"];
+  process.env.WINCLAW_TEST_SHOW_PASSED_LOGS === "1" ? [] : ["--silent=passed-only"];
 const rawPassthroughArgs = process.argv.slice(2);
 const passthroughArgs =
   rawPassthroughArgs[0] === "--" ? rawPassthroughArgs.slice(1) : rawPassthroughArgs;
-const rawTestProfile = process.env.OPENCLAW_TEST_PROFILE?.trim().toLowerCase();
+const rawTestProfile = process.env.WINCLAW_TEST_PROFILE?.trim().toLowerCase();
 const testProfile =
   rawTestProfile === "low" ||
   rawTestProfile === "max" ||
@@ -199,21 +199,21 @@ const testProfile =
   rawTestProfile === "serial"
     ? rawTestProfile
     : "normal";
-const overrideWorkers = Number.parseInt(process.env.OPENCLAW_TEST_WORKERS ?? "", 10);
+const overrideWorkers = Number.parseInt(process.env.WINCLAW_TEST_WORKERS ?? "", 10);
 const resolvedOverride =
   Number.isFinite(overrideWorkers) && overrideWorkers > 0 ? overrideWorkers : null;
 const parallelGatewayEnabled =
-  process.env.OPENCLAW_TEST_PARALLEL_GATEWAY === "1" || (!isCI && highMemLocalHost);
+  process.env.WINCLAW_TEST_PARALLEL_GATEWAY === "1" || (!isCI && highMemLocalHost);
 // Keep gateway serial by default except when explicitly requested or on high-memory local hosts.
 const keepGatewaySerial =
   isWindowsCi ||
-  process.env.OPENCLAW_TEST_SERIAL_GATEWAY === "1" ||
+  process.env.WINCLAW_TEST_SERIAL_GATEWAY === "1" ||
   testProfile === "serial" ||
   !parallelGatewayEnabled;
 const parallelRuns = keepGatewaySerial ? runs.filter((entry) => entry.name !== "gateway") : runs;
 const serialRuns = keepGatewaySerial ? runs.filter((entry) => entry.name === "gateway") : [];
 const baseLocalWorkers = Math.max(4, Math.min(16, hostCpuCount));
-const loadAwareDisabledRaw = process.env.OPENCLAW_TEST_LOAD_AWARE?.trim().toLowerCase();
+const loadAwareDisabledRaw = process.env.WINCLAW_TEST_LOAD_AWARE?.trim().toLowerCase();
 const loadAwareDisabled = loadAwareDisabledRaw === "0" || loadAwareDisabledRaw === "false";
 const loadRatio =
   !isCI && !loadAwareDisabled && process.platform !== "win32" && hostCpuCount > 0
@@ -302,7 +302,7 @@ const WARNING_SUPPRESSION_FLAGS = [
 const DEFAULT_CI_MAX_OLD_SPACE_SIZE_MB = 4096;
 const maxOldSpaceSizeMb = (() => {
   // CI can hit Node heap limits (especially on large suites). Allow override, default to 4GB.
-  const raw = process.env.OPENCLAW_TEST_MAX_OLD_SPACE_SIZE_MB ?? "";
+  const raw = process.env.WINCLAW_TEST_MAX_OLD_SPACE_SIZE_MB ?? "";
   const parsed = Number.parseInt(raw, 10);
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
@@ -314,7 +314,7 @@ const maxOldSpaceSizeMb = (() => {
 })();
 
 function resolveReportDir() {
-  const raw = process.env.OPENCLAW_VITEST_REPORT_DIR?.trim();
+  const raw = process.env.WINCLAW_VITEST_REPORT_DIR?.trim();
   if (!raw) {
     return null;
   }

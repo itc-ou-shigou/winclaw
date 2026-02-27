@@ -9,7 +9,7 @@ title: "Secrets Management"
 
 # Secrets management
 
-OpenClaw supports additive secret references so credentials do not need to be stored as plaintext in config files.
+WinClaw supports additive secret references so credentials do not need to be stored as plaintext in config files.
 
 Plaintext still works. Secret refs are optional.
 
@@ -26,7 +26,7 @@ This keeps secret-provider outages off the hot request path.
 
 ## Onboarding reference preflight
 
-When onboarding runs in interactive mode and you choose secret reference storage, OpenClaw performs a fast preflight check before saving:
+When onboarding runs in interactive mode and you choose secret reference storage, WinClaw performs a fast preflight check before saving:
 
 - Env refs: validates env var name and confirms a non-empty value is visible during onboarding.
 - Provider refs (`file` or `exec`): validates the selected provider, resolves the provided `id`, and checks value type.
@@ -86,12 +86,12 @@ Define providers under `secrets.providers`:
       default: { source: "env" },
       filemain: {
         source: "file",
-        path: "~/.openclaw/secrets.json",
+        path: "~/.winclaw/secrets.json",
         mode: "json", // or "singleValue"
       },
       vault: {
         source: "exec",
-        command: "/usr/local/bin/openclaw-vault-resolver",
+        command: "/usr/local/bin/winclaw-vault-resolver",
         args: ["--profile", "prod"],
         passEnv: ["PATH", "VAULT_ADDR"],
         jsonOnly: true,
@@ -127,7 +127,7 @@ Define providers under `secrets.providers`:
 
 - Runs configured absolute binary path, no shell.
 - By default, `command` must point to a regular file (not a symlink).
-- Set `allowSymlinkCommand: true` to allow symlink command paths (for example Homebrew shims). OpenClaw validates the resolved target path.
+- Set `allowSymlinkCommand: true` to allow symlink command paths (for example Homebrew shims). WinClaw validates the resolved target path.
 - Enable `allowSymlinkCommand` only when required for trusted package-manager paths, and pair it with `trustedDirs` (for example `["/opt/homebrew"]`).
 - When `trustedDirs` is set, checks apply to the resolved target path.
 - Supports timeout, no-output timeout, output byte limits, env allowlist, and trusted dirs.
@@ -166,7 +166,7 @@ Optional per-id errors:
         command: "/opt/homebrew/bin/op",
         allowSymlinkCommand: true, // required for Homebrew symlinked binaries
         trustedDirs: ["/opt/homebrew"],
-        args: ["read", "op://Personal/OpenClaw QA API Key/password"],
+        args: ["read", "op://Personal/WinClaw QA API Key/password"],
         passEnv: ["HOME"],
         jsonOnly: false,
       },
@@ -195,7 +195,7 @@ Optional per-id errors:
         command: "/opt/homebrew/bin/vault",
         allowSymlinkCommand: true, // required for Homebrew symlinked binaries
         trustedDirs: ["/opt/homebrew"],
-        args: ["kv", "get", "-field=OPENAI_API_KEY", "secret/openclaw"],
+        args: ["kv", "get", "-field=OPENAI_API_KEY", "secret/winclaw"],
         passEnv: ["VAULT_ADDR", "VAULT_TOKEN"],
         jsonOnly: false,
       },
@@ -244,7 +244,7 @@ Optional per-id errors:
 
 ## In-scope fields (v1)
 
-### `~/.openclaw/openclaw.json`
+### `~/.winclaw/winclaw.json`
 
 - `models.providers.<provider>.apiKey`
 - `skills.entries.<skillKey>.apiKey`
@@ -253,7 +253,7 @@ Optional per-id errors:
 - `channels.googlechat.accounts.<accountId>.serviceAccount`
 - `channels.googlechat.accounts.<accountId>.serviceAccountRef`
 
-### `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+### `~/.winclaw/agents/<agentId>/agent/auth-profiles.json`
 
 - `profiles.<profileId>.keyRef` for `type: "api_key"`
 - `profiles.<profileId>.tokenRef` for `type: "token"`
@@ -287,7 +287,7 @@ Activation contract:
 
 ## Degraded and recovered operator signals
 
-When reload-time activation fails after a healthy state, OpenClaw enters degraded secrets state.
+When reload-time activation fails after a healthy state, WinClaw enters degraded secrets state.
 
 One-shot system event and log codes:
 
@@ -306,9 +306,9 @@ Behavior:
 Use this default operator flow:
 
 ```bash
-openclaw secrets audit --check
-openclaw secrets configure
-openclaw secrets audit --check
+winclaw secrets audit --check
+winclaw secrets configure
+winclaw secrets audit --check
 ```
 
 Migration completeness:
@@ -320,7 +320,7 @@ Migration completeness:
 
 Findings include:
 
-- plaintext values at rest (`openclaw.json`, `auth-profiles.json`, `.env`)
+- plaintext values at rest (`winclaw.json`, `auth-profiles.json`, `.env`)
 - unresolved refs
 - precedence shadowing (`auth-profiles` taking priority over config refs)
 - legacy residues (`auth.json`, OAuth out-of-scope reminders)
@@ -330,15 +330,15 @@ Findings include:
 Interactive helper that:
 
 - configures `secrets.providers` first (`env`/`file`/`exec`, add/edit/remove)
-- lets you select secret-bearing fields in `openclaw.json`
+- lets you select secret-bearing fields in `winclaw.json`
 - captures SecretRef details (`source`, `provider`, `id`)
 - runs preflight resolution
 - can apply immediately
 
 Helpful modes:
 
-- `openclaw secrets configure --providers-only`
-- `openclaw secrets configure --skip-provider-setup`
+- `winclaw secrets configure --providers-only`
+- `winclaw secrets configure --skip-provider-setup`
 
 `configure` apply defaults to:
 
@@ -351,8 +351,8 @@ Helpful modes:
 Apply a saved plan:
 
 ```bash
-openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
-openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
+winclaw secrets apply --from /tmp/winclaw-secrets-plan.json
+winclaw secrets apply --from /tmp/winclaw-secrets-plan.json --dry-run
 ```
 
 For strict target/path contract details and exact rejection rules, see:
@@ -361,7 +361,7 @@ For strict target/path contract details and exact rejection rules, see:
 
 ## One-way safety policy
 
-OpenClaw intentionally does **not** write rollback backups that contain pre-migration plaintext secret values.
+WinClaw intentionally does **not** write rollback backups that contain pre-migration plaintext secret values.
 
 Safety model:
 
@@ -371,7 +371,7 @@ Safety model:
 
 ## `auth.json` compatibility notes
 
-For static credentials, OpenClaw runtime no longer depends on plaintext `auth.json`.
+For static credentials, WinClaw runtime no longer depends on plaintext `auth.json`.
 
 - Runtime credential source is the resolved in-memory snapshot.
 - Legacy `auth.json` static `api_key` entries are scrubbed when discovered.

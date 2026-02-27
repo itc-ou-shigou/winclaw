@@ -1,9 +1,9 @@
 {
-  "name": "@openclaw/irc",
+  "name": "@winclaw/irc",
   "version": "2026.2.26",
-  "description": "OpenClaw IRC channel plugin",
+  "description": "WinClaw IRC channel plugin",
   "type": "module",
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]
