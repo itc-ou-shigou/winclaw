@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "snowflake": {
+      "type": "http",
+      "url": "https://PLACEHOLDER-CONFIGURE-ME"
+    },
+    "databricks": {
+      "type": "http",
+      "url": "https://PLACEHOLDER-CONFIGURE-ME"
+    },
+    "bigquery": {
+      "type": "http",
+      "url": "https://bigquery.googleapis.com/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp"
+    },
+    "ms365": {
+      "type": "http",
+      "url": "https://microsoft365.mcp.claude.com/mcp"
+    },
+    "google-calendar": {
+      "type": "http",
+      "url": "https://gcal.mcp.claude.com/mcp"
+    },
+    "gmail": {
+      "type": "http",
+      "url": "https://gmail.mcp.claude.com/mcp"
+    }
+  }
+}

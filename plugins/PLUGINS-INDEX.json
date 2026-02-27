@@ -1,0 +1,889 @@
+{
+  "$schema": "./PLUGINS-INDEX.schema.json",
+  "version": "1.0.0",
+  "generated": "2026-02-27T01:55:51.035Z",
+  "plugins": {
+    "bio-research": {
+      "name": "bio-research",
+      "description": "Connect to preclinical research tools and databases (literature search, genomics analysis, target prioritization) to accelerate early-stage life sciences R&D",
+      "commands": [
+        {
+          "name": "start",
+          "description": "",
+          "file": "bio-research/commands/start.md"
+        }
+      ],
+      "skills": [
+        "instrument-data-to-allotrope",
+        "nextflow-development",
+        "scientific-problem-selection",
+        "scvi-tools",
+        "single-cell-rna-qc"
+      ],
+      "mcpServers": [
+        "pubmed",
+        "biorender",
+        "biorxiv",
+        "c-trials",
+        "chembl",
+        "synapse",
+        "wiley",
+        "owkin",
+        "ot",
+        "benchling"
+      ]
+    },
+    "customer-support": {
+      "name": "customer-support",
+      "description": "Triage tickets, draft responses, escalate issues, and build your knowledge base. Research customer context and turn resolved issues into self-service content.",
+      "commands": [
+        {
+          "name": "draft-response",
+          "description": "",
+          "file": "customer-support/commands/draft-response.md"
+        },
+        {
+          "name": "escalate",
+          "description": "",
+          "file": "customer-support/commands/escalate.md"
+        },
+        {
+          "name": "kb-article",
+          "description": "",
+          "file": "customer-support/commands/kb-article.md"
+        },
+        {
+          "name": "research",
+          "description": "",
+          "file": "customer-support/commands/research.md"
+        },
+        {
+          "name": "triage",
+          "description": "",
+          "file": "customer-support/commands/triage.md"
+        }
+      ],
+      "skills": [
+        "customer-research",
+        "escalation",
+        "knowledge-management",
+        "response-drafting",
+        "ticket-triage"
+      ],
+      "mcpServers": [
+        "slack",
+        "intercom",
+        "hubspot",
+        "guru",
+        "atlassian",
+        "notion",
+        "ms365",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "data": {
+      "name": "data",
+      "description": "Write SQL, explore datasets, and generate insights faster. Build visualizations and dashboards, and turn raw data into clear stories for stakeholders.",
+      "commands": [
+        {
+          "name": "analyze",
+          "description": "",
+          "file": "data/commands/analyze.md"
+        },
+        {
+          "name": "build-dashboard",
+          "description": "",
+          "file": "data/commands/build-dashboard.md"
+        },
+        {
+          "name": "create-viz",
+          "description": "",
+          "file": "data/commands/create-viz.md"
+        },
+        {
+          "name": "explore-data",
+          "description": "",
+          "file": "data/commands/explore-data.md"
+        },
+        {
+          "name": "validate",
+          "description": "",
+          "file": "data/commands/validate.md"
+        },
+        {
+          "name": "write-query",
+          "description": "",
+          "file": "data/commands/write-query.md"
+        }
+      ],
+      "skills": [
+        "data-context-extractor",
+        "data-exploration",
+        "data-validation",
+        "data-visualization",
+        "interactive-dashboard-builder",
+        "sql-queries",
+        "statistical-analysis"
+      ],
+      "mcpServers": [
+        "snowflake",
+        "databricks",
+        "bigquery",
+        "hex",
+        "amplitude",
+        "atlassian"
+      ]
+    },
+    "design": {
+      "name": "design",
+      "description": "Accelerate design workflows — critique, design system management, UX writing, accessibility audits, research synthesis, and dev handoff. From exploration to pixel-perfect specs.",
+      "commands": [
+        {
+          "name": "accessibility",
+          "description": "",
+          "file": "design/commands/accessibility.md"
+        },
+        {
+          "name": "critique",
+          "description": "",
+          "file": "design/commands/critique.md"
+        },
+        {
+          "name": "design-system",
+          "description": "",
+          "file": "design/commands/design-system.md"
+        },
+        {
+          "name": "handoff",
+          "description": "",
+          "file": "design/commands/handoff.md"
+        },
+        {
+          "name": "research-synthesis",
+          "description": "",
+          "file": "design/commands/research-synthesis.md"
+        },
+        {
+          "name": "ux-copy",
+          "description": "",
+          "file": "design/commands/ux-copy.md"
+        }
+      ],
+      "skills": [
+        "accessibility-review",
+        "design-critique",
+        "design-handoff",
+        "design-system-management",
+        "user-research",
+        "ux-writing"
+      ],
+      "mcpServers": [
+        "slack",
+        "figma",
+        "linear",
+        "asana",
+        "atlassian",
+        "notion",
+        "intercom",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "engineering": {
+      "name": "engineering",
+      "description": "Streamline engineering workflows — standups, code review, architecture decisions, incident response, and technical documentation. Works with your existing tools or standalone.",
+      "commands": [
+        {
+          "name": "architecture",
+          "description": "",
+          "file": "engineering/commands/architecture.md"
+        },
+        {
+          "name": "debug",
+          "description": "",
+          "file": "engineering/commands/debug.md"
+        },
+        {
+          "name": "deploy-checklist",
+          "description": "",
+          "file": "engineering/commands/deploy-checklist.md"
+        },
+        {
+          "name": "incident",
+          "description": "",
+          "file": "engineering/commands/incident.md"
+        },
+        {
+          "name": "review",
+          "description": "",
+          "file": "engineering/commands/review.md"
+        },
+        {
+          "name": "standup",
+          "description": "",
+          "file": "engineering/commands/standup.md"
+        }
+      ],
+      "skills": [
+        "code-review",
+        "documentation",
+        "incident-response",
+        "system-design",
+        "tech-debt",
+        "testing-strategy"
+      ],
+      "mcpServers": [
+        "slack",
+        "linear",
+        "asana",
+        "atlassian",
+        "notion",
+        "github",
+        "pagerduty",
+        "datadog",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "enterprise-search": {
+      "name": "enterprise-search",
+      "description": "Search across all of your company's tools in one place. Find anything across email, chat, documents, and wikis without switching between apps.",
+      "commands": [
+        {
+          "name": "digest",
+          "description": "",
+          "file": "enterprise-search/commands/digest.md"
+        },
+        {
+          "name": "search",
+          "description": "",
+          "file": "enterprise-search/commands/search.md"
+        }
+      ],
+      "skills": [
+        "knowledge-synthesis",
+        "search-strategy",
+        "source-management"
+      ],
+      "mcpServers": [
+        "slack",
+        "notion",
+        "guru",
+        "atlassian",
+        "asana",
+        "ms365",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "finance": {
+      "name": "finance",
+      "description": "Streamline finance and accounting workflows, from journal entries and reconciliation to financial statements and variance analysis. Speed up audit prep, month-end close, and keeping your books clean.",
+      "commands": [
+        {
+          "name": "income-statement",
+          "description": "",
+          "file": "finance/commands/income-statement.md"
+        },
+        {
+          "name": "journal-entry",
+          "description": "",
+          "file": "finance/commands/journal-entry.md"
+        },
+        {
+          "name": "reconciliation",
+          "description": "",
+          "file": "finance/commands/reconciliation.md"
+        },
+        {
+          "name": "sox-testing",
+          "description": "",
+          "file": "finance/commands/sox-testing.md"
+        },
+        {
+          "name": "variance-analysis",
+          "description": "",
+          "file": "finance/commands/variance-analysis.md"
+        }
+      ],
+      "skills": [
+        "audit-support",
+        "close-management",
+        "financial-statements",
+        "journal-entry-prep",
+        "reconciliation",
+        "variance-analysis"
+      ],
+      "mcpServers": [
+        "snowflake",
+        "databricks",
+        "bigquery",
+        "slack",
+        "ms365",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "human-resources": {
+      "name": "human-resources",
+      "description": "Streamline people operations — recruiting, onboarding, performance reviews, compensation analysis, and policy guidance. Maintain compliance and keep your team running smoothly.",
+      "commands": [
+        {
+          "name": "comp-analysis",
+          "description": "",
+          "file": "human-resources/commands/comp-analysis.md"
+        },
+        {
+          "name": "draft-offer",
+          "description": "",
+          "file": "human-resources/commands/draft-offer.md"
+        },
+        {
+          "name": "onboarding",
+          "description": "",
+          "file": "human-resources/commands/onboarding.md"
+        },
+        {
+          "name": "people-report",
+          "description": "",
+          "file": "human-resources/commands/people-report.md"
+        },
+        {
+          "name": "performance-review",
+          "description": "",
+          "file": "human-resources/commands/performance-review.md"
+        },
+        {
+          "name": "policy-lookup",
+          "description": "",
+          "file": "human-resources/commands/policy-lookup.md"
+        }
+      ],
+      "skills": [
+        "compensation-benchmarking",
+        "employee-handbook",
+        "interview-prep",
+        "org-planning",
+        "people-analytics",
+        "recruiting-pipeline"
+      ],
+      "mcpServers": [
+        "slack",
+        "google-calendar",
+        "gmail",
+        "notion",
+        "atlassian",
+        "ms365"
+      ]
+    },
+    "legal": {
+      "name": "legal",
+      "description": "Speed up contract review, NDA triage, and compliance workflows for in-house legal teams. Draft legal briefs, organize precedent research, and manage institutional knowledge.",
+      "commands": [
+        {
+          "name": "brief",
+          "description": "",
+          "file": "legal/commands/brief.md"
+        },
+        {
+          "name": "compliance-check",
+          "description": "",
+          "file": "legal/commands/compliance-check.md"
+        },
+        {
+          "name": "respond",
+          "description": "",
+          "file": "legal/commands/respond.md"
+        },
+        {
+          "name": "review-contract",
+          "description": "",
+          "file": "legal/commands/review-contract.md"
+        },
+        {
+          "name": "signature-request",
+          "description": "",
+          "file": "legal/commands/signature-request.md"
+        },
+        {
+          "name": "triage-nda",
+          "description": "",
+          "file": "legal/commands/triage-nda.md"
+        },
+        {
+          "name": "vendor-check",
+          "description": "",
+          "file": "legal/commands/vendor-check.md"
+        }
+      ],
+      "skills": [
+        "canned-responses",
+        "compliance",
+        "contract-review",
+        "legal-risk-assessment",
+        "meeting-briefing",
+        "nda-triage"
+      ],
+      "mcpServers": [
+        "slack",
+        "box",
+        "egnyte",
+        "atlassian",
+        "ms365",
+        "docusign",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "marketing": {
+      "name": "marketing",
+      "description": "Create content, plan campaigns, and analyze performance across marketing channels. Maintain brand voice consistency, track competitors, and report on what's working.",
+      "commands": [
+        {
+          "name": "brand-review",
+          "description": "",
+          "file": "marketing/commands/brand-review.md"
+        },
+        {
+          "name": "campaign-plan",
+          "description": "",
+          "file": "marketing/commands/campaign-plan.md"
+        },
+        {
+          "name": "competitive-brief",
+          "description": "",
+          "file": "marketing/commands/competitive-brief.md"
+        },
+        {
+          "name": "draft-content",
+          "description": "",
+          "file": "marketing/commands/draft-content.md"
+        },
+        {
+          "name": "email-sequence",
+          "description": "",
+          "file": "marketing/commands/email-sequence.md"
+        },
+        {
+          "name": "performance-report",
+          "description": "",
+          "file": "marketing/commands/performance-report.md"
+        },
+        {
+          "name": "seo-audit",
+          "description": "",
+          "file": "marketing/commands/seo-audit.md"
+        }
+      ],
+      "skills": [
+        "brand-voice",
+        "campaign-planning",
+        "competitive-analysis",
+        "content-creation",
+        "performance-analytics"
+      ],
+      "mcpServers": [
+        "slack",
+        "canva",
+        "figma",
+        "hubspot",
+        "amplitude",
+        "notion",
+        "ahrefs",
+        "similarweb",
+        "klaviyo",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "operations": {
+      "name": "operations",
+      "description": "Optimize business operations — vendor management, process documentation, change management, capacity planning, and compliance tracking. Keep your organization running efficiently.",
+      "commands": [
+        {
+          "name": "capacity-plan",
+          "description": "",
+          "file": "operations/commands/capacity-plan.md"
+        },
+        {
+          "name": "change-request",
+          "description": "",
+          "file": "operations/commands/change-request.md"
+        },
+        {
+          "name": "process-doc",
+          "description": "",
+          "file": "operations/commands/process-doc.md"
+        },
+        {
+          "name": "runbook",
+          "description": "",
+          "file": "operations/commands/runbook.md"
+        },
+        {
+          "name": "status-report",
+          "description": "",
+          "file": "operations/commands/status-report.md"
+        },
+        {
+          "name": "vendor-review",
+          "description": "",
+          "file": "operations/commands/vendor-review.md"
+        }
+      ],
+      "skills": [
+        "change-management",
+        "compliance-tracking",
+        "process-optimization",
+        "resource-planning",
+        "risk-assessment",
+        "vendor-management"
+      ],
+      "mcpServers": [
+        "slack",
+        "google-calendar",
+        "gmail",
+        "notion",
+        "atlassian",
+        "asana",
+        "servicenow",
+        "ms365"
+      ]
+    },
+    "partner-built/apollo": {
+      "name": "apollo",
+      "description": "3 pre-built skills that chain multiple Apollo APIs into complete sales workflows — no manual steps, no tab switching. Enrich any contact from a name, email, or LinkedIn URL. Prospect by describing your ICP in plain English and get ranked leads. Find, enrich, and load contacts into a sequence in one shot.",
+      "commands": [],
+      "skills": [
+        "enrich-lead",
+        "prospect",
+        "sequence-load"
+      ],
+      "mcpServers": [
+        "apollo"
+      ]
+    },
+    "partner-built/brand-voice": {
+      "name": "brand-voice",
+      "description": "Brand Voice transforms scattered brand materials into enforceable AI guardrails — automatically. It searches across Notion, Google Drive, Confluence, Gong, Slack, and meeting transcripts to distill your strongest brand signals into a single source of truth, then applies them to every piece of AI-generated content. The more your team creates with Claude, the more consistent your brand becomes.",
+      "commands": [
+        {
+          "name": "discover-brand",
+          "description": "",
+          "file": "partner-built/brand-voice/commands/discover-brand.md"
+        },
+        {
+          "name": "enforce-voice",
+          "description": "",
+          "file": "partner-built/brand-voice/commands/enforce-voice.md"
+        },
+        {
+          "name": "generate-guidelines",
+          "description": "",
+          "file": "partner-built/brand-voice/commands/generate-guidelines.md"
+        }
+      ],
+      "skills": [
+        "brand-voice-enforcement",
+        "discover-brand",
+        "guideline-generation"
+      ],
+      "mcpServers": [
+        "notion",
+        "atlassian",
+        "box",
+        "figma",
+        "gong",
+        "microsoft-365",
+        "granola"
+      ]
+    },
+    "partner-built/common-room": {
+      "name": "common-room",
+      "description": "Turn Common Room into your GTM copilot. Research accounts and contacts, prep for calls with attendee profiles and talking points, and draft personalized outreach across email, LinkedIn, and phone. Build targeted prospect lists, generate weekly briefings for every upcoming call, and create strategic account plans — all grounded in real signal data from product usage, engagement and intent signals, so every output reflects what's actually happening in your accounts.",
+      "commands": [
+        {
+          "name": "generate-account-plan",
+          "description": "",
+          "file": "partner-built/common-room/commands/generate-account-plan.md"
+        },
+        {
+          "name": "weekly-brief",
+          "description": "",
+          "file": "partner-built/common-room/commands/weekly-brief.md"
+        }
+      ],
+      "skills": [
+        "account-research",
+        "call-prep",
+        "compose-outreach",
+        "contact-research",
+        "prospect",
+        "weekly-prep-brief"
+      ],
+      "mcpServers": [
+        "common-room"
+      ]
+    },
+    "partner-built/slack": {
+      "name": "slack-by-salesforce",
+      "description": "Official Slack MCP server for interactive and collaborative workflows. Surface insights, draft messages, and engage teams directly within Slack from Claude Cowork.",
+      "commands": [
+        {
+          "name": "channel-digest",
+          "description": "",
+          "file": "partner-built/slack/commands/channel-digest.md"
+        },
+        {
+          "name": "draft-announcement",
+          "description": "",
+          "file": "partner-built/slack/commands/draft-announcement.md"
+        },
+        {
+          "name": "find-discussions",
+          "description": "",
+          "file": "partner-built/slack/commands/find-discussions.md"
+        },
+        {
+          "name": "standup",
+          "description": "",
+          "file": "partner-built/slack/commands/standup.md"
+        },
+        {
+          "name": "summarize-channel",
+          "description": "",
+          "file": "partner-built/slack/commands/summarize-channel.md"
+        }
+      ],
+      "skills": [
+        "slack-messaging",
+        "slack-search"
+      ],
+      "mcpServers": [
+        "slack"
+      ]
+    },
+    "product-management": {
+      "name": "product-management",
+      "description": "Write feature specs, plan roadmaps, and synthesize user research faster. Keep stakeholders updated and stay ahead of the competitive landscape.",
+      "commands": [
+        {
+          "name": "competitive-brief",
+          "description": "",
+          "file": "product-management/commands/competitive-brief.md"
+        },
+        {
+          "name": "metrics-review",
+          "description": "",
+          "file": "product-management/commands/metrics-review.md"
+        },
+        {
+          "name": "roadmap-update",
+          "description": "",
+          "file": "product-management/commands/roadmap-update.md"
+        },
+        {
+          "name": "sprint-planning",
+          "description": "",
+          "file": "product-management/commands/sprint-planning.md"
+        },
+        {
+          "name": "stakeholder-update",
+          "description": "",
+          "file": "product-management/commands/stakeholder-update.md"
+        },
+        {
+          "name": "synthesize-research",
+          "description": "",
+          "file": "product-management/commands/synthesize-research.md"
+        },
+        {
+          "name": "write-spec",
+          "description": "",
+          "file": "product-management/commands/write-spec.md"
+        }
+      ],
+      "skills": [
+        "competitive-analysis",
+        "feature-spec",
+        "metrics-tracking",
+        "roadmap-management",
+        "stakeholder-comms",
+        "user-research-synthesis"
+      ],
+      "mcpServers": [
+        "slack",
+        "linear",
+        "asana",
+        "monday",
+        "clickup",
+        "atlassian",
+        "notion",
+        "figma",
+        "amplitude",
+        "pendo",
+        "intercom",
+        "fireflies",
+        "google-calendar",
+        "gmail",
+        "similarweb"
+      ]
+    },
+    "productivity": {
+      "name": "productivity",
+      "description": "Manage tasks, plan your day, and build up memory of important context about your work. Syncs with your calendar, email, and chat to keep everything organized and on track.",
+      "commands": [
+        {
+          "name": "start",
+          "description": "",
+          "file": "productivity/commands/start.md"
+        },
+        {
+          "name": "update",
+          "description": "",
+          "file": "productivity/commands/update.md"
+        }
+      ],
+      "skills": [
+        "memory-management",
+        "task-management"
+      ],
+      "mcpServers": [
+        "slack",
+        "notion",
+        "asana",
+        "linear",
+        "atlassian",
+        "ms365",
+        "monday",
+        "clickup",
+        "google-calendar",
+        "gmail"
+      ]
+    },
+    "sales": {
+      "name": "sales",
+      "description": "Prospect, craft outreach, and build deal strategy faster. Prep for calls, manage your pipeline, and write personalized messaging that moves deals forward.",
+      "commands": [
+        {
+          "name": "call-summary",
+          "description": "",
+          "file": "sales/commands/call-summary.md"
+        },
+        {
+          "name": "forecast",
+          "description": "",
+          "file": "sales/commands/forecast.md"
+        },
+        {
+          "name": "pipeline-review",
+          "description": "",
+          "file": "sales/commands/pipeline-review.md"
+        }
+      ],
+      "skills": [
+        "account-research",
+        "call-prep",
+        "competitive-intelligence",
+        "create-an-asset",
+        "daily-briefing",
+        "draft-outreach"
+      ],
+      "mcpServers": [
+        "slack",
+        "hubspot",
+        "close",
+        "clay",
+        "zoominfo",
+        "notion",
+        "atlassian",
+        "fireflies",
+        "ms365",
+        "apollo",
+        "outreach",
+        "google-calendar",
+        "gmail",
+        "similarweb"
+      ]
+    }
+  },
+  "allCommands": [
+    "start",
+    "draft-response",
+    "escalate",
+    "kb-article",
+    "research",
+    "triage",
+    "analyze",
+    "build-dashboard",
+    "create-viz",
+    "explore-data",
+    "validate",
+    "write-query",
+    "accessibility",
+    "critique",
+    "design-system",
+    "handoff",
+    "research-synthesis",
+    "ux-copy",
+    "architecture",
+    "debug",
+    "deploy-checklist",
+    "incident",
+    "review",
+    "standup",
+    "digest",
+    "search",
+    "income-statement",
+    "journal-entry",
+    "reconciliation",
+    "sox-testing",
+    "variance-analysis",
+    "comp-analysis",
+    "draft-offer",
+    "onboarding",
+    "people-report",
+    "performance-review",
+    "policy-lookup",
+    "brief",
+    "compliance-check",
+    "respond",
+    "review-contract",
+    "signature-request",
+    "triage-nda",
+    "vendor-check",
+    "brand-review",
+    "campaign-plan",
+    "competitive-brief",
+    "draft-content",
+    "email-sequence",
+    "performance-report",
+    "seo-audit",
+    "capacity-plan",
+    "change-request",
+    "process-doc",
+    "runbook",
+    "status-report",
+    "vendor-review",
+    "discover-brand",
+    "enforce-voice",
+    "generate-guidelines",
+    "generate-account-plan",
+    "weekly-brief",
+    "channel-digest",
+    "draft-announcement",
+    "find-discussions",
+    "summarize-channel",
+    "metrics-review",
+    "roadmap-update",
+    "sprint-planning",
+    "stakeholder-update",
+    "synthesize-research",
+    "write-spec",
+    "update",
+    "call-summary",
+    "forecast",
+    "pipeline-review"
+  ]
+}
