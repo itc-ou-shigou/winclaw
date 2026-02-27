@@ -87,8 +87,8 @@ describe("fs-safe", () => {
   });
 
   it.runIf(process.platform !== "win32")("blocks hardlink aliases under root", async () => {
-    const root = await tempDirs.make("openclaw-fs-safe-root-");
-    const outside = await tempDirs.make("openclaw-fs-safe-outside-");
+    const root = await tempDirs.make("winclaw-fs-safe-root-");
+    const outside = await tempDirs.make("winclaw-fs-safe-outside-");
     const outsideFile = path.join(outside, "outside.txt");
     const hardlinkPath = path.join(root, "link.txt");
     await fs.writeFile(outsideFile, "outside");
@@ -114,7 +114,7 @@ describe("fs-safe", () => {
   });
 
   it("writes a file within root safely", async () => {
-    const root = await tempDirs.make("openclaw-fs-safe-root-");
+    const root = await tempDirs.make("winclaw-fs-safe-root-");
     await writeFileWithinRoot({
       rootDir: root,
       relativePath: "nested/out.txt",
@@ -124,7 +124,7 @@ describe("fs-safe", () => {
   });
 
   it("rejects write traversal outside root", async () => {
-    const root = await tempDirs.make("openclaw-fs-safe-root-");
+    const root = await tempDirs.make("winclaw-fs-safe-root-");
     await expect(
       writeFileWithinRoot({
         rootDir: root,
@@ -135,8 +135,8 @@ describe("fs-safe", () => {
   });
 
   it.runIf(process.platform !== "win32")("rejects writing through hardlink aliases", async () => {
-    const root = await tempDirs.make("openclaw-fs-safe-root-");
-    const outside = await tempDirs.make("openclaw-fs-safe-outside-");
+    const root = await tempDirs.make("winclaw-fs-safe-root-");
+    const outside = await tempDirs.make("winclaw-fs-safe-outside-");
     const outsideFile = path.join(outside, "outside.txt");
     const hardlinkPath = path.join(root, "alias.txt");
     await fs.writeFile(outsideFile, "outside");

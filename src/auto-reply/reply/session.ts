@@ -112,7 +112,7 @@ export type SessionInitResult = {
  */
 const DEFAULT_PARENT_FORK_MAX_TOKENS = 100_000;
 
-function resolveParentForkMaxTokens(cfg: OpenClawConfig): number {
+function resolveParentForkMaxTokens(cfg: WinClawConfig): number {
   const configured = cfg.session?.parentForkMaxTokens;
   if (typeof configured === "number" && Number.isFinite(configured) && configured >= 0) {
     return Math.floor(configured);

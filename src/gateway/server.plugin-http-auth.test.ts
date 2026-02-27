@@ -346,7 +346,7 @@ describe("gateway plugin HTTP auth boundary", () => {
 
     await withTempConfig({
       cfg: { gateway: { trustedProxies: [] } },
-      prefix: "openclaw-plugin-http-auth-canonicalized-test-",
+      prefix: "winclaw-plugin-http-auth-canonicalized-test-",
       run: async () => {
         const handlePluginRequest = vi.fn(async (req: IncomingMessage, res: ServerResponse) => {
           const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
@@ -395,7 +395,7 @@ describe("gateway plugin HTTP auth boundary", () => {
 
     await withTempConfig({
       cfg: { gateway: { trustedProxies: [] } },
-      prefix: "openclaw-plugin-http-auth-fuzz-corpus-test-",
+      prefix: "winclaw-plugin-http-auth-fuzz-corpus-test-",
       run: async () => {
         const handlePluginRequest = vi.fn(async (req: IncomingMessage, res: ServerResponse) => {
           const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
@@ -445,7 +445,7 @@ describe("gateway plugin HTTP auth boundary", () => {
 
       await withTempConfig({
         cfg: { gateway: { trustedProxies: [] } },
-        prefix: "openclaw-plugin-http-hooks-bindhost-",
+        prefix: "winclaw-plugin-http-hooks-bindhost-",
         run: async () => {
           const handleHooksRequest = createHooksRequestHandler({
             getHooksConfig: () => createHooksConfig(),
@@ -491,7 +491,7 @@ describe("gateway plugin HTTP auth boundary", () => {
 
     await withTempConfig({
       cfg: { gateway: { trustedProxies: [] } },
-      prefix: "openclaw-plugin-http-hooks-query-token-",
+      prefix: "winclaw-plugin-http-hooks-query-token-",
       run: async () => {
         const handleHooksRequest = createHooksRequestHandler({
           getHooksConfig: () => createHooksConfig(),

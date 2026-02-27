@@ -442,8 +442,8 @@ describe("security audit", () => {
     const riskyGlobalTrustedDirs =
       process.platform === "win32"
         ? [String.raw`C:\Users\ci-user\bin`, String.raw`C:\Users\ci-user\.local\bin`]
-        : ["/usr/local/bin", "/tmp/openclaw-safe-bins"];
-    const cfg: OpenClawConfig = {
+        : ["/usr/local/bin", "/tmp/winclaw-safe-bins"];
+    const cfg: WinClawConfig = {
       tools: {
         exec: {
           safeBinTrustedDirs: riskyGlobalTrustedDirs,
@@ -474,7 +474,7 @@ describe("security audit", () => {
   });
 
   it("does not warn for non-risky absolute safeBinTrustedDirs entries", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       tools: {
         exec: {
           safeBinTrustedDirs: ["/usr/libexec"],
@@ -904,7 +904,7 @@ describe("security audit", () => {
   });
 
   it("flags container namespace join network mode in sandbox config", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -2772,7 +2772,7 @@ description: test skill
   });
 
   it("warns when config heuristics suggest a likely multi-user setup", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: {
         discord: {
           groupPolicy: "allowlist",
@@ -2802,7 +2802,7 @@ description: test skill
   });
 
   it("does not warn for multi-user heuristic when no shared-user signals are configured", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: {
         discord: {
           groupPolicy: "allowlist",

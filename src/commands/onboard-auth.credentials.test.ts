@@ -14,8 +14,8 @@ import {
 
 describe("onboard auth credentials secret refs", () => {
   const lifecycle = createAuthTestLifecycle([
-    "OPENCLAW_STATE_DIR",
-    "OPENCLAW_AGENT_DIR",
+    "WINCLAW_STATE_DIR",
+    "WINCLAW_AGENT_DIR",
     "PI_CODING_AGENT_DIR",
     "MOONSHOT_API_KEY",
     "OPENAI_API_KEY",
@@ -29,7 +29,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("keeps env-backed moonshot key as plaintext by default", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-");
     lifecycle.setStateDir(env.stateDir);
     process.env.MOONSHOT_API_KEY = "sk-moonshot-env";
 
@@ -45,7 +45,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("stores env-backed moonshot key as keyRef when secret-input-mode=ref", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-ref-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-ref-");
     lifecycle.setStateDir(env.stateDir);
     process.env.MOONSHOT_API_KEY = "sk-moonshot-env";
 
@@ -61,7 +61,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("stores ${ENV} moonshot input as keyRef even when env value is unset", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-inline-ref-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-inline-ref-");
     lifecycle.setStateDir(env.stateDir);
 
     await setMoonshotApiKey("${MOONSHOT_API_KEY}");
@@ -76,7 +76,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("keeps plaintext moonshot key when no env ref applies", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-plaintext-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-plaintext-");
     lifecycle.setStateDir(env.stateDir);
     process.env.MOONSHOT_API_KEY = "sk-moonshot-other";
 
@@ -92,7 +92,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("preserves cloudflare metadata when storing keyRef", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-cloudflare-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-cloudflare-");
     lifecycle.setStateDir(env.stateDir);
     process.env.CLOUDFLARE_AI_GATEWAY_API_KEY = "cf-secret";
 
@@ -111,7 +111,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("keeps env-backed openai key as plaintext by default", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-openai-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-openai-");
     lifecycle.setStateDir(env.stateDir);
     process.env.OPENAI_API_KEY = "sk-openai-env";
 
@@ -127,7 +127,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("stores env-backed openai key as keyRef in ref mode", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-openai-ref-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-openai-ref-");
     lifecycle.setStateDir(env.stateDir);
     process.env.OPENAI_API_KEY = "sk-openai-env";
 
@@ -143,7 +143,7 @@ describe("onboard auth credentials secret refs", () => {
   });
 
   it("stores env-backed volcengine and byteplus keys as keyRef in ref mode", async () => {
-    const env = await setupAuthTestEnv("openclaw-onboard-auth-credentials-volc-byte-");
+    const env = await setupAuthTestEnv("winclaw-onboard-auth-credentials-volc-byte-");
     lifecycle.setStateDir(env.stateDir);
     process.env.VOLCANO_ENGINE_API_KEY = "volcengine-secret";
     process.env.BYTEPLUS_API_KEY = "byteplus-secret";

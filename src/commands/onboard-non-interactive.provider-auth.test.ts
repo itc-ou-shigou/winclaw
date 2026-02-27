@@ -360,7 +360,7 @@ describe("onboard (non-interactive): provider auth", () => {
   it.each([
     {
       name: "anthropic",
-      prefix: "openclaw-onboard-ref-flag-anthropic-",
+      prefix: "winclaw-onboard-ref-flag-anthropic-",
       authChoice: "apiKey",
       optionKey: "anthropicApiKey",
       flagName: "--anthropic-api-key",
@@ -368,7 +368,7 @@ describe("onboard (non-interactive): provider auth", () => {
     },
     {
       name: "openai",
-      prefix: "openclaw-onboard-ref-flag-openai-",
+      prefix: "winclaw-onboard-ref-flag-openai-",
       authChoice: "openai-api-key",
       optionKey: "openaiApiKey",
       flagName: "--openai-api-key",
@@ -376,7 +376,7 @@ describe("onboard (non-interactive): provider auth", () => {
     },
     {
       name: "openrouter",
-      prefix: "openclaw-onboard-ref-flag-openrouter-",
+      prefix: "winclaw-onboard-ref-flag-openrouter-",
       authChoice: "openrouter-api-key",
       optionKey: "openrouterApiKey",
       flagName: "--openrouter-api-key",
@@ -384,7 +384,7 @@ describe("onboard (non-interactive): provider auth", () => {
     },
     {
       name: "xai",
-      prefix: "openclaw-onboard-ref-flag-xai-",
+      prefix: "winclaw-onboard-ref-flag-xai-",
       authChoice: "xai-api-key",
       optionKey: "xaiApiKey",
       flagName: "--xai-api-key",
@@ -392,7 +392,7 @@ describe("onboard (non-interactive): provider auth", () => {
     },
     {
       name: "volcengine",
-      prefix: "openclaw-onboard-ref-flag-volcengine-",
+      prefix: "winclaw-onboard-ref-flag-volcengine-",
       authChoice: "volcengine-api-key",
       optionKey: "volcengineApiKey",
       flagName: "--volcengine-api-key",
@@ -400,7 +400,7 @@ describe("onboard (non-interactive): provider auth", () => {
     },
     {
       name: "byteplus",
-      prefix: "openclaw-onboard-ref-flag-byteplus-",
+      prefix: "winclaw-onboard-ref-flag-byteplus-",
       authChoice: "byteplus-api-key",
       optionKey: "byteplusApiKey",
       flagName: "--byteplus-api-key",
@@ -443,7 +443,7 @@ describe("onboard (non-interactive): provider auth", () => {
   );
 
   it("stores the detected env alias as keyRef for opencode ref mode", async () => {
-    await withOnboardEnv("openclaw-onboard-ref-opencode-alias-", async ({ runtime }) => {
+    await withOnboardEnv("winclaw-onboard-ref-opencode-alias-", async ({ runtime }) => {
       await withEnvAsync(
         {
           OPENCODE_API_KEY: undefined,
@@ -633,7 +633,7 @@ describe("onboard (non-interactive): provider auth", () => {
 
   it("stores CUSTOM_API_KEY env ref for non-interactive custom provider auth in ref mode", async () => {
     await withOnboardEnv(
-      "openclaw-onboard-custom-provider-env-ref-",
+      "winclaw-onboard-custom-provider-env-ref-",
       async ({ configPath, runtime }) => {
         process.env.CUSTOM_API_KEY = "custom-env-key";
         await runCustomLocalNonInteractive(runtime, {
@@ -649,7 +649,7 @@ describe("onboard (non-interactive): provider auth", () => {
   });
 
   it("fails fast for custom provider ref mode when --custom-api-key is set but CUSTOM_API_KEY env is missing", async () => {
-    await withOnboardEnv("openclaw-onboard-custom-provider-ref-flag-", async ({ runtime }) => {
+    await withOnboardEnv("winclaw-onboard-custom-provider-ref-flag-", async ({ runtime }) => {
       const providedSecret = "custom-inline-key-should-not-leak";
       await withEnvAsync({ CUSTOM_API_KEY: undefined }, async () => {
         let thrown: Error | undefined;

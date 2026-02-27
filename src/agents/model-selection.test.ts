@@ -145,7 +145,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       expect(
         inferUniqueProviderFromConfiguredModels({
@@ -165,7 +165,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       expect(
         inferUniqueProviderFromConfiguredModels({
@@ -184,7 +184,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       expect(
         inferUniqueProviderFromConfiguredModels({
@@ -203,7 +203,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       expect(
         inferUniqueProviderFromConfiguredModels({
@@ -243,7 +243,7 @@ describe("model-selection", () => {
 
   describe("buildAllowedModelSet", () => {
     it("keeps explicitly allowlisted models even when missing from bundled catalog", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: WinClawConfig = {
         agents: {
           defaults: {
             model: { primary: "openai/gpt-5.2" },
@@ -252,7 +252,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       const catalog = [
         { provider: "anthropic", id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
@@ -275,7 +275,7 @@ describe("model-selection", () => {
 
   describe("resolveAllowedModelRef", () => {
     it("accepts explicit allowlist refs absent from bundled catalog", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: WinClawConfig = {
         agents: {
           defaults: {
             model: { primary: "openai/gpt-5.2" },
@@ -284,7 +284,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       const catalog = [
         { provider: "anthropic", id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
@@ -306,7 +306,7 @@ describe("model-selection", () => {
     });
 
     it("strips trailing auth profile suffix before allowlist matching", () => {
-      const cfg: OpenClawConfig = {
+      const cfg: WinClawConfig = {
         agents: {
           defaults: {
             models: {
@@ -314,7 +314,7 @@ describe("model-selection", () => {
             },
           },
         },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       const result = resolveAllowedModelRef({
         cfg,

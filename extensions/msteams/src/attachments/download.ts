@@ -1,4 +1,4 @@
-import { fetchWithBearerAuthScopeFallback } from "openclaw/plugin-sdk";
+import { fetchWithBearerAuthScopeFallback } from "winclaw/plugin-sdk";
 import { getMSTeamsRuntime } from "../runtime.js";
 import { downloadAndStoreMSTeamsRemoteMedia } from "./remote-media.js";
 import {

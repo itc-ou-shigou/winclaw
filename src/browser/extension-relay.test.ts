@@ -149,13 +149,13 @@ describe("chrome extension relay server", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "OPENCLAW_GATEWAY_TOKEN",
-      "OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS",
-      "OPENCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
+      "WINCLAW_GATEWAY_TOKEN",
+      "WINCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS",
+      "WINCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
     ]);
-    process.env.OPENCLAW_GATEWAY_TOKEN = TEST_GATEWAY_TOKEN;
-    delete process.env.OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS;
-    delete process.env.OPENCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS;
+    process.env.WINCLAW_GATEWAY_TOKEN = TEST_GATEWAY_TOKEN;
+    delete process.env.WINCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS;
+    delete process.env.WINCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS;
   });
 
   afterEach(async () => {
@@ -213,8 +213,8 @@ describe("chrome extension relay server", () => {
     await ensureChromeExtensionRelayServer({ cdpUrl });
 
     const headers = getChromeExtensionRelayAuthHeaders(cdpUrl);
-    expect(Object.keys(headers)).toContain("x-openclaw-relay-token");
-    expect(headers["x-openclaw-relay-token"]).not.toBe(TEST_GATEWAY_TOKEN);
+    expect(Object.keys(headers)).toContain("x-winclaw-relay-token");
+    expect(headers["x-winclaw-relay-token"]).not.toBe(TEST_GATEWAY_TOKEN);
   });
 
   it("rejects CDP access without relay auth token", async () => {
@@ -264,14 +264,14 @@ describe("chrome extension relay server", () => {
       headers: {
         Origin: origin,
         "Access-Control-Request-Method": "GET",
-        "Access-Control-Request-Headers": "x-openclaw-relay-token",
+        "Access-Control-Request-Headers": "x-winclaw-relay-token",
       },
     });
 
     expect(res.status).toBe(204);
     expect(res.headers.get("access-control-allow-origin")).toBe(origin);
     expect(res.headers.get("access-control-allow-headers") ?? "").toContain(
-      "x-openclaw-relay-token",
+      "x-winclaw-relay-token",
     );
   });
 
@@ -442,7 +442,7 @@ describe("chrome extension relay server", () => {
   });
 
   it("closes CDP clients after reconnect grace when extension stays disconnected", async () => {
-    process.env.OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS = "150";
+    process.env.WINCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS = "150";
 
     const { port, ext } = await startRelayWithExtension();
     const cdp = new WebSocket(`ws://127.0.0.1:${port}/cdp`, {
@@ -459,7 +459,7 @@ describe("chrome extension relay server", () => {
     cdpUrl = `http://127.0.0.1:${port}`;
     await ensureChromeExtensionRelayServer({ cdpUrl });
 
-    const token = relayAuthHeaders(`ws://127.0.0.1:${port}/extension`)["x-openclaw-relay-token"];
+    const token = relayAuthHeaders(`ws://127.0.0.1:${port}/extension`)["x-winclaw-relay-token"];
     expect(token).toBeTruthy();
     const ext = new WebSocket(
       `ws://127.0.0.1:${port}/extension?token=${encodeURIComponent(String(token))}`,
@@ -473,7 +473,7 @@ describe("chrome extension relay server", () => {
     cdpUrl = `http://127.0.0.1:${port}`;
     await ensureChromeExtensionRelayServer({ cdpUrl });
 
-    const token = relayAuthHeaders(cdpUrl)["x-openclaw-relay-token"];
+    const token = relayAuthHeaders(cdpUrl)["x-winclaw-relay-token"];
     expect(token).toBeTruthy();
     const versionRes = await fetch(
       `${cdpUrl}/json/version?token=${encodeURIComponent(String(token))}`,
@@ -487,7 +487,7 @@ describe("chrome extension relay server", () => {
     await ensureChromeExtensionRelayServer({ cdpUrl });
 
     const versionRes = await fetch(`${cdpUrl}/json/version`, {
-      headers: { "x-openclaw-relay-token": TEST_GATEWAY_TOKEN },
+      headers: { "x-winclaw-relay-token": TEST_GATEWAY_TOKEN },
     });
     expect(versionRes.status).toBe(200);
 
@@ -684,7 +684,7 @@ describe("chrome extension relay server", () => {
     let probeToken: string | undefined;
     const fakeRelay = createServer((req, res) => {
       if (req.url?.startsWith("/json/version")) {
-        const header = req.headers["x-openclaw-relay-token"];
+        const header = req.headers["x-winclaw-relay-token"];
         probeToken = Array.isArray(header) ? header[0] : header;
         if (!probeToken) {
           res.writeHead(401);
@@ -692,7 +692,7 @@ describe("chrome extension relay server", () => {
           return;
         }
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ Browser: "OpenClaw/extension-relay" }));
+        res.end(JSON.stringify({ Browser: "WinClaw/extension-relay" }));
         return;
       }
       if (req.url?.startsWith("/extension/status")) {
@@ -723,7 +723,7 @@ describe("chrome extension relay server", () => {
     }
   });
 
-  it("does not swallow EADDRINUSE when occupied port is not an openclaw relay", async () => {
+  it("does not swallow EADDRINUSE when occupied port is not an winclaw relay", async () => {
     const port = await getFreePort();
     const blocker = createServer((_, res) => {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });

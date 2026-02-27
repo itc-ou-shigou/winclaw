@@ -113,7 +113,7 @@ describe("agents helpers", () => {
   });
 
   it("applyAgentBindings upgrades channel-only binding to account-specific binding for same agent", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       bindings: [
         {
           agentId: "main",
@@ -141,7 +141,7 @@ describe("agents helpers", () => {
   });
 
   it("applyAgentBindings treats role-based bindings as distinct routes", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       bindings: [
         {
           agentId: "main",
@@ -172,7 +172,7 @@ describe("agents helpers", () => {
   });
 
   it("removeAgentBindings does not remove role-based bindings when removing channel-level routes", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       bindings: [
         {
           agentId: "main",

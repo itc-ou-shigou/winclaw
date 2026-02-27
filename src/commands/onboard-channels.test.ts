@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
@@ -83,7 +83,7 @@ describe("setupChannels", () => {
 
     const runtime = createExitThrowingRuntime();
 
-    await setupChannels({} as OpenClawConfig, runtime, prompter, {
+    await setupChannels({} as WinClawConfig, runtime, prompter, {
       skipConfirm: true,
       quickstartDefaults: true,
       forceAllowFromChannels: ["whatsapp"],
@@ -118,7 +118,7 @@ describe("setupChannels", () => {
 
     const runtime = createExitThrowingRuntime();
 
-    await setupChannels({} as OpenClawConfig, runtime, prompter, {
+    await setupChannels({} as WinClawConfig, runtime, prompter, {
       skipConfirm: true,
       quickstartDefaults: true,
     });
@@ -148,7 +148,7 @@ describe("setupChannels", () => {
 
     const runtime = createExitThrowingRuntime();
 
-    await setupChannels({} as OpenClawConfig, runtime, prompter, {
+    await setupChannels({} as WinClawConfig, runtime, prompter, {
       skipConfirm: true,
     });
 
@@ -188,7 +188,7 @@ describe("setupChannels", () => {
             botToken: "token",
           },
         },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       runtime,
       prompter,
       {
@@ -241,7 +241,7 @@ describe("setupChannels", () => {
             enabled: false,
           },
         },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       runtime,
       prompter,
       {
@@ -281,7 +281,7 @@ describe("setupChannels", () => {
 
     const runtime = createExitThrowingRuntime();
     try {
-      const cfg = await setupChannels({} as OpenClawConfig, runtime, prompter, {
+      const cfg = await setupChannels({} as WinClawConfig, runtime, prompter, {
         skipConfirm: true,
         quickstartDefaults: true,
         onSelection: selection,
@@ -308,14 +308,14 @@ describe("setupChannels", () => {
     });
     const selection = vi.fn();
     const onAccountId = vi.fn();
-    const configureInteractive = vi.fn(async ({ cfg }: { cfg: OpenClawConfig }) => ({
+    const configureInteractive = vi.fn(async ({ cfg }: { cfg: WinClawConfig }) => ({
       cfg: {
         ...cfg,
         channels: {
           ...cfg.channels,
           telegram: { ...cfg.channels?.telegram, botToken: "new-token" },
         },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       accountId: "acct-1",
     }));
     const configure = vi.fn(async () => {
@@ -340,7 +340,7 @@ describe("setupChannels", () => {
 
     const runtime = createExitThrowingRuntime();
     try {
-      const cfg = await setupChannels({} as OpenClawConfig, runtime, prompter, {
+      const cfg = await setupChannels({} as WinClawConfig, runtime, prompter, {
         skipConfirm: true,
         quickstartDefaults: true,
         onSelection: selection,
@@ -366,14 +366,14 @@ describe("setupChannels", () => {
     });
     const selection = vi.fn();
     const onAccountId = vi.fn();
-    const configureWhenConfigured = vi.fn(async ({ cfg }: { cfg: OpenClawConfig }) => ({
+    const configureWhenConfigured = vi.fn(async ({ cfg }: { cfg: WinClawConfig }) => ({
       cfg: {
         ...cfg,
         channels: {
           ...cfg.channels,
           telegram: { ...cfg.channels?.telegram, botToken: "updated-token" },
         },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       accountId: "acct-2",
     }));
     const configure = vi.fn(async () => {
@@ -408,7 +408,7 @@ describe("setupChannels", () => {
               botToken: "old-token",
             },
           },
-        } as OpenClawConfig,
+        } as WinClawConfig,
         runtime,
         prompter,
         {
@@ -472,7 +472,7 @@ describe("setupChannels", () => {
               botToken: "old-token",
             },
           },
-        } as OpenClawConfig,
+        } as WinClawConfig,
         runtime,
         prompter,
         {
@@ -534,7 +534,7 @@ describe("setupChannels", () => {
               botToken: "old-token",
             },
           },
-        } as OpenClawConfig,
+        } as WinClawConfig,
         runtime,
         prompter,
         {

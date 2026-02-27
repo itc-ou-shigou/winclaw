@@ -774,7 +774,7 @@ describe("applyAuthChoice", () => {
           providers: {
             filemain: {
               source: "file",
-              path: "/tmp/openclaw-missing-secrets.json",
+              path: "/tmp/winclaw-missing-secrets.json",
               mode: "json",
             },
           },

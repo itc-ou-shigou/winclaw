@@ -1,13 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
-import { resolveOpenClawAgentDir } from "./agent-paths.js";
+import type { WinClawConfig } from "../config/config.js";
+import { resolveWinClawAgentDir } from "./agent-paths.js";
 import {
   installModelsConfigTestHooks,
   withModelsTempHome as withTempHome,
 } from "./models-config.e2e-harness.js";
-import { ensureOpenClawModelsJson } from "./models-config.js";
+import { ensureWinClawModelsJson } from "./models-config.js";
 
 installModelsConfigTestHooks();
 
@@ -30,7 +30,7 @@ describe("models-config: explicit reasoning override", () => {
       const prevKey = process.env.MINIMAX_API_KEY;
       process.env.MINIMAX_API_KEY = "sk-minimax-test";
       try {
-        const cfg: OpenClawConfig = {
+        const cfg: WinClawConfig = {
           models: {
             providers: {
               minimax: {
@@ -52,9 +52,9 @@ describe("models-config: explicit reasoning override", () => {
           },
         };
 
-        await ensureOpenClawModelsJson(cfg);
+        await ensureWinClawModelsJson(cfg);
 
-        const raw = await fs.readFile(path.join(resolveOpenClawAgentDir(), "models.json"), "utf8");
+        const raw = await fs.readFile(path.join(resolveWinClawAgentDir(), "models.json"), "utf8");
         const parsed = JSON.parse(raw) as ModelsJson;
         const m25 = parsed.providers.minimax?.models?.find((m) => m.id === "MiniMax-M2.5");
         expect(m25).toBeDefined();
@@ -86,7 +86,7 @@ describe("models-config: explicit reasoning override", () => {
           contextWindow: 1_000_000,
           maxTokens: 8192,
         };
-        const cfg: OpenClawConfig = {
+        const cfg: WinClawConfig = {
           models: {
             providers: {
               minimax: {
@@ -99,9 +99,9 @@ describe("models-config: explicit reasoning override", () => {
           },
         };
 
-        await ensureOpenClawModelsJson(cfg);
+        await ensureWinClawModelsJson(cfg);
 
-        const raw = await fs.readFile(path.join(resolveOpenClawAgentDir(), "models.json"), "utf8");
+        const raw = await fs.readFile(path.join(resolveWinClawAgentDir(), "models.json"), "utf8");
         const parsed = JSON.parse(raw) as ModelsJson;
         const m25 = parsed.providers.minimax?.models?.find((m) => m.id === "MiniMax-M2.5");
         expect(m25).toBeDefined();

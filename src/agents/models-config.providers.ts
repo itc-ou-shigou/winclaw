@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
 import { coerceSecretRef } from "../config/types.secrets.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
@@ -54,7 +54,7 @@ import {
 } from "./together-models.js";
 import { discoverVeniceModels, VENICE_BASE_URL } from "./venice-models.js";
 
-type ModelsConfig = NonNullable<OpenClawConfig["models"]>;
+type ModelsConfig = NonNullable<WinClawConfig["models"]>;
 export type ProviderConfig = NonNullable<ModelsConfig["providers"]>[string];
 
 const MINIMAX_PORTAL_BASE_URL = "https://api.minimax.io/anthropic";
@@ -739,7 +739,7 @@ function buildOpenrouterProvider(): ProviderConfig {
         // applyExtraParamsToAgent skips the reasoning effort injection for
         // model id "auto" because it dynamically routes to any OpenRouter model
         // (including ones where reasoning is mandatory and cannot be disabled).
-        // See: openclaw/openclaw#24851
+        // See: winclaw/winclaw#24851
         reasoning: false,
         input: ["text", "image"],
         cost: OPENROUTER_DEFAULT_COST,
@@ -1086,7 +1086,7 @@ export async function resolveImplicitCopilotProvider(params: {
   }
 
   // We deliberately do not write pi-coding-agent auth.json here.
-  // OpenClaw keeps auth in auth-profiles and resolves runtime availability from that store.
+  // WinClaw keeps auth in auth-profiles and resolves runtime availability from that store.
 
   // We intentionally do NOT define custom models for Copilot in models.json.
   // pi-coding-agent treats providers with models as replacements requiring apiKey.
@@ -1099,7 +1099,7 @@ export async function resolveImplicitCopilotProvider(params: {
 
 export async function resolveImplicitBedrockProvider(params: {
   agentDir: string;
-  config?: OpenClawConfig;
+  config?: WinClawConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<ProviderConfig | null> {
   const env = params.env ?? process.env;

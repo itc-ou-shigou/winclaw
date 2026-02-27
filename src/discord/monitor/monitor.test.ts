@@ -402,7 +402,7 @@ describe("discord component interactions", () => {
         cfg: {
           commands: { useAccessGroups: true },
           channels: { discord: { replyToMode: "first" } },
-        } as OpenClawConfig,
+        } as WinClawConfig,
         allowFrom: ["owner-1"],
       }),
     );
@@ -434,7 +434,7 @@ describe("discord component interactions", () => {
         cfg: {
           commands: { useAccessGroups: true },
           channels: { discord: { replyToMode: "first" } },
-        } as OpenClawConfig,
+        } as WinClawConfig,
         allowFrom: ["123456789"],
       }),
     );

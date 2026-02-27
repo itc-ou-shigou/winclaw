@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import {
   resolveHeartbeatDeliveryTarget,
   resolveOutboundTarget,
@@ -16,7 +16,7 @@ describe("resolveOutboundTarget defaultTo config fallback", () => {
   installResolveOutboundTargetPluginRegistryHooks();
 
   it("uses whatsapp defaultTo when no explicit target is provided", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: { whatsapp: { defaultTo: "+15551234567", allowFrom: ["*"] } },
     };
     const res = resolveOutboundTarget({
@@ -29,7 +29,7 @@ describe("resolveOutboundTarget defaultTo config fallback", () => {
   });
 
   it("uses telegram defaultTo when no explicit target is provided", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: { telegram: { defaultTo: "123456789" } },
     };
     const res = resolveOutboundTarget({
@@ -42,7 +42,7 @@ describe("resolveOutboundTarget defaultTo config fallback", () => {
   });
 
   it("explicit --reply-to overrides defaultTo", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: { whatsapp: { defaultTo: "+15551234567", allowFrom: ["*"] } },
     };
     const res = resolveOutboundTarget({
@@ -55,7 +55,7 @@ describe("resolveOutboundTarget defaultTo config fallback", () => {
   });
 
   it("still errors when no defaultTo and no explicit target", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: { whatsapp: { allowFrom: ["+1555"] } },
     };
     const res = resolveOutboundTarget({
@@ -302,7 +302,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("allows heartbeat delivery to Slack DMs and avoids inherited threadId by default", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -323,7 +323,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("blocks heartbeat delivery to Slack DMs when directPolicy is block", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -345,7 +345,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("allows heartbeat delivery to Discord DMs by default", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -364,7 +364,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("allows heartbeat delivery to Telegram direct chats by default", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -383,7 +383,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("blocks heartbeat delivery to Telegram direct chats when directPolicy is block", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -403,7 +403,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("keeps heartbeat delivery to Telegram groups", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -422,7 +422,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("allows heartbeat delivery to WhatsApp direct chats by default", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -441,7 +441,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("keeps heartbeat delivery to WhatsApp groups", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -460,7 +460,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("uses session chatType hint when target parser cannot classify and allows direct by default", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -480,7 +480,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("blocks session chatType direct hints when directPolicy is block", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -501,7 +501,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("keeps heartbeat delivery to Discord channels", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
@@ -540,7 +540,7 @@ describe("resolveSessionDeliveryTarget", () => {
   });
 
   it("parses explicit heartbeat topic targets into threadId", () => {
-    const cfg: OpenClawConfig = {};
+    const cfg: WinClawConfig = {};
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       heartbeat: {

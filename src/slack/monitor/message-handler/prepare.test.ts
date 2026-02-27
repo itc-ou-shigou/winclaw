@@ -298,7 +298,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       cfg: {
         channels: { slack: { enabled: true } },
         session: { dmScope: "main" },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       accountId: "default",
       botToken: "token",
       app: { client: {} } as App,
@@ -325,7 +325,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       threadInheritParent: false,
       slashCommand: {
         enabled: false,
-        name: "openclaw",
+        name: "winclaw",
         sessionPrefix: "slack:slash",
         ephemeral: true,
       },
@@ -381,7 +381,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       cfg: {
         channels: { slack: { enabled: true } },
         session: { dmScope: "main" },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       accountId: "default",
       botToken: "token",
       app: { client: {} } as App,
@@ -408,7 +408,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       threadInheritParent: false,
       slashCommand: {
         enabled: false,
-        name: "openclaw",
+        name: "winclaw",
         sessionPrefix: "slack:slash",
         ephemeral: true,
       },

@@ -136,7 +136,7 @@ describe("models-config", () => {
 
   it("preserves non-empty agent apiKey/baseUrl for matching providers in merge mode", async () => {
     await withTempHome(async () => {
-      const agentDir = resolveOpenClawAgentDir();
+      const agentDir = resolveWinClawAgentDir();
       await fs.mkdir(agentDir, { recursive: true });
       await fs.writeFile(
         path.join(agentDir, "models.json"),
@@ -157,7 +157,7 @@ describe("models-config", () => {
         "utf8",
       );
 
-      await ensureOpenClawModelsJson({
+      await ensureWinClawModelsJson({
         models: {
           mode: "merge",
           providers: {
@@ -191,7 +191,7 @@ describe("models-config", () => {
 
   it("uses config apiKey/baseUrl when existing agent values are empty", async () => {
     await withTempHome(async () => {
-      const agentDir = resolveOpenClawAgentDir();
+      const agentDir = resolveWinClawAgentDir();
       await fs.mkdir(agentDir, { recursive: true });
       await fs.writeFile(
         path.join(agentDir, "models.json"),
@@ -212,7 +212,7 @@ describe("models-config", () => {
         "utf8",
       );
 
-      await ensureOpenClawModelsJson({
+      await ensureWinClawModelsJson({
         models: {
           mode: "merge",
           providers: {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { DoctorPrompter } from "./doctor-prompter.js";
 
@@ -34,7 +34,7 @@ describe("maybeRepairSandboxImages", () => {
     // Simulate Docker not available (command fails)
     runExec.mockRejectedValue(new Error("Docker not installed"));
 
-    const config: OpenClawConfig = {
+    const config: WinClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -61,7 +61,7 @@ describe("maybeRepairSandboxImages", () => {
   it("warns when sandbox mode is 'all' but Docker is not available", async () => {
     runExec.mockRejectedValue(new Error("Docker not installed"));
 
-    const config: OpenClawConfig = {
+    const config: WinClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -85,7 +85,7 @@ describe("maybeRepairSandboxImages", () => {
   it("does not warn when sandbox mode is off", async () => {
     runExec.mockRejectedValue(new Error("Docker not installed"));
 
-    const config: OpenClawConfig = {
+    const config: WinClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -106,7 +106,7 @@ describe("maybeRepairSandboxImages", () => {
     // Simulate Docker available
     runExec.mockResolvedValue({ stdout: "24.0.0", stderr: "" });
 
-    const config: OpenClawConfig = {
+    const config: WinClawConfig = {
       agents: {
         defaults: {
           sandbox: {

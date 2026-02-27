@@ -199,7 +199,7 @@ describe("sandbox fs bridge shell compatibility", () => {
     if (process.platform === "win32") {
       return;
     }
-    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-fs-bridge-hardlink-"));
+    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-fs-bridge-hardlink-"));
     const workspaceDir = path.join(stateDir, "workspace");
     const outsideDir = path.join(stateDir, "outside");
     const outsideFile = path.join(outsideDir, "secret.txt");

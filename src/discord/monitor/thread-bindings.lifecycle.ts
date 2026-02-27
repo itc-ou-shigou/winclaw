@@ -1,5 +1,5 @@
 import { readAcpSessionEntry } from "../../acp/runtime/session-meta.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
 import { parseDiscordTarget } from "../targets.js";
 import { resolveChannelIdForBinding } from "./thread-bindings.discord-api.js";
@@ -222,7 +222,7 @@ export function setThreadBindingTtlBySessionKey(params: {
 }
 
 export function reconcileAcpThreadBindingsOnStartup(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   accountId?: string;
   sendFarewell?: boolean;
 }): AcpThreadBindingReconciliationResult {

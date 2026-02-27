@@ -271,7 +271,7 @@ async function startRateLimitedTokenServerWithPairedDeviceToken() {
   const { server, ws, port, prevToken } = await startServerWithClient();
   const deviceIdentityPath = path.join(
     os.tmpdir(),
-    `openclaw-auth-rate-limit-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    `winclaw-auth-rate-limit-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
   );
   try {
     const initial = await connectReq(ws, { token: "secret", deviceIdentityPath });
@@ -305,7 +305,7 @@ async function ensurePairedDeviceTokenForCurrentIdentity(ws: WebSocket): Promise
 
   const deviceIdentityPath = path.join(
     os.tmpdir(),
-    `openclaw-auth-device-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    `winclaw-auth-device-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
   );
 
   const res = await connectReq(ws, { token: "secret", deviceIdentityPath });

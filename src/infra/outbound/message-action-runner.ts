@@ -12,7 +12,7 @@ import type {
   ChannelMessageActionName,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
 import { buildChannelAccountBindings } from "../../routing/bindings.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
@@ -92,7 +92,7 @@ function resolveAndApplyOutboundThreadId(
 }
 
 export type RunMessageActionParams = {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   action: ChannelMessageActionName;
   params: Record<string, unknown>;
   defaultAccountId?: string;
@@ -186,7 +186,7 @@ function applyCrossContextMessageDecoration({
 }
 
 async function maybeApplyCrossContextMarker(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   target: string;
@@ -217,7 +217,7 @@ async function maybeApplyCrossContextMarker(params: {
   });
 }
 
-async function resolveChannel(cfg: OpenClawConfig, params: Record<string, unknown>) {
+async function resolveChannel(cfg: WinClawConfig, params: Record<string, unknown>) {
   const channelHint = readStringParam(params, "channel");
   const selection = await resolveMessageChannelSelection({
     cfg,
@@ -227,7 +227,7 @@ async function resolveChannel(cfg: OpenClawConfig, params: Record<string, unknow
 }
 
 async function resolveActionTarget(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   args: Record<string, unknown>;
@@ -272,7 +272,7 @@ async function resolveActionTarget(params: {
 }
 
 type ResolvedActionContext = {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   params: Record<string, unknown>;
   channel: ChannelId;
   accountId?: string | null;

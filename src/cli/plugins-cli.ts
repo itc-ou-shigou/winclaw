@@ -635,7 +635,7 @@ export function registerPluginsCli(program: Command) {
 
         const existing = cfg.plugins?.load?.paths ?? [];
         const mergedPaths = Array.from(new Set([...existing, bundledFallback.localPath]));
-        let next: OpenClawConfig = {
+        let next: WinClawConfig = {
           ...cfg,
           plugins: {
             ...cfg.plugins,

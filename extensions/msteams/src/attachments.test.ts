@@ -1,4 +1,4 @@
-import type { PluginRuntime, SsrFPolicy } from "openclaw/plugin-sdk";
+import type { PluginRuntime, SsrFPolicy } from "winclaw/plugin-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildMSTeamsAttachmentPlaceholder,

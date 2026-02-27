@@ -255,7 +255,7 @@ async function createMockRuntime(params?: {
   logPath: string;
   config: ResolvedAcpxPluginConfig;
 }> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "openclaw-acpx-runtime-test-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "winclaw-acpx-runtime-test-"));
   tempDirs.push(dir);
   const scriptPath = path.join(dir, "mock-acpx.cjs");
   const logPath = path.join(dir, "calls.log");
@@ -558,7 +558,7 @@ describe("AcpxRuntime", () => {
 
   it("does not mark backend unhealthy when a per-session cwd is missing", async () => {
     const { runtime } = await createMockRuntime();
-    const missingCwd = path.join(os.tmpdir(), "openclaw-acpx-runtime-test-missing-cwd");
+    const missingCwd = path.join(os.tmpdir(), "winclaw-acpx-runtime-test-missing-cwd");
 
     await runtime.probeAvailability();
     expect(runtime.isHealthy()).toBe(true);

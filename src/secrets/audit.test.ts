@@ -14,15 +14,15 @@ describe("secrets audit", () => {
   let env: NodeJS.ProcessEnv;
 
   beforeEach(async () => {
-    rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-secrets-audit-"));
-    stateDir = path.join(rootDir, ".openclaw");
-    configPath = path.join(stateDir, "openclaw.json");
+    rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-secrets-audit-"));
+    stateDir = path.join(rootDir, ".winclaw");
+    configPath = path.join(stateDir, "winclaw.json");
     authStorePath = path.join(stateDir, "agents", "main", "agent", "auth-profiles.json");
     authJsonPath = path.join(stateDir, "agents", "main", "agent", "auth.json");
     envPath = path.join(stateDir, ".env");
     env = {
-      OPENCLAW_STATE_DIR: stateDir,
-      OPENCLAW_CONFIG_PATH: configPath,
+      WINCLAW_STATE_DIR: stateDir,
+      WINCLAW_CONFIG_PATH: configPath,
       OPENAI_API_KEY: "env-openai-key",
       ...(typeof process.env.PATH === "string" && process.env.PATH.trim().length > 0
         ? { PATH: process.env.PATH }

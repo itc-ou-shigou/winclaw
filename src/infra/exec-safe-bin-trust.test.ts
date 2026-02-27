@@ -77,7 +77,7 @@ describe("exec safe bin trust", () => {
     if (process.platform === "win32") {
       return;
     }
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-safe-bin-trust-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-safe-bin-trust-"));
     try {
       await fs.chmod(dir, 0o777);
       const hits = listWritableExplicitTrustedSafeBinDirs([dir]);

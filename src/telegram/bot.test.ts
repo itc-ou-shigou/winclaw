@@ -228,7 +228,7 @@ describe("createTelegramBot", () => {
           message_id: 20,
         },
       },
-      me: { username: "openclaw_bot" },
+      me: { username: "winclaw_bot" },
       getFile: async () => ({ download: async () => new Uint8Array() }),
     });
 

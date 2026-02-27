@@ -2,10 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export const POSIX_OPENCLAW_TMP_DIR = "/tmp/openclaw";
+export const POSIX_WINCLAW_TMP_DIR = "/tmp/winclaw";
 const TMP_DIR_ACCESS_MODE = fs.constants.W_OK | fs.constants.X_OK;
 
-type ResolvePreferredOpenClawTmpDirOptions = {
+type ResolvePreferredWinClawTmpDirOptions = {
   accessSync?: (path: string, mode?: number) => void;
   chmodSync?: (path: string, mode: number) => void;
   lstatSync?: (path: string) => {
@@ -31,8 +31,8 @@ function isNodeErrorWithCode(err: unknown, code: string): err is MaybeNodeError 
   );
 }
 
-export function resolvePreferredOpenClawTmpDir(
-  options: ResolvePreferredOpenClawTmpDirOptions = {},
+export function resolvePreferredWinClawTmpDir(
+  options: ResolvePreferredWinClawTmpDirOptions = {},
 ): string {
   const accessSync = options.accessSync ?? fs.accessSync;
   const chmodSync = options.chmodSync ?? fs.chmodSync;
@@ -67,7 +67,7 @@ export function resolvePreferredOpenClawTmpDir(
 
   const fallback = (): string => {
     const base = tmpdir();
-    const suffix = uid === undefined ? "openclaw" : `openclaw-${uid}`;
+    const suffix = uid === undefined ? "winclaw" : `winclaw-${uid}`;
     return path.join(base, suffix);
   };
 
@@ -109,7 +109,7 @@ export function resolvePreferredOpenClawTmpDir(
         return false;
       }
       chmodSync(candidatePath, 0o700);
-      warn(`[openclaw] tightened permissions on temp dir: ${candidatePath}`);
+      warn(`[winclaw] tightened permissions on temp dir: ${candidatePath}`);
       return resolveDirState(candidatePath) === "available";
     } catch {
       return false;
@@ -126,27 +126,27 @@ export function resolvePreferredOpenClawTmpDir(
       if (tryRepairWritableBits(fallbackPath)) {
         return fallbackPath;
       }
-      throw new Error(`Unsafe fallback OpenClaw temp dir: ${fallbackPath}`);
+      throw new Error(`Unsafe fallback WinClaw temp dir: ${fallbackPath}`);
     }
     try {
       mkdirSync(fallbackPath, { recursive: true, mode: 0o700 });
       chmodSync(fallbackPath, 0o700);
     } catch {
-      throw new Error(`Unable to create fallback OpenClaw temp dir: ${fallbackPath}`);
+      throw new Error(`Unable to create fallback WinClaw temp dir: ${fallbackPath}`);
     }
     if (resolveDirState(fallbackPath) !== "available" && !tryRepairWritableBits(fallbackPath)) {
-      throw new Error(`Unsafe fallback OpenClaw temp dir: ${fallbackPath}`);
+      throw new Error(`Unsafe fallback WinClaw temp dir: ${fallbackPath}`);
     }
     return fallbackPath;
   };
 
-  const existingPreferredState = resolveDirState(POSIX_OPENCLAW_TMP_DIR);
+  const existingPreferredState = resolveDirState(POSIX_WINCLAW_TMP_DIR);
   if (existingPreferredState === "available") {
-    return POSIX_OPENCLAW_TMP_DIR;
+    return POSIX_WINCLAW_TMP_DIR;
   }
   if (existingPreferredState === "invalid") {
-    if (tryRepairWritableBits(POSIX_OPENCLAW_TMP_DIR)) {
-      return POSIX_OPENCLAW_TMP_DIR;
+    if (tryRepairWritableBits(POSIX_WINCLAW_TMP_DIR)) {
+      return POSIX_WINCLAW_TMP_DIR;
     }
     return ensureTrustedFallbackDir();
   }
@@ -154,15 +154,15 @@ export function resolvePreferredOpenClawTmpDir(
   try {
     accessSync("/tmp", TMP_DIR_ACCESS_MODE);
     // Create with a safe default; subsequent callers expect it exists.
-    mkdirSync(POSIX_OPENCLAW_TMP_DIR, { recursive: true, mode: 0o700 });
-    chmodSync(POSIX_OPENCLAW_TMP_DIR, 0o700);
+    mkdirSync(POSIX_WINCLAW_TMP_DIR, { recursive: true, mode: 0o700 });
+    chmodSync(POSIX_WINCLAW_TMP_DIR, 0o700);
     if (
-      resolveDirState(POSIX_OPENCLAW_TMP_DIR) !== "available" &&
-      !tryRepairWritableBits(POSIX_OPENCLAW_TMP_DIR)
+      resolveDirState(POSIX_WINCLAW_TMP_DIR) !== "available" &&
+      !tryRepairWritableBits(POSIX_WINCLAW_TMP_DIR)
     ) {
       return ensureTrustedFallbackDir();
     }
-    return POSIX_OPENCLAW_TMP_DIR;
+    return POSIX_WINCLAW_TMP_DIR;
   } catch {
     return ensureTrustedFallbackDir();
   }

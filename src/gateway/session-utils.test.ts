@@ -348,7 +348,7 @@ describe("resolveSessionModelRef", () => {
           model: { primary: "google-gemini-cli/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelRef(cfg, {
       sessionId: "legacy-session",
@@ -372,7 +372,7 @@ describe("resolveSessionModelRef", () => {
           model: { primary: "google-gemini-cli/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelRef(cfg, {
       sessionId: "slash-model",
@@ -393,7 +393,7 @@ describe("resolveSessionModelIdentityRef", () => {
           model: { primary: "google-gemini-cli/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelIdentityRef(cfg, {
       sessionId: "legacy-session",
@@ -415,7 +415,7 @@ describe("resolveSessionModelIdentityRef", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelIdentityRef(cfg, {
       sessionId: "legacy-session",
@@ -438,7 +438,7 @@ describe("resolveSessionModelIdentityRef", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelIdentityRef(cfg, {
       sessionId: "legacy-session",
@@ -457,7 +457,7 @@ describe("resolveSessionModelIdentityRef", () => {
           model: { primary: "google-gemini-cli/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelIdentityRef(cfg, {
       sessionId: "slash-model",
@@ -479,7 +479,7 @@ describe("resolveSessionModelIdentityRef", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const resolved = resolveSessionModelIdentityRef(cfg, {
       sessionId: "slash-model",
@@ -691,7 +691,7 @@ describe("listSessionsFromStore search", () => {
           model: { primary: "google-gemini-cli/gemini-3-pro-preview" },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -723,7 +723,7 @@ describe("listSessionsFromStore search", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -755,7 +755,7 @@ describe("listSessionsFromStore search", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {

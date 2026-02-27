@@ -108,7 +108,7 @@ describe("hooks workspace", () => {
       return;
     }
 
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-hooks-workspace-hardlink-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "winclaw-hooks-workspace-hardlink-"));
     const hooksRoot = path.join(root, "hooks");
     fs.mkdirSync(hooksRoot, { recursive: true });
 
@@ -131,7 +131,7 @@ describe("hooks workspace", () => {
       throw err;
     }
 
-    const entries = loadHookEntriesFromDir({ dir: hooksRoot, source: "openclaw-workspace" });
+    const entries = loadHookEntriesFromDir({ dir: hooksRoot, source: "winclaw-workspace" });
     expect(entries.some((e) => e.hook.name === "hardlink-hook")).toBe(false);
     expect(entries.some((e) => e.hook.name === "outside")).toBe(false);
   });
@@ -141,7 +141,7 @@ describe("hooks workspace", () => {
       return;
     }
 
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-hooks-workspace-hardlink-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "winclaw-hooks-workspace-hardlink-"));
     const hooksRoot = path.join(root, "hooks");
     fs.mkdirSync(hooksRoot, { recursive: true });
 
@@ -162,7 +162,7 @@ describe("hooks workspace", () => {
       throw err;
     }
 
-    const entries = loadHookEntriesFromDir({ dir: hooksRoot, source: "openclaw-workspace" });
+    const entries = loadHookEntriesFromDir({ dir: hooksRoot, source: "winclaw-workspace" });
     expect(entries.some((e) => e.hook.name === "hardlink-handler-hook")).toBe(false);
   });
 });

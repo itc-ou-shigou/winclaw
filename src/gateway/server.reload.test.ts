@@ -177,30 +177,30 @@ describe("gateway hot reload", () => {
   let prevOpenAiApiKey: string | undefined;
 
   beforeEach(() => {
-    prevSkipChannels = process.env.OPENCLAW_SKIP_CHANNELS;
-    prevSkipGmail = process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
-    prevSkipProviders = process.env.OPENCLAW_SKIP_PROVIDERS;
+    prevSkipChannels = process.env.WINCLAW_SKIP_CHANNELS;
+    prevSkipGmail = process.env.WINCLAW_SKIP_GMAIL_WATCHER;
+    prevSkipProviders = process.env.WINCLAW_SKIP_PROVIDERS;
     prevOpenAiApiKey = process.env.OPENAI_API_KEY;
-    process.env.OPENCLAW_SKIP_CHANNELS = "0";
-    delete process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
-    delete process.env.OPENCLAW_SKIP_PROVIDERS;
+    process.env.WINCLAW_SKIP_CHANNELS = "0";
+    delete process.env.WINCLAW_SKIP_GMAIL_WATCHER;
+    delete process.env.WINCLAW_SKIP_PROVIDERS;
   });
 
   afterEach(() => {
     if (prevSkipChannels === undefined) {
-      delete process.env.OPENCLAW_SKIP_CHANNELS;
+      delete process.env.WINCLAW_SKIP_CHANNELS;
     } else {
-      process.env.OPENCLAW_SKIP_CHANNELS = prevSkipChannels;
+      process.env.WINCLAW_SKIP_CHANNELS = prevSkipChannels;
     }
     if (prevSkipGmail === undefined) {
-      delete process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
+      delete process.env.WINCLAW_SKIP_GMAIL_WATCHER;
     } else {
-      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = prevSkipGmail;
+      process.env.WINCLAW_SKIP_GMAIL_WATCHER = prevSkipGmail;
     }
     if (prevSkipProviders === undefined) {
-      delete process.env.OPENCLAW_SKIP_PROVIDERS;
+      delete process.env.WINCLAW_SKIP_PROVIDERS;
     } else {
-      process.env.OPENCLAW_SKIP_PROVIDERS = prevSkipProviders;
+      process.env.WINCLAW_SKIP_PROVIDERS = prevSkipProviders;
     }
     if (prevOpenAiApiKey === undefined) {
       delete process.env.OPENAI_API_KEY;
@@ -210,9 +210,9 @@ describe("gateway hot reload", () => {
   });
 
   async function writeEnvRefConfig() {
-    const configPath = process.env.OPENCLAW_CONFIG_PATH;
+    const configPath = process.env.WINCLAW_CONFIG_PATH;
     if (!configPath) {
-      throw new Error("OPENCLAW_CONFIG_PATH is not set");
+      throw new Error("WINCLAW_CONFIG_PATH is not set");
     }
     await fs.writeFile(
       configPath,
@@ -236,9 +236,9 @@ describe("gateway hot reload", () => {
   }
 
   async function writeAuthProfileEnvRefStore() {
-    const stateDir = process.env.OPENCLAW_STATE_DIR;
+    const stateDir = process.env.WINCLAW_STATE_DIR;
     if (!stateDir) {
-      throw new Error("OPENCLAW_STATE_DIR is not set");
+      throw new Error("WINCLAW_STATE_DIR is not set");
     }
     const authStorePath = path.join(stateDir, "agents", "main", "agent", "auth-profiles.json");
     await fs.mkdir(path.dirname(authStorePath), { recursive: true });
@@ -251,7 +251,7 @@ describe("gateway hot reload", () => {
             missing: {
               type: "api_key",
               provider: "openai",
-              keyRef: { source: "env", provider: "default", id: "MISSING_OPENCLAW_AUTH_REF" },
+              keyRef: { source: "env", provider: "default", id: "MISSING_WINCLAW_AUTH_REF" },
             },
           },
           selectedProfileId: "missing",
@@ -266,7 +266,7 @@ describe("gateway hot reload", () => {
   }
 
   async function removeMainAuthProfileStore() {
-    const stateDir = process.env.OPENCLAW_STATE_DIR;
+    const stateDir = process.env.WINCLAW_STATE_DIR;
     if (!stateDir) {
       return;
     }
@@ -389,10 +389,10 @@ describe("gateway hot reload", () => {
 
   it("fails startup when auth-profile secret refs are unresolved", async () => {
     await writeAuthProfileEnvRefStore();
-    delete process.env.MISSING_OPENCLAW_AUTH_REF;
+    delete process.env.MISSING_WINCLAW_AUTH_REF;
     try {
       await expect(withGatewayServer(async () => {})).rejects.toThrow(
-        'Environment variable "MISSING_OPENCLAW_AUTH_REF" is missing or empty.',
+        'Environment variable "MISSING_WINCLAW_AUTH_REF" is missing or empty.',
       );
     } finally {
       await removeMainAuthProfileStore();

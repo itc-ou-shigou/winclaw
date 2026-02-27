@@ -171,8 +171,8 @@ describe("loadPluginManifestRegistry", () => {
   it("rejects manifest paths that escape plugin root via symlink", () => {
     const rootDir = makeTempDir();
     const outsideDir = makeTempDir();
-    const outsideManifest = path.join(outsideDir, "openclaw.plugin.json");
-    const linkedManifest = path.join(rootDir, "openclaw.plugin.json");
+    const outsideManifest = path.join(outsideDir, "winclaw.plugin.json");
+    const linkedManifest = path.join(rootDir, "winclaw.plugin.json");
     fs.writeFileSync(path.join(rootDir, "index.ts"), "export default function () {}", "utf-8");
     fs.writeFileSync(
       outsideManifest,
@@ -204,8 +204,8 @@ describe("loadPluginManifestRegistry", () => {
     }
     const rootDir = makeTempDir();
     const outsideDir = makeTempDir();
-    const outsideManifest = path.join(outsideDir, "openclaw.plugin.json");
-    const linkedManifest = path.join(rootDir, "openclaw.plugin.json");
+    const outsideManifest = path.join(outsideDir, "winclaw.plugin.json");
+    const linkedManifest = path.join(rootDir, "winclaw.plugin.json");
     fs.writeFileSync(path.join(rootDir, "index.ts"), "export default function () {}", "utf-8");
     fs.writeFileSync(
       outsideManifest,

@@ -255,14 +255,14 @@ describe("discoverWinClawPlugins", () => {
     fs.writeFileSync(
       path.join(globalExt, "package.json"),
       JSON.stringify({
-        name: "@openclaw/pack",
-        openclaw: { extensions: ["./escape.ts"] },
+        name: "@winclaw/pack",
+        winclaw: { extensions: ["./escape.ts"] },
       }),
       "utf-8",
     );
 
     const { candidates, diagnostics } = await withStateDir(stateDir, async () => {
-      return discoverOpenClawPlugins({});
+      return discoverWinClawPlugins({});
     });
 
     expect(candidates.some((candidate) => candidate.idHint === "pack")).toBe(false);
@@ -286,8 +286,8 @@ describe("discoverWinClawPlugins", () => {
     fs.writeFileSync(
       outsideManifest,
       JSON.stringify({
-        name: "@openclaw/pack",
-        openclaw: { extensions: ["./entry.ts"] },
+        name: "@winclaw/pack",
+        winclaw: { extensions: ["./entry.ts"] },
       }),
       "utf-8",
     );
@@ -301,7 +301,7 @@ describe("discoverWinClawPlugins", () => {
     }
 
     const { candidates } = await withStateDir(stateDir, async () => {
-      return discoverOpenClawPlugins({});
+      return discoverWinClawPlugins({});
     });
 
     expect(candidates.some((candidate) => candidate.idHint === "pack")).toBe(false);

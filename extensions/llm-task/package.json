@@ -1,10 +1,10 @@
 {
-  "name": "@openclaw/llm-task",
+  "name": "@winclaw/llm-task",
   "version": "2026.2.26",
   "private": true,
-  "description": "OpenClaw JSON-only LLM task plugin",
+  "description": "WinClaw JSON-only LLM task plugin",
   "type": "module",
-  "openclaw": {
+  "winclaw": {
     "extensions": [
       "./index.ts"
     ]

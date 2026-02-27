@@ -14,7 +14,7 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>) {
 }
 
 async function withWorkspaceTempDir<T>(fn: (dir: string) => Promise<T>) {
-  const dir = await fs.mkdtemp(path.join(process.cwd(), "openclaw-patch-workspace-"));
+  const dir = await fs.mkdtemp(path.join(process.cwd(), "winclaw-patch-workspace-"));
   try {
     return await fn(dir);
   } finally {

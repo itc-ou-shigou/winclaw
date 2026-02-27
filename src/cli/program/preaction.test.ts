@@ -150,7 +150,7 @@ describe("registerPreActionHooks", () => {
   it("loads plugin registry for agents command", async () => {
     await runCommand({
       parseArgv: ["agents"],
-      processArgv: ["node", "openclaw", "agents"],
+      processArgv: ["node", "winclaw", "agents"],
     });
 
     expect(ensurePluginRegistryLoadedMock).toHaveBeenCalledTimes(1);
@@ -167,7 +167,7 @@ describe("registerPreActionHooks", () => {
     });
     await runCommand({
       parseArgv: ["secrets"],
-      processArgv: ["node", "openclaw", "secrets"],
+      processArgv: ["node", "winclaw", "secrets"],
     });
 
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();

@@ -6,7 +6,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { isLoopbackAddress, isLoopbackHost } from "../gateway/net.js";
 import { rawDataToString } from "../infra/ws.js";
 import {
-  probeAuthenticatedOpenClawRelay,
+  probeAuthenticatedWinClawRelay,
   resolveRelayAcceptedTokensForPort,
   resolveRelayAuthTokenForPort,
 } from "./extension-relay-auth.js";
@@ -81,7 +81,7 @@ type ConnectedTarget = {
   targetInfo: TargetInfo;
 };
 
-const RELAY_AUTH_HEADER = "x-openclaw-relay-token";
+const RELAY_AUTH_HEADER = "x-winclaw-relay-token";
 const DEFAULT_EXTENSION_RECONNECT_GRACE_MS = 5_000;
 const DEFAULT_EXTENSION_COMMAND_RECONNECT_WAIT_MS = 3_000;
 
@@ -240,11 +240,11 @@ export async function ensureChromeExtensionRelayServer(opts: {
   }
 
   const extensionReconnectGraceMs = envMsOrDefault(
-    "OPENCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS",
+    "WINCLAW_EXTENSION_RELAY_RECONNECT_GRACE_MS",
     DEFAULT_EXTENSION_RECONNECT_GRACE_MS,
   );
   const extensionCommandReconnectWaitMs = envMsOrDefault(
-    "OPENCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
+    "WINCLAW_EXTENSION_RELAY_COMMAND_RECONNECT_WAIT_MS",
     DEFAULT_EXTENSION_COMMAND_RECONNECT_WAIT_MS,
   );
 
@@ -395,9 +395,9 @@ export async function ensureChromeExtensionRelayServer(opts: {
         case "Browser.getVersion":
           return {
             protocolVersion: "1.3",
-            product: "Chrome/OpenClaw-Extension-Relay",
+            product: "Chrome/WinClaw-Extension-Relay",
             revision: "0",
-            userAgent: "OpenClaw-Extension-Relay",
+            userAgent: "WinClaw-Extension-Relay",
             jsVersion: "V8",
           };
         case "Browser.setDownloadBehavior":
@@ -531,7 +531,7 @@ export async function ensureChromeExtensionRelayServer(opts: {
         (req.method === "GET" || req.method === "PUT")
       ) {
         const payload: Record<string, unknown> = {
-          Browser: "OpenClaw/extension-relay",
+          Browser: "WinClaw/extension-relay",
           "Protocol-Version": "1.3",
         };
         // Only advertise the WS URL if a real extension is connected.
@@ -892,7 +892,7 @@ export async function ensureChromeExtensionRelayServer(opts: {
     } catch (err) {
       if (
         isAddrInUseError(err) &&
-        (await probeAuthenticatedOpenClawRelay({
+        (await probeAuthenticatedWinClawRelay({
           baseUrl: info.baseUrl,
           relayAuthHeader: RELAY_AUTH_HEADER,
           relayAuthToken,

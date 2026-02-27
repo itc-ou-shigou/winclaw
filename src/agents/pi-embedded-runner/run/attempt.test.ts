@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { WinClawConfig } from "../../../config/config.js";
 import {
   resolveAttemptFsWorkspaceOnly,
   resolvePromptBuildHookResult,
@@ -64,7 +64,7 @@ describe("resolvePromptModeForSession", () => {
 
 describe("resolveAttemptFsWorkspaceOnly", () => {
   it("uses global tools.fs.workspaceOnly when agent has no override", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       tools: {
         fs: { workspaceOnly: true },
       },
@@ -79,7 +79,7 @@ describe("resolveAttemptFsWorkspaceOnly", () => {
   });
 
   it("prefers agent-specific tools.fs.workspaceOnly override", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       tools: {
         fs: { workspaceOnly: true },
       },

@@ -183,7 +183,7 @@ describe("buildSandboxCreateArgs", () => {
     },
     {
       name: "network container namespace join",
-      containerName: "openclaw-sbx-container-network",
+      containerName: "winclaw-sbx-container-network",
       cfg: createSandboxConfig({ network: "container:peer" }),
       expected: /network mode "container:peer" is blocked by default/,
     },
@@ -284,7 +284,7 @@ describe("buildSandboxCreateArgs", () => {
       dangerouslyAllowContainerNamespaceJoin: true,
     });
     const args = buildSandboxCreateArgs({
-      name: "openclaw-sbx-container-network-override",
+      name: "winclaw-sbx-container-network-override",
       cfg,
       scopeKey: "main",
       createdAtMs: 1700000000000,

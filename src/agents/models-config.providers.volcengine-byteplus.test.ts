@@ -40,7 +40,7 @@ describe("Volcengine and BytePlus providers", () => {
   });
 
   it("includes providers when auth profiles are env keyRef-only", async () => {
-    const agentDir = mkdtempSync(join(tmpdir(), "openclaw-test-"));
+    const agentDir = mkdtempSync(join(tmpdir(), "winclaw-test-"));
     const envSnapshot = captureEnv(["VOLCANO_ENGINE_API_KEY", "BYTEPLUS_API_KEY"]);
     delete process.env.VOLCANO_ENGINE_API_KEY;
     delete process.env.BYTEPLUS_API_KEY;

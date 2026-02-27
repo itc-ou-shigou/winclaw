@@ -1,6 +1,6 @@
 ---
 name: acp-router
-description: Route plain-language requests for Pi, Claude Code, Codex, OpenCode, Gemini CLI, or ACP harness work into either OpenClaw ACP runtime sessions or direct acpx-driven sessions ("telephone game" flow).
+description: Route plain-language requests for Pi, Claude Code, Codex, OpenCode, Gemini CLI, or ACP harness work into either WinClaw ACP runtime sessions or direct acpx-driven sessions ("telephone game" flow).
 user-invocable: false
 ---
 
@@ -10,7 +10,7 @@ When user intent is "run this in Pi/Claude Code/Codex/OpenCode/Gemini (ACP harne
 
 ## Intent detection
 
-Trigger this skill when the user asks OpenClaw to:
+Trigger this skill when the user asks WinClaw to:
 
 - run something in Pi / Claude Code / Codex / OpenCode / Gemini
 - continue existing harness work
@@ -21,14 +21,14 @@ Trigger this skill when the user asks OpenClaw to:
 
 Choose one of these paths:
 
-1. OpenClaw ACP runtime path (default): use `sessions_spawn` / ACP runtime tools.
+1. WinClaw ACP runtime path (default): use `sessions_spawn` / ACP runtime tools.
 2. Direct `acpx` path (telephone game): use `acpx` CLI through `exec` to drive the harness session directly.
 
 Use direct `acpx` when one of these is true:
 
 - user explicitly asks for direct `acpx` driving
 - ACP runtime/plugin path is unavailable or unhealthy
-- the task is "just relay prompts to harness" and no OpenClaw ACP lifecycle features are needed
+- the task is "just relay prompts to harness" and no WinClaw ACP lifecycle features are needed
 
 Do not use:
 
@@ -50,7 +50,7 @@ These defaults match current acpx built-in aliases.
 
 If policy rejects the chosen id, report the policy error clearly and ask for the allowed ACP agent id.
 
-## OpenClaw ACP runtime path
+## WinClaw ACP runtime path
 
 Required behavior:
 
@@ -101,7 +101,7 @@ Do not default to subagent runtime for these requests.
 
 ## ACPX install and version policy (direct acpx path)
 
-For this repo, direct `acpx` calls must follow the same pinned policy as the `@openclaw/acpx` extension.
+For this repo, direct `acpx` calls must follow the same pinned policy as the `@winclaw/acpx` extension.
 
 1. Prefer plugin-local binary, not global PATH:
    - `./extensions/acpx/node_modules/.bin/acpx`

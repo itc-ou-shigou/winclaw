@@ -105,7 +105,7 @@ describe("ensureAgentWorkspace", () => {
   });
 
   it("treats memory-backed workspaces as existing even when template files are missing", async () => {
-    const tempDir = await makeTempWorkspace("openclaw-workspace-");
+    const tempDir = await makeTempWorkspace("winclaw-workspace-");
     await fs.mkdir(path.join(tempDir, "memory"), { recursive: true });
     await fs.writeFile(path.join(tempDir, "memory", "2026-02-25.md"), "# Daily log\nSome notes");
     await fs.writeFile(path.join(tempDir, "MEMORY.md"), "# Long-term memory\nImportant stuff");
@@ -123,7 +123,7 @@ describe("ensureAgentWorkspace", () => {
   });
 
   it("treats git-backed workspaces as existing even when template files are missing", async () => {
-    const tempDir = await makeTempWorkspace("openclaw-workspace-");
+    const tempDir = await makeTempWorkspace("winclaw-workspace-");
     await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
     await fs.writeFile(path.join(tempDir, ".git", "HEAD"), "ref: refs/heads/main\n");
 
@@ -181,7 +181,7 @@ describe("loadWorkspaceBootstrapFiles", () => {
     if (process.platform === "win32") {
       return;
     }
-    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-workspace-hardlink-"));
+    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-workspace-hardlink-"));
     try {
       const workspaceDir = path.join(rootDir, "workspace");
       const outsideDir = path.join(rootDir, "outside");

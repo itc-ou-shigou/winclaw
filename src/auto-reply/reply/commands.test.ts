@@ -895,7 +895,7 @@ describe("handleCommands hooks", () => {
     const cfg = {
       commands: { text: true },
       channels: { telegram: { allowFrom: ["*"] } },
-    } as OpenClawConfig;
+    } as WinClawConfig;
     const params = buildParams("/new", cfg, {
       Provider: "telegram",
       Surface: "telegram",

@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk";
 import { createAcpxPluginConfigSchema } from "./src/config.js";
 import { createAcpxRuntimeService } from "./src/service.js";
 
@@ -7,7 +7,7 @@ const plugin = {
   name: "ACPX Runtime",
   description: "ACP runtime backend powered by the acpx CLI.",
   configSchema: createAcpxPluginConfigSchema(),
-  register(api: OpenClawPluginApi) {
+  register(api: WinClawPluginApi) {
     api.registerService(
       createAcpxRuntimeService({
         pluginConfig: api.pluginConfig,

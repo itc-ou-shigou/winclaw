@@ -1,6 +1,6 @@
 import type { AcpRuntimeEvent } from "../../acp/runtime/types.js";
 import { EmbeddedBlockChunker } from "../../agents/pi-embedded-block-chunker.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import type { ReplyPayload } from "../types.js";
 import { createBlockReplyPipeline } from "./block-reply-pipeline.js";
 import { resolveEffectiveBlockStreamingConfig } from "./block-streaming.js";
@@ -28,7 +28,7 @@ function clampPositiveInteger(
   return rounded;
 }
 
-function resolveAcpStreamCoalesceIdleMs(cfg: OpenClawConfig): number {
+function resolveAcpStreamCoalesceIdleMs(cfg: WinClawConfig): number {
   return clampPositiveInteger(
     cfg.acp?.stream?.coalesceIdleMs,
     DEFAULT_ACP_STREAM_COALESCE_IDLE_MS,
@@ -39,7 +39,7 @@ function resolveAcpStreamCoalesceIdleMs(cfg: OpenClawConfig): number {
   );
 }
 
-function resolveAcpStreamMaxChunkChars(cfg: OpenClawConfig): number {
+function resolveAcpStreamMaxChunkChars(cfg: WinClawConfig): number {
   return clampPositiveInteger(cfg.acp?.stream?.maxChunkChars, DEFAULT_ACP_STREAM_MAX_CHUNK_CHARS, {
     min: 50,
     max: 4_000,
@@ -47,7 +47,7 @@ function resolveAcpStreamMaxChunkChars(cfg: OpenClawConfig): number {
 }
 
 function resolveAcpStreamingConfig(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   provider?: string;
   accountId?: string;
 }) {
@@ -66,7 +66,7 @@ export type AcpReplyProjector = {
 };
 
 export function createAcpReplyProjector(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   shouldSendToolSummaries: boolean;
   deliver: (kind: ReplyDispatchKind, payload: ReplyPayload) => Promise<boolean>;
   provider?: string;

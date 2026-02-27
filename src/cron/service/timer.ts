@@ -299,7 +299,7 @@ export async function onTimer(state: CronServiceState) {
     // We use MAX_TIMER_DELAY_MS as a fixed re-check interval to avoid a
     // zero-delay hot-loop when past-due jobs are waiting for the current
     // execution to finish.
-    // See: https://github.com/openclaw/openclaw/issues/12025
+    // See: https://github.com/winclaw/winclaw/issues/12025
     armRunningRecheckTimer(state);
     return;
   }
@@ -721,7 +721,7 @@ export async function executeJobCore(
   // delivery was requested and we are confident no outbound delivery path
   // ran. If delivery was attempted but final ack is uncertain, suppress the
   // main summary to avoid duplicate user-facing sends.
-  // See: https://github.com/openclaw/openclaw/issues/15692
+  // See: https://github.com/winclaw/winclaw/issues/15692
   const summaryText = res.summary?.trim();
   const deliveryPlan = resolveCronDeliveryPlan(job);
   const suppressMainSummary =

@@ -4,7 +4,7 @@ import path from "node:path";
 import { listAgentIds, resolveAgentDir } from "../agents/agent-scope.js";
 import { resolveAuthStorePath } from "../agents/auth-profiles/paths.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
-import { resolveStateDir, type OpenClawConfig } from "../config/config.js";
+import { resolveStateDir, type WinClawConfig } from "../config/config.js";
 import { coerceSecretRef, type SecretRef } from "../config/types.secrets.js";
 import { resolveConfigDir, resolveUserPath } from "../utils.js";
 import { createSecretsConfigIO } from "./config-io.js";
@@ -182,7 +182,7 @@ function readJsonObject(filePath: string): {
 }
 
 function collectConfigSecrets(params: {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   configPath: string;
   collector: AuditCollector;
 }): void {
@@ -306,7 +306,7 @@ function collectConfigSecrets(params: {
   }
 }
 
-function collectAuthStorePaths(config: OpenClawConfig, stateDir: string): string[] {
+function collectAuthStorePaths(config: WinClawConfig, stateDir: string): string[] {
   const paths = new Set<string>();
   // Scope default auth store discovery to the provided stateDir instead of
   // ambient process env, so audits do not include unrelated host-global stores.
@@ -489,7 +489,7 @@ function collectAuthJsonResidue(params: { stateDir: string; collector: AuditColl
 
 async function collectUnresolvedRefFindings(params: {
   collector: AuditCollector;
-  config: OpenClawConfig;
+  config: WinClawConfig;
   env: NodeJS.ProcessEnv;
 }): Promise<void> {
   const cache: SecretRefResolveCache = {};
@@ -603,7 +603,7 @@ function collectShadowingFindings(collector: AuditCollector): void {
       addFinding(collector, {
         code: "REF_SHADOWED",
         severity: "warn",
-        file: "openclaw.json",
+        file: "winclaw.json",
         jsonPath: configPath,
         message: `Auth profile credentials (${modeText}) take precedence for provider "${provider}", so this config ref may never be used.`,
         provider,
@@ -642,8 +642,8 @@ export async function runSecretsAudit(
   } = {},
 ): Promise<SecretsAuditReport> {
   const env = params.env ?? process.env;
-  const previousAuthStoreReadOnly = process.env.OPENCLAW_AUTH_STORE_READONLY;
-  process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
+  const previousAuthStoreReadOnly = process.env.WINCLAW_AUTH_STORE_READONLY;
+  process.env.WINCLAW_AUTH_STORE_READONLY = "1";
   try {
     const io = createSecretsConfigIO({ env });
     const snapshot = await io.readConfigFileSnapshot();
@@ -660,7 +660,7 @@ export async function runSecretsAudit(
 
     const stateDir = resolveStateDir(env, os.homedir);
     const envPath = path.join(resolveConfigDir(env, os.homedir), ".env");
-    const config = snapshot.valid ? snapshot.config : ({} as OpenClawConfig);
+    const config = snapshot.valid ? snapshot.config : ({} as WinClawConfig);
 
     if (snapshot.valid) {
       collectConfigSecrets({
@@ -717,9 +717,9 @@ export async function runSecretsAudit(
     };
   } finally {
     if (previousAuthStoreReadOnly === undefined) {
-      delete process.env.OPENCLAW_AUTH_STORE_READONLY;
+      delete process.env.WINCLAW_AUTH_STORE_READONLY;
     } else {
-      process.env.OPENCLAW_AUTH_STORE_READONLY = previousAuthStoreReadOnly;
+      process.env.WINCLAW_AUTH_STORE_READONLY = previousAuthStoreReadOnly;
     }
   }
 }
@@ -735,7 +735,7 @@ export function resolveSecretsAuditExitCode(report: SecretsAuditReport, check: b
 }
 
 export function applySecretsPlanTarget(
-  config: OpenClawConfig,
+  config: WinClawConfig,
   pathLabel: string,
   value: unknown,
 ): void {

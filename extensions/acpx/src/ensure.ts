@@ -1,4 +1,4 @@
-import type { PluginLogger } from "openclaw/plugin-sdk";
+import type { PluginLogger } from "winclaw/plugin-sdk";
 import { ACPX_LOCAL_INSTALL_COMMAND, ACPX_PINNED_VERSION, ACPX_PLUGIN_ROOT } from "./config.js";
 import { resolveSpawnFailure, spawnAndCollect } from "./runtime-internals/process.js";
 

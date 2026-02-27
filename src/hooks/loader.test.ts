@@ -297,7 +297,7 @@ describe("loader", () => {
           "---",
           "name: hardlink-hook",
           "description: hardlink test",
-          'metadata: {"openclaw":{"events":["command:new"]}}',
+          'metadata: {"winclaw":{"events":["command:new"]}}',
           "---",
           "",
           "# Hardlink Hook",

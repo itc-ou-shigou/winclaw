@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import {
   describeIMessageEchoDropLog,
   resolveIMessageInboundDecision,
 } from "./inbound-processing.js";
 
 describe("resolveIMessageInboundDecision echo detection", () => {
-  const cfg = {} as OpenClawConfig;
+  const cfg = {} as WinClawConfig;
 
   it("drops inbound messages when outbound message id matches echo cache", () => {
     const echoHas = vi.fn((_scope: string, lookup: { text?: string; messageId?: string }) => {
@@ -60,7 +60,7 @@ describe("describeIMessageEchoDropLog", () => {
 });
 
 describe("resolveIMessageInboundDecision command auth", () => {
-  const cfg = {} as OpenClawConfig;
+  const cfg = {} as WinClawConfig;
 
   it("does not auto-authorize DM commands in open mode without allowlists", () => {
     const decision = resolveIMessageInboundDecision({

@@ -5,7 +5,7 @@ import { toAcpRuntimeErrorText } from "../../../acp/runtime/error-text.js";
 import type { AcpRuntimeError } from "../../../acp/runtime/errors.js";
 import type { AcpRuntimeSessionMode } from "../../../acp/runtime/types.js";
 import { DISCORD_THREAD_BINDING_CHANNEL } from "../../../channels/thread-bindings-policy.js";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { WinClawConfig } from "../../../config/config.js";
 import type { AcpSessionRuntimeOptions } from "../../../config/sessions/types.js";
 import { normalizeAgentId } from "../../../routing/session-key.js";
 import type { CommandHandlerResult, HandleCommandsParams } from "../commands-types.js";
@@ -404,11 +404,11 @@ export function resolveAcpHelpText(): string {
   ].join("\n");
 }
 
-export function resolveConfiguredAcpBackendId(cfg: OpenClawConfig): string {
+export function resolveConfiguredAcpBackendId(cfg: WinClawConfig): string {
   return cfg.acp?.backend?.trim() || "acpx";
 }
 
-export function resolveAcpInstallCommandHint(cfg: OpenClawConfig): string {
+export function resolveAcpInstallCommandHint(cfg: WinClawConfig): string {
   const configured = cfg.acp?.runtime?.installCommand?.trim();
   if (configured) {
     return configured;
@@ -417,9 +417,9 @@ export function resolveAcpInstallCommandHint(cfg: OpenClawConfig): string {
   if (backendId === "acpx") {
     const localPath = path.resolve(process.cwd(), "extensions/acpx");
     if (existsSync(localPath)) {
-      return `openclaw plugins install ${localPath}`;
+      return `winclaw plugins install ${localPath}`;
     }
-    return "openclaw plugins install @openclaw/acpx";
+    return "winclaw plugins install @winclaw/acpx";
   }
   return `Install and enable the plugin that provides ACP backend "${backendId}".`;
 }

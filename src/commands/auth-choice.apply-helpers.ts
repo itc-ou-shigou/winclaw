@@ -1,5 +1,5 @@
 import { resolveEnvApiKey } from "../agents/model-auth.js";
-import type { OpenClawConfig } from "../config/types.js";
+import type { WinClawConfig } from "../config/types.js";
 import { type SecretInput, type SecretRef } from "../config/types.secrets.js";
 import { encodeJsonPointerToken } from "../secrets/json-pointer.js";
 import { PROVIDER_ENV_VARS } from "../secrets/provider-env-vars.js";
@@ -41,7 +41,7 @@ function resolveDefaultFilePointerId(provider: string): string {
 }
 
 function resolveRefFallbackInput(params: {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   provider: string;
   preferredEnvVar?: string;
 }): { ref: SecretRef; resolvedValue: string } {
@@ -71,7 +71,7 @@ function resolveRefFallbackInput(params: {
 
 async function resolveApiKeyRefForOnboarding(params: {
   provider: string;
-  config: OpenClawConfig;
+  config: WinClawConfig;
   prompter: WizardPrompter;
   preferredEnvVar?: string;
 }): Promise<{ ref: SecretRef; resolvedValue: string }> {
@@ -136,7 +136,7 @@ async function resolveApiKeyRefForOnboarding(params: {
         env: process.env,
       });
       await params.prompter.note(
-        `Validated environment variable ${envVar}. OpenClaw will store a reference, not the key value.`,
+        `Validated environment variable ${envVar}. WinClaw will store a reference, not the key value.`,
         "Reference validated",
       );
       return { ref, resolvedValue };
@@ -222,7 +222,7 @@ async function resolveApiKeyRefForOnboarding(params: {
         env: process.env,
       });
       await params.prompter.note(
-        `Validated ${providerEntry.source} reference ${selectedProvider}:${id}. OpenClaw will store a reference, not the key value.`,
+        `Validated ${providerEntry.source} reference ${selectedProvider}:${id}. WinClaw will store a reference, not the key value.`,
         "Reference validated",
       );
       return { ref, resolvedValue };
@@ -344,7 +344,7 @@ export async function resolveSecretInputModeForEnvSelection(params: {
       {
         value: "plaintext",
         label: "Paste API key now",
-        hint: "Stores the key directly in OpenClaw config",
+        hint: "Stores the key directly in WinClaw config",
       },
       {
         value: "ref",
@@ -380,7 +380,7 @@ export async function ensureApiKeyFromOptionEnvOrPrompt(params: {
   token: string | undefined;
   tokenProvider: string | undefined;
   secretInputMode?: SecretInputMode;
-  config: OpenClawConfig;
+  config: WinClawConfig;
   expectedProviders: string[];
   provider: string;
   envLabel: string;
@@ -422,7 +422,7 @@ export async function ensureApiKeyFromOptionEnvOrPrompt(params: {
 }
 
 export async function ensureApiKeyFromEnvOrPrompt(params: {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   provider: string;
   envLabel: string;
   promptMessage: string;

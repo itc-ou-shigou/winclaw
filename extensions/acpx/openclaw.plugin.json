@@ -48,7 +48,7 @@
     },
     "queueOwnerTtlSeconds": {
       "label": "Queue Owner TTL Seconds",
-      "help": "Idle queue-owner TTL for acpx prompt turns. Keep this short in OpenClaw to avoid delayed completion after each turn.",
+      "help": "Idle queue-owner TTL for acpx prompt turns. Keep this short in WinClaw to avoid delayed completion after each turn.",
       "advanced": true
     }
   }

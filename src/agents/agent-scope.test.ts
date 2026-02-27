@@ -231,7 +231,7 @@ describe("resolveAgentConfig", () => {
   });
 
   it("resolves run fallback overrides via shared helper", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -266,7 +266,7 @@ describe("resolveAgentConfig", () => {
   });
 
   it("computes whether any model fallbacks are configured via shared helper", () => {
-    const cfgDefaultsOnly: OpenClawConfig = {
+    const cfgDefaultsOnly: WinClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -283,7 +283,7 @@ describe("resolveAgentConfig", () => {
       }),
     ).toBe(true);
 
-    const cfgAgentOverrideOnly: OpenClawConfig = {
+    const cfgAgentOverrideOnly: WinClawConfig = {
       agents: {
         defaults: {
           model: {

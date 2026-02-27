@@ -182,9 +182,9 @@ function cloneIfObject<T>(value: T): T {
 // move top-level account settings into accounts.default so the original
 // account keeps working without duplicate account values at channel root.
 export function moveSingleAccountChannelSectionToDefaultAccount(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   channelKey: string;
-}): OpenClawConfig {
+}): WinClawConfig {
   const channels = params.cfg.channels as Record<string, unknown> | undefined;
   const baseConfig = channels?.[params.channelKey];
   const base =
@@ -229,5 +229,5 @@ export function moveSingleAccountChannelSectionToDefaultAccount(params: {
         },
       },
     },
-  } as OpenClawConfig;
+  } as WinClawConfig;
 }

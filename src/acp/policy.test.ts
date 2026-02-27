@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import {
   isAcpAgentAllowedByPolicy,
   isAcpDispatchEnabledByPolicy,
@@ -12,7 +12,7 @@ import {
 
 describe("acp policy", () => {
   it("treats ACP as enabled by default", () => {
-    const cfg = {} satisfies OpenClawConfig;
+    const cfg = {} satisfies WinClawConfig;
     expect(isAcpEnabledByPolicy(cfg)).toBe(true);
     expect(isAcpDispatchEnabledByPolicy(cfg)).toBe(false);
     expect(resolveAcpDispatchPolicyState(cfg)).toBe("dispatch_disabled");
@@ -23,7 +23,7 @@ describe("acp policy", () => {
       acp: {
         enabled: false,
       },
-    } satisfies OpenClawConfig;
+    } satisfies WinClawConfig;
     expect(isAcpEnabledByPolicy(cfg)).toBe(false);
     expect(resolveAcpDispatchPolicyState(cfg)).toBe("acp_disabled");
     expect(resolveAcpDispatchPolicyMessage(cfg)).toContain("acp.enabled=false");
@@ -38,7 +38,7 @@ describe("acp policy", () => {
           enabled: false,
         },
       },
-    } satisfies OpenClawConfig;
+    } satisfies WinClawConfig;
     expect(isAcpDispatchEnabledByPolicy(cfg)).toBe(false);
     expect(resolveAcpDispatchPolicyState(cfg)).toBe("dispatch_disabled");
     expect(resolveAcpDispatchPolicyMessage(cfg)).toContain("acp.dispatch.enabled=false");
@@ -49,7 +49,7 @@ describe("acp policy", () => {
       acp: {
         allowedAgents: ["Codex", "claude-code"],
       },
-    } satisfies OpenClawConfig;
+    } satisfies WinClawConfig;
     expect(isAcpAgentAllowedByPolicy(cfg, "codex")).toBe(true);
     expect(isAcpAgentAllowedByPolicy(cfg, "claude-code")).toBe(true);
     expect(isAcpAgentAllowedByPolicy(cfg, "gemini")).toBe(false);

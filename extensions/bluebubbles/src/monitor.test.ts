@@ -2314,7 +2314,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "open",
         allowFrom: [],
       });
-      const config: OpenClawConfig = {};
+      const config: WinClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 

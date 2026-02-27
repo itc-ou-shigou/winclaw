@@ -1,5 +1,5 @@
 import { SettingsManager } from "@mariozechner/pi-coding-agent";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import { applyMergePatch } from "../config/merge-patch.js";
 import { applyPiCompactionSettingsFromConfig } from "./pi-settings.js";
 
@@ -20,7 +20,7 @@ function sanitizeProjectSettings(settings: PiSettingsSnapshot): PiSettingsSnapsh
 }
 
 export function resolveEmbeddedPiProjectSettingsPolicy(
-  cfg?: OpenClawConfig,
+  cfg?: WinClawConfig,
 ): EmbeddedPiProjectSettingsPolicy {
   const raw = cfg?.agents?.defaults?.embeddedPi?.projectSettingsPolicy;
   if (raw === "trusted" || raw === "sanitize" || raw === "ignore") {
@@ -46,7 +46,7 @@ export function buildEmbeddedPiSettingsSnapshot(params: {
 export function createEmbeddedPiSettingsManager(params: {
   cwd: string;
   agentDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: WinClawConfig;
 }): SettingsManager {
   const fileSettingsManager = SettingsManager.create(params.cwd, params.agentDir);
   const policy = resolveEmbeddedPiProjectSettingsPolicy(params.cfg);
@@ -64,7 +64,7 @@ export function createEmbeddedPiSettingsManager(params: {
 export function createPreparedEmbeddedPiSettingsManager(params: {
   cwd: string;
   agentDir: string;
-  cfg?: OpenClawConfig;
+  cfg?: WinClawConfig;
 }): SettingsManager {
   const settingsManager = createEmbeddedPiSettingsManager(params);
   applyPiCompactionSettingsFromConfig({

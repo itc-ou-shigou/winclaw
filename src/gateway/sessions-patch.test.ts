@@ -254,7 +254,7 @@ describe("gateway sessions patch", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as WinClawConfig;
 
     const res = await applySessionsPatchToStore({
       cfg,

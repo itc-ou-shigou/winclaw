@@ -173,7 +173,7 @@ export function parseModelRef(raw: string, defaultProvider: string): ModelRef | 
 }
 
 export function inferUniqueProviderFromConfiguredModels(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   model: string;
 }): string | undefined {
   const model = params.model.trim();

@@ -2,13 +2,13 @@ import {
   resolveThreadBindingSessionTtlMs,
   resolveThreadBindingsEnabled,
 } from "../../channels/thread-bindings-policy.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
 
 export { resolveThreadBindingSessionTtlMs, resolveThreadBindingsEnabled };
 
 export function resolveDiscordThreadBindingSessionTtlMs(params: {
-  cfg: OpenClawConfig;
+  cfg: WinClawConfig;
   accountId?: string;
 }): number {
   const accountId = normalizeAccountId(params.accountId);

@@ -369,7 +369,7 @@ describe("createTelegramBot", () => {
           photo: [{ file_id: "p1" }],
           from: { id: 999, username: "random" },
         },
-        me: { username: "openclaw_bot" },
+        me: { username: "winclaw_bot" },
         getFile: getFileSpy,
       });
 
@@ -410,7 +410,7 @@ describe("createTelegramBot", () => {
           photo: [{ file_id: "p1" }],
           from: { id: 999, username: "random" },
         },
-        me: { username: "openclaw_bot" },
+        me: { username: "winclaw_bot" },
         getFile: getFileSpy,
       });
 
@@ -453,7 +453,7 @@ describe("createTelegramBot", () => {
           photo: [{ file_id: "p1" }],
           from: { id: 999, username: "random" },
         },
-        me: { username: "openclaw_bot" },
+        me: { username: "winclaw_bot" },
         getFile: getFileSpy,
       });
 

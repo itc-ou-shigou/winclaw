@@ -6,7 +6,7 @@ import { listAgentIds, resolveAgentDir } from "../agents/agent-scope.js";
 import { loadAuthProfileStoreForSecretsRuntime } from "../agents/auth-profiles.js";
 import { resolveAuthStorePath } from "../agents/auth-profiles/paths.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
-import { resolveStateDir, type OpenClawConfig } from "../config/config.js";
+import { resolveStateDir, type WinClawConfig } from "../config/config.js";
 import type { ConfigWriteOptions } from "../config/io.js";
 import type { SecretProviderConfig } from "../config/types.secrets.js";
 import { resolveConfigDir, resolveUserPath } from "../utils.js";
@@ -35,7 +35,7 @@ type ApplyWrite = {
 };
 
 type ProjectedState = {
-  nextConfig: OpenClawConfig;
+  nextConfig: WinClawConfig;
   configPath: string;
   configWriteOptions: ConfigWriteOptions;
   authStoreByPath: Map<string, Record<string, unknown>>;
@@ -67,7 +67,7 @@ function getByPathSegments(root: unknown, segments: string[]): unknown {
   return cursor;
 }
 
-function setByPathSegments(root: OpenClawConfig, segments: string[], value: unknown): boolean {
+function setByPathSegments(root: WinClawConfig, segments: string[], value: unknown): boolean {
   if (segments.length === 0) {
     throw new Error("Target path is empty.");
   }
@@ -90,7 +90,7 @@ function setByPathSegments(root: OpenClawConfig, segments: string[], value: unkn
   return changed;
 }
 
-function deleteByPathSegments(root: OpenClawConfig, segments: string[]): boolean {
+function deleteByPathSegments(root: WinClawConfig, segments: string[]): boolean {
   if (segments.length === 0) {
     return false;
   }
@@ -172,7 +172,7 @@ function scrubEnvRaw(
   };
 }
 
-function collectAuthStorePaths(config: OpenClawConfig, stateDir: string): string[] {
+function collectAuthStorePaths(config: WinClawConfig, stateDir: string): string[] {
   const paths = new Set<string>();
   // Scope default auth store discovery to the provided stateDir instead of
   // ambient process env, so apply does not touch unrelated host-global stores.
@@ -230,7 +230,7 @@ function resolveGoogleChatRefPathSegments(pathSegments: string[]): string[] {
 }
 
 function applyProviderPlanMutations(params: {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   upserts: Record<string, SecretProviderConfig> | undefined;
   deletes: string[] | undefined;
 }): boolean {

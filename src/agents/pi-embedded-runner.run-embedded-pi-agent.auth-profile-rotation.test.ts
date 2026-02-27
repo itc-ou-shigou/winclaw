@@ -109,7 +109,7 @@ const makeConfig = (opts?: { fallbacks?: string[]; apiKey?: string }): WinClawCo
     },
   }) satisfies WinClawConfig;
 
-const makeAgentOverrideOnlyFallbackConfig = (agentId: string): OpenClawConfig =>
+const makeAgentOverrideOnlyFallbackConfig = (agentId: string): WinClawConfig =>
   ({
     agents: {
       defaults: {
@@ -146,7 +146,7 @@ const makeAgentOverrideOnlyFallbackConfig = (agentId: string): OpenClawConfig =>
         },
       },
     },
-  }) satisfies OpenClawConfig;
+  }) satisfies WinClawConfig;
 
 const writeAuthStore = async (
   agentDir: string,

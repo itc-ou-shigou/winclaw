@@ -70,12 +70,12 @@ function toInt(value: string | undefined, fallback: number): number {
 }
 
 function resolveGatewayLiveMaxModels(): number {
-  const gatewayMax = toInt(process.env.OPENCLAW_LIVE_GATEWAY_MAX_MODELS, -1);
+  const gatewayMax = toInt(process.env.WINCLAW_LIVE_GATEWAY_MAX_MODELS, -1);
   if (gatewayMax >= 0) {
     return gatewayMax;
   }
   // Reuse shared live-model cap when gateway-specific cap is not provided.
-  return Math.max(0, toInt(process.env.OPENCLAW_LIVE_MAX_MODELS, 0));
+  return Math.max(0, toInt(process.env.WINCLAW_LIVE_MAX_MODELS, 0));
 }
 
 function resolveGatewayLiveSuiteTimeoutMs(maxModels: number): number {
@@ -1209,7 +1209,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
       logProgress(`[all-models] selection=${useExplicit ? "explicit" : "modern"}`);
       if (selectedCandidates.length < candidates.length) {
         logProgress(
-          `[all-models] capped to ${selectedCandidates.length}/${candidates.length} via OPENCLAW_LIVE_GATEWAY_MAX_MODELS=${maxModels}`,
+          `[all-models] capped to ${selectedCandidates.length}/${candidates.length} via WINCLAW_LIVE_GATEWAY_MAX_MODELS=${maxModels}`,
         );
       }
       const imageCandidates = selectedCandidates.filter((m) => m.input?.includes("image"));

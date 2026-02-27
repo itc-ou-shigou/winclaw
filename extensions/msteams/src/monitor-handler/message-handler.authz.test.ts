@@ -1,4 +1,4 @@
-import type { OpenClawConfig, PluginRuntime, RuntimeEnv } from "openclaw/plugin-sdk";
+import type { WinClawConfig, PluginRuntime, RuntimeEnv } from "winclaw/plugin-sdk";
 import { describe, expect, it, vi } from "vitest";
 import type { MSTeamsMessageHandlerDeps } from "../monitor-handler.js";
 import { setMSTeamsRuntime } from "../runtime.js";
@@ -44,7 +44,7 @@ describe("msteams monitor handler authz", () => {
             groupAllowFrom: [],
           },
         },
-      } as OpenClawConfig,
+      } as WinClawConfig,
       runtime: { error: vi.fn() } as unknown as RuntimeEnv,
       appId: "test-app",
       adapter: {} as MSTeamsMessageHandlerDeps["adapter"],

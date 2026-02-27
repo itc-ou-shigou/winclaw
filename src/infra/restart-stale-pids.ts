@@ -32,7 +32,7 @@ function sleepSync(ms: number): void {
 
 /**
  * Find PIDs of gateway processes listening on the given port using synchronous lsof.
- * Returns only PIDs that belong to openclaw gateway processes (not the current process).
+ * Returns only PIDs that belong to winclaw gateway processes (not the current process).
  */
 export function findGatewayPidsOnPortSync(port: number): number[] {
   if (process.platform === "win32") {
@@ -51,7 +51,7 @@ export function findGatewayPidsOnPortSync(port: number): number[] {
   let currentCmd: string | undefined;
   for (const line of res.stdout.split(/\r?\n/).filter(Boolean)) {
     if (line.startsWith("p")) {
-      if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("openclaw")) {
+      if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("winclaw")) {
         pids.push(currentPid);
       }
       const parsed = Number.parseInt(line.slice(1), 10);
@@ -61,7 +61,7 @@ export function findGatewayPidsOnPortSync(port: number): number[] {
       currentCmd = line.slice(1);
     }
   }
-  if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("openclaw")) {
+  if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("winclaw")) {
     pids.push(currentPid);
   }
   return pids.filter((pid) => pid !== process.pid);

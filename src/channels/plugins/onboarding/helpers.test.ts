@@ -555,7 +555,7 @@ describe("patchChannelConfigForAccount", () => {
   });
 
   it("moves single-account config into default account when patching non-default", () => {
-    const cfg: OpenClawConfig = {
+    const cfg: WinClawConfig = {
       channels: {
         telegram: {
           enabled: true,

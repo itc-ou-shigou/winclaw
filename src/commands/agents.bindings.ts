@@ -1,7 +1,7 @@
 import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
 import type { ChannelId } from "../channels/plugins/types.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { WinClawConfig } from "../config/config.js";
 import type { AgentBinding } from "../config/types.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAgentId } from "../routing/session-key.js";
 import type { ChannelChoice } from "./onboard-types.js";
@@ -72,10 +72,10 @@ export function describeBinding(binding: AgentBinding) {
 }
 
 export function applyAgentBindings(
-  cfg: OpenClawConfig,
+  cfg: WinClawConfig,
   bindings: AgentBinding[],
 ): {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   added: AgentBinding[];
   updated: AgentBinding[];
   skipped: AgentBinding[];
@@ -157,10 +157,10 @@ export function applyAgentBindings(
 }
 
 export function removeAgentBindings(
-  cfg: OpenClawConfig,
+  cfg: WinClawConfig,
   bindings: AgentBinding[],
 ): {
-  config: OpenClawConfig;
+  config: WinClawConfig;
   removed: AgentBinding[];
   missing: AgentBinding[];
   conflicts: Array<{ binding: AgentBinding; existingAgentId: string }>;
@@ -222,7 +222,7 @@ export function removeAgentBindings(
   };
 }
 
-function resolveDefaultAccountId(cfg: OpenClawConfig, provider: ChannelId): string {
+function resolveDefaultAccountId(cfg: WinClawConfig, provider: ChannelId): string {
   const plugin = getChannelPlugin(provider);
   if (!plugin) {
     return DEFAULT_ACCOUNT_ID;
@@ -232,7 +232,7 @@ function resolveDefaultAccountId(cfg: OpenClawConfig, provider: ChannelId): stri
 
 function resolveBindingAccountId(params: {
   channel: ChannelId;
-  config: OpenClawConfig;
+  config: WinClawConfig;
   agentId: string;
   explicitAccountId?: string;
 }): string | undefined {
@@ -260,7 +260,7 @@ function resolveBindingAccountId(params: {
 export function buildChannelBindings(params: {
   agentId: string;
   selection: ChannelChoice[];
-  config: OpenClawConfig;
+  config: WinClawConfig;
   accountIds?: Partial<Record<ChannelChoice, string>>;
 }): AgentBinding[] {
   const bindings: AgentBinding[] = [];
@@ -284,7 +284,7 @@ export function buildChannelBindings(params: {
 export function parseBindingSpecs(params: {
   agentId: string;
   specs?: string[];
-  config: OpenClawConfig;
+  config: WinClawConfig;
 }): { bindings: AgentBinding[]; errors: string[] } {
   const bindings: AgentBinding[] = [];
   const errors: string[] = [];

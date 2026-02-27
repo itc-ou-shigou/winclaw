@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { WinClawConfig } from "../../config/config.js";
 import type { PluginManifestRegistry } from "../../plugins/manifest-registry.js";
 import { createTrackedTempDirs } from "../../test-utils/tracked-temp-dirs.js";
 
@@ -30,7 +30,7 @@ function buildRegistry(params: { acpxRoot: string; helperRoot: string }): Plugin
         origin: "workspace",
         rootDir: params.acpxRoot,
         source: params.acpxRoot,
-        manifestPath: path.join(params.acpxRoot, "openclaw.plugin.json"),
+        manifestPath: path.join(params.acpxRoot, "winclaw.plugin.json"),
       },
       {
         id: "helper",
@@ -41,7 +41,7 @@ function buildRegistry(params: { acpxRoot: string; helperRoot: string }): Plugin
         origin: "workspace",
         rootDir: params.helperRoot,
         source: params.helperRoot,
-        manifestPath: path.join(params.helperRoot, "openclaw.plugin.json"),
+        manifestPath: path.join(params.helperRoot, "winclaw.plugin.json"),
       },
     ],
   };
@@ -54,9 +54,9 @@ afterEach(async () => {
 
 describe("resolvePluginSkillDirs", () => {
   it("keeps acpx plugin skills when ACP is enabled", async () => {
-    const workspaceDir = await tempDirs.make("openclaw-");
-    const acpxRoot = await tempDirs.make("openclaw-acpx-plugin-");
-    const helperRoot = await tempDirs.make("openclaw-helper-plugin-");
+    const workspaceDir = await tempDirs.make("winclaw-");
+    const acpxRoot = await tempDirs.make("winclaw-acpx-plugin-");
+    const helperRoot = await tempDirs.make("winclaw-helper-plugin-");
     await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
     await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
 
@@ -71,16 +71,16 @@ describe("resolvePluginSkillDirs", () => {
       workspaceDir,
       config: {
         acp: { enabled: true },
-      } as OpenClawConfig,
+      } as WinClawConfig,
     });
 
     expect(dirs).toEqual([path.resolve(acpxRoot, "skills"), path.resolve(helperRoot, "skills")]);
   });
 
   it("skips acpx plugin skills when ACP is disabled", async () => {
-    const workspaceDir = await tempDirs.make("openclaw-");
-    const acpxRoot = await tempDirs.make("openclaw-acpx-plugin-");
-    const helperRoot = await tempDirs.make("openclaw-helper-plugin-");
+    const workspaceDir = await tempDirs.make("winclaw-");
+    const acpxRoot = await tempDirs.make("winclaw-acpx-plugin-");
+    const helperRoot = await tempDirs.make("winclaw-helper-plugin-");
     await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
     await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
 
@@ -95,7 +95,7 @@ describe("resolvePluginSkillDirs", () => {
       workspaceDir,
       config: {
         acp: { enabled: false },
-      } as OpenClawConfig,
+      } as WinClawConfig,
     });
 
     expect(dirs).toEqual([path.resolve(helperRoot, "skills")]);

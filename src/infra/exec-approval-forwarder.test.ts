@@ -220,7 +220,7 @@ describe("exec approval forwarder", () => {
 
   it("prefers turn-source routing over stale session last route", async () => {
     vi.useFakeTimers();
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-exec-approval-forwarder-test-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "winclaw-exec-approval-forwarder-test-"));
     try {
       const storePath = path.join(tmpDir, "sessions.json");
       fs.writeFileSync(
@@ -240,7 +240,7 @@ describe("exec approval forwarder", () => {
       const cfg = {
         session: { store: storePath },
         approvals: { exec: { enabled: true, mode: "session" } },
-      } as OpenClawConfig;
+      } as WinClawConfig;
 
       const { deliver, forwarder } = createForwarder({ cfg });
       await expect(

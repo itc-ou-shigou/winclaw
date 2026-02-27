@@ -474,8 +474,8 @@ export async function restartLaunchAgent({
           `launchctl bootstrap failed: ${detail}`,
           `LaunchAgent restart requires a logged-in macOS GUI session for this user (${domain}).`,
           "This usually means you are running from SSH/headless context or as the wrong user (including sudo).",
-          "Fix: sign in to the macOS desktop as the target user and rerun `openclaw gateway restart`.",
-          "Headless deployments should use a dedicated logged-in user session or a custom LaunchDaemon (not shipped): https://docs.openclaw.ai/gateway",
+          "Fix: sign in to the macOS desktop as the target user and rerun `winclaw gateway restart`.",
+          "Headless deployments should use a dedicated logged-in user session or a custom LaunchDaemon (not shipped): https://docs.winclaw.ai/gateway",
         ].join("\n"),
       );
     }

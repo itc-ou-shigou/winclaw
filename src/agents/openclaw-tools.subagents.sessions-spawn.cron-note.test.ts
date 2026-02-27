@@ -5,7 +5,7 @@ import {
   getSessionsSpawnTool,
   resetSessionsSpawnConfigOverride,
   setupSessionsSpawnGatewayMock,
-} from "./openclaw-tools.subagents.sessions-spawn.test-harness.js";
+} from "./winclaw-tools.subagents.sessions-spawn.test-harness.js";
 import { resetSubagentRegistryForTests } from "./subagent-registry.js";
 import { SUBAGENT_SPAWN_ACCEPTED_NOTE } from "./subagent-spawn.js";
 

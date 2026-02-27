@@ -61,7 +61,7 @@ describe("MiniMax implicit provider (#15275)", () => {
   });
 
   it("should set authHeader for minimax portal provider", async () => {
-    const agentDir = mkdtempSync(join(tmpdir(), "openclaw-test-"));
+    const agentDir = mkdtempSync(join(tmpdir(), "winclaw-test-"));
     await writeFile(
       join(agentDir, "auth-profiles.json"),
       JSON.stringify(

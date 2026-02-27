@@ -6,7 +6,7 @@ import { saveAuthProfileStore } from "./auth-profiles.js";
 import { discoverAuthStorage } from "./pi-model-discovery.js";
 
 async function createAgentDir(): Promise<string> {
-  return await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-pi-auth-storage-"));
+  return await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-pi-auth-storage-"));
 }
 
 async function pathExists(pathname: string): Promise<boolean> {
@@ -116,8 +116,8 @@ describe("discoverAuthStorage", () => {
 
   it("preserves legacy auth.json when auth store is forced read-only", async () => {
     const agentDir = await createAgentDir();
-    const previous = process.env.OPENCLAW_AUTH_STORE_READONLY;
-    process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
+    const previous = process.env.WINCLAW_AUTH_STORE_READONLY;
+    process.env.WINCLAW_AUTH_STORE_READONLY = "1";
     try {
       saveAuthProfileStore(
         {
@@ -151,9 +151,9 @@ describe("discoverAuthStorage", () => {
       expect(parsed.openrouter).toMatchObject({ type: "api_key", key: "legacy-static-key" });
     } finally {
       if (previous === undefined) {
-        delete process.env.OPENCLAW_AUTH_STORE_READONLY;
+        delete process.env.WINCLAW_AUTH_STORE_READONLY;
       } else {
-        process.env.OPENCLAW_AUTH_STORE_READONLY = previous;
+        process.env.WINCLAW_AUTH_STORE_READONLY = previous;
       }
       await fs.rm(agentDir, { recursive: true, force: true });
     }
