@@ -4,9 +4,10 @@
  * Bridges MCP (Model Context Protocol) servers into WinClaw's agent tool system.
  * Allows any MCP-compatible server to provide tools to WinClaw agents.
  *
- * Servers can be configured from two sources:
+ * Servers can be configured from three sources:
  * 1. Static config in winclaw.json (under plugins.entries.mcp-bridge.config.servers)
  * 2. Dynamic config from IDE via ACP protocol (mcpServers in newSession/loadSession)
+ * 3. Plugin .mcp.json files (auto-discovered from plugin directories)
  *
  * Configuration in winclaw.json:
  * ```json
@@ -31,6 +32,8 @@
  * }
  * ```
  */
+import fs from "node:fs";
+import path from "node:path";
 import type { WinClawPluginApi, AnyAgentTool } from "winclaw/plugin-sdk";
 import {
   McpBridgeManager,
@@ -44,7 +47,203 @@ import {
 
 type McpBridgePluginConfig = {
   servers?: McpServerConfig[];
+  /** Disable auto-discovery of .mcp.json from plugin directories */
+  disablePluginDiscovery?: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Plugin .mcp.json discovery
+// ---------------------------------------------------------------------------
+
+type PluginMcpConfig = {
+  mcpServers?: Record<string, PluginMcpServerConfig>;
+};
+
+type PluginMcpServerConfig = {
+  type?: "stdio" | "sse" | "http";
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  timeoutMs?: number;
+  autoReconnect?: boolean;
+  maxReconnectAttempts?: number;
+  blockedTools?: string[];
+};
+
+/**
+ * Expand environment variables in a string.
+ * Supports ${VAR} and $VAR syntax.
+ */
+function expandEnvVars(value: string, env: Record<string, string> = process.env): string {
+  return value
+    .replace(/\$\{([^}]+)\}/g, (_, key) => env[key] ?? "")
+    .replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_, key) => env[key] ?? "");
+}
+
+/**
+ * Recursively expand environment variables in an object.
+ */
+function expandEnvVarsInObject<T>(obj: T, env: Record<string, string> = process.env): T {
+  if (typeof obj === "string") {
+    return expandEnvVars(obj, env) as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => expandEnvVarsInObject(item, env)) as T;
+  }
+  if (obj && typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = expandEnvVarsInObject(value, env);
+    }
+    return result as T;
+  }
+  return obj;
+}
+
+/**
+ * Convert a plugin .mcp.json server config to McpServerConfig format.
+ */
+function convertPluginMcpServer(
+  name: string,
+  config: PluginMcpServerConfig,
+): McpServerConfig | null {
+  // Determine transport type
+  let transport: "stdio" | "sse";
+  if (config.type === "sse" || config.type === "http") {
+    transport = "sse";
+  } else if (config.type === "stdio" || config.command) {
+    transport = "stdio";
+  } else if (config.url) {
+    transport = "sse";
+  } else {
+    return null; // Invalid config - no transport determined
+  }
+
+  // Validate required fields
+  if (transport === "stdio" && !config.command) {
+    return null;
+  }
+  if (transport === "sse" && !config.url) {
+    return null;
+  }
+
+  // Expand env vars in all string fields
+  const expanded = expandEnvVarsInObject(config);
+
+  return {
+    name,
+    transport,
+    command: expanded.command,
+    args: expanded.args,
+    env: expanded.env,
+    url: expanded.url,
+    timeoutMs: expanded.timeoutMs,
+    autoReconnect: expanded.autoReconnect,
+    maxReconnectAttempts: expanded.maxReconnectAttempts,
+    blockedTools: expanded.blockedTools,
+  };
+}
+
+/**
+ * Discover and load .mcp.json files from plugin directories.
+ */
+function discoverPluginMcpConfigs(params: {
+  config: WinClawPluginApi["config"];
+  logger: WinClawPluginApi["logger"];
+}): McpServerConfig[] {
+  const { config, logger } = params;
+  const servers: McpServerConfig[] = [];
+
+  // Collect plugin paths from config
+  const pluginPaths: string[] = [];
+
+  // From plugins.load.paths
+  const loadPaths = config.plugins?.load?.paths;
+  if (Array.isArray(loadPaths)) {
+    pluginPaths.push(...loadPaths);
+  }
+
+  // From plugins.entries (get source dirs for enabled plugins)
+  const entries = config.plugins?.entries;
+  if (entries && typeof entries === "object") {
+    for (const entry of Object.values(entries)) {
+      if (entry && typeof entry === "object" && "sourcePath" in entry) {
+        const sourcePath = (entry as { sourcePath?: string }).sourcePath;
+        if (sourcePath && typeof sourcePath === "string") {
+          pluginPaths.push(sourcePath);
+        }
+      }
+    }
+  }
+
+  // Deduplicate paths
+  const seenPaths = new Set<string>();
+
+  for (const pluginPath of pluginPaths) {
+    let resolvedPath: string;
+    try {
+      // Handle relative paths
+      if (path.isAbsolute(pluginPath)) {
+        resolvedPath = pluginPath;
+      } else {
+        // Assume relative to workspace or cwd
+        resolvedPath = path.resolve(process.cwd(), pluginPath);
+      }
+
+      // If path points to a file, use its directory
+      if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+        resolvedPath = path.dirname(resolvedPath);
+      }
+
+      // Normalize to avoid duplicates
+      const normalized = path.normalize(resolvedPath);
+      if (seenPaths.has(normalized)) {
+        continue;
+      }
+      seenPaths.add(normalized);
+
+      // Look for .mcp.json in the plugin directory
+      const mcpJsonPath = path.join(normalized, ".mcp.json");
+      if (!fs.existsSync(mcpJsonPath)) {
+        continue;
+      }
+
+      // Read and parse .mcp.json
+      const content = fs.readFileSync(mcpJsonPath, "utf-8");
+      let mcpConfig: PluginMcpConfig;
+      try {
+        mcpConfig = JSON.parse(content) as PluginMcpConfig;
+      } catch (parseErr) {
+        logger.warn(`[mcp-bridge] Failed to parse ${mcpJsonPath}: ${String(parseErr)}`);
+        continue;
+      }
+
+      // Convert servers
+      const mcpServers = mcpConfig.mcpServers;
+      if (!mcpServers || typeof mcpServers !== "object") {
+        continue;
+      }
+
+      for (const [name, serverConfig] of Object.entries(mcpServers)) {
+        const converted = convertPluginMcpServer(name, serverConfig as PluginMcpServerConfig);
+        if (converted) {
+          servers.push(converted);
+          logger.info(`[mcp-bridge] Discovered MCP server "${name}" from ${mcpJsonPath}`);
+        } else {
+          logger.warn(
+            `[mcp-bridge] Invalid MCP server config "${name}" in ${mcpJsonPath}: missing required fields`,
+          );
+        }
+      }
+    } catch (err) {
+      // Path resolution or access error - skip silently
+      logger.debug?.(`[mcp-bridge] Error scanning ${pluginPath}: ${String(err)}`);
+    }
+  }
+
+  return servers;
+}
 
 // ---------------------------------------------------------------------------
 // Singleton manager (shared across tool factory invocations)
@@ -53,6 +252,7 @@ type McpBridgePluginConfig = {
 let globalManager: McpBridgeManager | null = null;
 let managerInitPromise: Promise<void> | null = null;
 let lastConfigHash = "";
+let cachedDiscoveredServers: McpServerConfig[] = [];
 
 function computeConfigHash(servers: McpServerConfig[]): string {
   return JSON.stringify(servers);
@@ -98,8 +298,22 @@ const mcpBridgePlugin = {
     const pluginConfig = (api.pluginConfig ?? {}) as McpBridgePluginConfig;
     const staticServers = pluginConfig.servers ?? [];
 
+    // Discover MCP servers from plugin .mcp.json files
+    let discoveredServers: McpServerConfig[] = [];
+    if (!pluginConfig.disablePluginDiscovery) {
+      discoveredServers = discoverPluginMcpConfigs({
+        config: api.config,
+        logger: api.logger,
+      });
+    }
+    // Cache for use in status tool reconnection logic
+    cachedDiscoveredServers = discoveredServers;
+
+    const totalStatic = staticServers.length;
+    const totalDiscovered = discoveredServers.length;
     api.logger.info(
-      `[mcp-bridge] Plugin loaded with ${staticServers.length} static server(s) configured`,
+      `[mcp-bridge] Plugin loaded with ${totalStatic} static server(s)` +
+        (totalDiscovered > 0 ? `, ${totalDiscovered} discovered from plugins` : ""),
     );
 
     // Validate static server configs
@@ -126,9 +340,13 @@ const mcpBridgePlugin = {
     // Tool factories are called lazily per agent session
     api.registerTool(
       (_ctx) => {
-        // Merge static config servers with IDE-provided servers
+        // Merge static config servers with discovered plugin servers and IDE-provided servers
+        // Priority (highest to lowest): IDE > static config > discovered
         const ideServers = getIdeMcpServersSync();
-        const allServers = mergeServerConfigs(staticServers, ideServers);
+        const allServers = mergeServerConfigs(
+          mergeServerConfigs(discoveredServers, staticServers),
+          ideServers,
+        );
 
         if (allServers.length === 0) {
           return null; // No servers configured — no tools to provide
@@ -175,8 +393,10 @@ const mcpBridgePlugin = {
       },
       {
         names:
-          staticServers.length > 0
-            ? staticServers.map((s) => `mcp__${s.name.replace(/[^a-zA-Z0-9_]/g, "_")}`)
+          staticServers.length > 0 || discoveredServers.length > 0
+            ? [...staticServers, ...discoveredServers].map(
+                (s) => `mcp__${s.name.replace(/[^a-zA-Z0-9_]/g, "_")}`,
+              )
             : ["mcp__bridge_status"],
       },
     );
@@ -186,7 +406,8 @@ const mcpBridgePlugin = {
     // a way that replaces the running session (destroying all user tabs).
     // Allowed: running the safe launcher script "ensure-chrome-debug.ps1"
     // which checks for existing Chrome before acting.
-    const hasChromeDevtools = staticServers.some((s) => s.name === "chrome-devtools");
+    const allKnownServers = [...staticServers, ...discoveredServers];
+    const hasChromeDevtools = allKnownServers.some((s) => s.name === "chrome-devtools");
     if (hasChromeDevtools) {
       api.on("before_tool_call", (event, _ctx) => {
         const tool = event.toolName;
@@ -358,7 +579,11 @@ function createMcpStatusTool(api: WinClawPluginApi): AnyAgentTool {
         const ideServers = getIdeMcpServersSync();
         const staticServers =
           (api.pluginConfig as McpBridgePluginConfig | undefined)?.servers ?? [];
-        const allServers = mergeServerConfigs(staticServers, ideServers);
+        // Include discovered plugin servers (cached from plugin load)
+        const allServers = mergeServerConfigs(
+          mergeServerConfigs(cachedDiscoveredServers, staticServers),
+          ideServers,
+        );
 
         await globalManager.dispose();
         globalManager = createManager(api);
