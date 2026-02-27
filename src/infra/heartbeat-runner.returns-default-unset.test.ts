@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { HEARTBEAT_PROMPT } from "../auto-reply/heartbeat.js";
 import * as replyModule from "../auto-reply/reply.js";
 import { whatsappOutbound } from "../channels/plugins/outbound/whatsapp.js";
-import type { WinClawConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveAgentIdFromSessionKey,
   resolveAgentMainSessionKey,
@@ -103,7 +103,7 @@ beforeAll(async () => {
   ]);
   setActivePluginRegistry(testRegistry);
 
-  fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-heartbeat-suite-"));
+  fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-heartbeat-suite-"));
 });
 
 beforeEach(() => {
@@ -172,11 +172,11 @@ describe("resolveHeartbeatIntervalMs", () => {
 describe("resolveHeartbeatPrompt", () => {
   it("uses default or trimmed override prompts", () => {
     const cases = [
-      { cfg: {} as WinClawConfig, expected: HEARTBEAT_PROMPT },
+      { cfg: {} as OpenClawConfig, expected: HEARTBEAT_PROMPT },
       {
         cfg: {
           agents: { defaults: { heartbeat: { prompt: "  ping  " } } },
-        } as WinClawConfig,
+        } as OpenClawConfig,
         expected: "ping",
       },
     ] as const;
@@ -188,7 +188,7 @@ describe("resolveHeartbeatPrompt", () => {
 
 describe("isHeartbeatEnabledForAgent", () => {
   it("enables only explicit heartbeat agents when configured", () => {
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
         list: [{ id: "main" }, { id: "ops", heartbeat: { every: "1h" } }],
@@ -199,7 +199,7 @@ describe("isHeartbeatEnabledForAgent", () => {
   });
 
   it("falls back to default agent when no explicit heartbeat entries", () => {
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
         list: [{ id: "main" }, { id: "ops" }],
@@ -219,7 +219,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
   it("resolves target variants across route and allowlist rules", () => {
     const cases: Array<{
       name: string;
-      cfg: WinClawConfig;
+      cfg: OpenClawConfig;
       entry: typeof baseEntry & {
         lastChannel?: "whatsapp" | "telegram" | "webchat";
         lastTo?: string;
@@ -239,12 +239,12 @@ describe("resolveHeartbeatDeliveryTarget", () => {
         },
       },
       {
-        name: "use last route by default",
+        name: "target defaults to none when unset",
         cfg: {},
-        entry: { ...baseEntry, lastChannel: "whatsapp", lastTo: "+1555" },
+        entry: { ...baseEntry, lastChannel: "whatsapp", lastTo: "120363401234567890@g.us" },
         expected: {
-          channel: "whatsapp",
-          to: "+1555",
+          channel: "none",
+          reason: "target-none",
           accountId: undefined,
           lastChannel: "whatsapp",
           lastAccountId: undefined,
@@ -253,13 +253,15 @@ describe("resolveHeartbeatDeliveryTarget", () => {
       {
         name: "normalize explicit whatsapp target when allowFrom wildcard",
         cfg: {
-          agents: { defaults: { heartbeat: { target: "whatsapp", to: "whatsapp:(555) 123" } } },
+          agents: {
+            defaults: { heartbeat: { target: "whatsapp", to: "whatsapp:120363401234567890@G.US" } },
+          },
           channels: { whatsapp: { allowFrom: ["*"] } },
         },
         entry: baseEntry,
         expected: {
           channel: "whatsapp",
-          to: "+555123",
+          to: "120363401234567890@g.us",
           accountId: undefined,
           lastChannel: undefined,
           lastAccountId: undefined,
@@ -271,7 +273,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
         entry: { ...baseEntry, lastChannel: "webchat", lastTo: "web" },
         expected: {
           channel: "none",
-          reason: "no-target",
+          reason: "target-none",
           accountId: undefined,
           lastChannel: undefined,
           lastAccountId: undefined,
@@ -281,7 +283,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
         name: "reject explicit whatsapp target outside allowFrom",
         cfg: {
           agents: { defaults: { heartbeat: { target: "whatsapp", to: "+1999" } } },
-          channels: { whatsapp: { allowFrom: ["+1555", "+1666"] } },
+          channels: { whatsapp: { allowFrom: ["120363401234567890@g.us", "+1666"] } },
         },
         entry: { ...baseEntry, lastChannel: "whatsapp", lastTo: "+1222" },
         expected: {
@@ -294,7 +296,10 @@ describe("resolveHeartbeatDeliveryTarget", () => {
       },
       {
         name: "normalize prefixed whatsapp group targets",
-        cfg: { channels: { whatsapp: { allowFrom: ["+1555"] } } },
+        cfg: {
+          agents: { defaults: { heartbeat: { target: "last" } } },
+          channels: { whatsapp: { allowFrom: ["120363401234567890@g.us"] } },
+        },
         entry: {
           ...baseEntry,
           lastChannel: "whatsapp",
@@ -310,13 +315,37 @@ describe("resolveHeartbeatDeliveryTarget", () => {
       },
       {
         name: "keep explicit telegram target",
-        cfg: { agents: { defaults: { heartbeat: { target: "telegram", to: "123" } } } },
+        cfg: { agents: { defaults: { heartbeat: { target: "telegram", to: "-100123" } } } },
         entry: baseEntry,
         expected: {
           channel: "telegram",
-          to: "123",
+          to: "-100123",
           accountId: undefined,
           lastChannel: undefined,
+          lastAccountId: undefined,
+        },
+      },
+      {
+        name: "allow direct target by default",
+        cfg: { agents: { defaults: { heartbeat: { target: "last" } } } },
+        entry: { ...baseEntry, lastChannel: "telegram", lastTo: "5232990709" },
+        expected: {
+          channel: "telegram",
+          to: "5232990709",
+          accountId: undefined,
+          lastChannel: "telegram",
+          lastAccountId: undefined,
+        },
+      },
+      {
+        name: "block direct target when directPolicy is block",
+        cfg: { agents: { defaults: { heartbeat: { target: "last", directPolicy: "block" } } } },
+        entry: { ...baseEntry, lastChannel: "telegram", lastTo: "5232990709" },
+        expected: {
+          channel: "none",
+          reason: "dm-blocked",
+          accountId: undefined,
+          lastChannel: "telegram",
           lastAccountId: undefined,
         },
       },
@@ -335,7 +364,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
       { to: "-100111", expectedTo: "-100111", expectedThreadId: undefined },
     ] as const;
     for (const testCase of cases) {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             heartbeat: { target: "telegram", to: testCase.to },
@@ -355,7 +384,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
         accountId: "work",
         expected: {
           channel: "telegram",
-          to: "123",
+          to: "-100123",
           accountId: "work",
           lastChannel: undefined,
           lastAccountId: undefined,
@@ -374,10 +403,10 @@ describe("resolveHeartbeatDeliveryTarget", () => {
     ] as const;
 
     for (const testCase of cases) {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
-            heartbeat: { target: "telegram", to: "123", accountId: testCase.accountId },
+            heartbeat: { target: "telegram", to: "-100123", accountId: testCase.accountId },
           },
         },
         channels: { telegram: { accounts: { work: { botToken: "token" } } } },
@@ -387,10 +416,10 @@ describe("resolveHeartbeatDeliveryTarget", () => {
   });
 
   it("prefers per-agent heartbeat overrides when provided", () => {
-    const cfg: WinClawConfig = {
-      agents: { defaults: { heartbeat: { target: "telegram", to: "123" } } },
+    const cfg: OpenClawConfig = {
+      agents: { defaults: { heartbeat: { target: "telegram", to: "-100123" } } },
     };
-    const heartbeat = { target: "whatsapp", to: "+1555" } as const;
+    const heartbeat = { target: "whatsapp", to: "120363401234567890@g.us" } as const;
     expect(
       resolveHeartbeatDeliveryTarget({
         cfg,
@@ -399,7 +428,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
       }),
     ).toEqual({
       channel: "whatsapp",
-      to: "+1555",
+      to: "120363401234567890@g.us",
       accountId: undefined,
       lastChannel: "whatsapp",
       lastAccountId: undefined,
@@ -409,7 +438,7 @@ describe("resolveHeartbeatDeliveryTarget", () => {
 
 describe("resolveHeartbeatSenderContext", () => {
   it("prefers delivery accountId for allowFrom resolution", () => {
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         telegram: {
           allowFrom: ["111"],
@@ -453,7 +482,7 @@ describe("runHeartbeatOnce", () => {
   });
 
   it("skips when agent heartbeat is not enabled", async () => {
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
         list: [{ id: "main" }, { id: "ops", heartbeat: { every: "1h" } }],
@@ -468,7 +497,7 @@ describe("runHeartbeatOnce", () => {
   });
 
   it("skips outside active hours", async () => {
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           userTimezone: "UTC",
@@ -496,7 +525,7 @@ describe("runHeartbeatOnce", () => {
     const storePath = path.join(tmpDir, "sessions.json");
     const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
     try {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,
@@ -515,7 +544,7 @@ describe("runHeartbeatOnce", () => {
             sessionId: "sid",
             updatedAt: Date.now(),
             lastChannel: "whatsapp",
-            lastTo: "+1555",
+            lastTo: "120363401234567890@g.us",
           },
         }),
       );
@@ -532,7 +561,11 @@ describe("runHeartbeatOnce", () => {
       });
 
       expect(sendWhatsApp).toHaveBeenCalledTimes(1);
-      expect(sendWhatsApp).toHaveBeenCalledWith("+1555", "Final alert", expect.any(Object));
+      expect(sendWhatsApp).toHaveBeenCalledWith(
+        "120363401234567890@g.us",
+        "Final alert",
+        expect.any(Object),
+      );
     } finally {
       replySpy.mockRestore();
     }
@@ -543,7 +576,7 @@ describe("runHeartbeatOnce", () => {
     const storePath = path.join(tmpDir, "sessions.json");
     const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
     try {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             heartbeat: { every: "30m", prompt: "Default prompt" },
@@ -569,7 +602,7 @@ describe("runHeartbeatOnce", () => {
             sessionId: "sid",
             updatedAt: Date.now(),
             lastChannel: "whatsapp",
-            lastTo: "+1555",
+            lastTo: "120363401234567890@g.us",
           },
         }),
       );
@@ -584,13 +617,19 @@ describe("runHeartbeatOnce", () => {
         deps: createHeartbeatDeps(sendWhatsApp),
       });
       expect(sendWhatsApp).toHaveBeenCalledTimes(1);
-      expect(sendWhatsApp).toHaveBeenCalledWith("+1555", "Final alert", expect.any(Object));
+      expect(sendWhatsApp).toHaveBeenCalledWith(
+        "120363401234567890@g.us",
+        "Final alert",
+        expect.any(Object),
+      );
       expect(replySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           Body: expect.stringMatching(/Ops check[\s\S]*Current time: /),
           SessionKey: sessionKey,
-          From: "+1555",
-          To: "+1555",
+          From: "120363401234567890@g.us",
+          To: "120363401234567890@g.us",
+          OriginatingChannel: "whatsapp",
+          OriginatingTo: "120363401234567890@g.us",
           Provider: "heartbeat",
         }),
         expect.objectContaining({ isHeartbeat: true, suppressToolErrorWarnings: false }),
@@ -607,7 +646,7 @@ describe("runHeartbeatOnce", () => {
     const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
     const agentId = "ops";
     try {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             heartbeat: { every: "30m", prompt: "Default prompt" },
@@ -640,7 +679,7 @@ describe("runHeartbeatOnce", () => {
             sessionFile,
             updatedAt: Date.now(),
             lastChannel: "whatsapp",
-            lastTo: "+1555",
+            lastTo: "120363401234567890@g.us",
           },
         }),
       );
@@ -658,12 +697,16 @@ describe("runHeartbeatOnce", () => {
 
       expect(result.status).toBe("ran");
       expect(sendWhatsApp).toHaveBeenCalledTimes(1);
-      expect(sendWhatsApp).toHaveBeenCalledWith("+1555", "Final alert", expect.any(Object));
+      expect(sendWhatsApp).toHaveBeenCalledWith(
+        "120363401234567890@g.us",
+        "Final alert",
+        expect.any(Object),
+      );
       expect(replySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           SessionKey: sessionKey,
-          From: "+1555",
-          To: "+1555",
+          From: "120363401234567890@g.us",
+          To: "120363401234567890@g.us",
           Provider: "heartbeat",
         }),
         expect.objectContaining({ isHeartbeat: true, suppressToolErrorWarnings: false }),
@@ -683,7 +726,7 @@ describe("runHeartbeatOnce", () => {
         peerKind: "group" | "direct";
         peerId: string;
         message: string;
-        applyOverride: (params: { cfg: WinClawConfig; sessionKey: string }) => void;
+        applyOverride: (params: { cfg: OpenClawConfig; sessionKey: string }) => void;
         runOptions: (params: { sessionKey: string }) => { sessionKey?: string };
       }>([
         {
@@ -692,7 +735,7 @@ describe("runHeartbeatOnce", () => {
           peerKind: "group" as const,
           peerId: "120363401234567890@g.us",
           message: "Group alert",
-          applyOverride: ({ cfg, sessionKey }: { cfg: WinClawConfig; sessionKey: string }) => {
+          applyOverride: ({ cfg, sessionKey }: { cfg: OpenClawConfig; sessionKey: string }) => {
             if (cfg.agents?.defaults?.heartbeat) {
               cfg.agents.defaults.heartbeat.session = sessionKey;
             }
@@ -704,8 +747,8 @@ describe("runHeartbeatOnce", () => {
         {
           name: "runHeartbeatOnce sessionKey arg",
           caseDir: "hb-forced-session-override",
-          peerKind: "direct" as const,
-          peerId: "+15559990000",
+          peerKind: "group" as const,
+          peerId: "120363401234567891@g.us",
           message: "Forced alert",
           applyOverride: () => {},
           runOptions: ({ sessionKey }: { sessionKey: string }) => ({ sessionKey }),
@@ -715,7 +758,7 @@ describe("runHeartbeatOnce", () => {
       for (const testCase of cases) {
         const tmpDir = await createCaseDir(testCase.caseDir);
         const storePath = path.join(tmpDir, "sessions.json");
-        const cfg: WinClawConfig = {
+        const cfg: OpenClawConfig = {
           agents: {
             defaults: {
               workspace: tmpDir,
@@ -745,7 +788,7 @@ describe("runHeartbeatOnce", () => {
               sessionId: "sid-main",
               updatedAt: Date.now(),
               lastChannel: "whatsapp",
-              lastTo: "+1555",
+              lastTo: "120363401234567890@g.us",
             },
             [overrideSessionKey]: {
               sessionId: `sid-${testCase.peerKind}`,
@@ -795,7 +838,7 @@ describe("runHeartbeatOnce", () => {
     const storePath = path.join(tmpDir, "sessions.json");
     const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
     try {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,
@@ -814,7 +857,7 @@ describe("runHeartbeatOnce", () => {
             sessionId: "sid",
             updatedAt: Date.now(),
             lastChannel: "whatsapp",
-            lastTo: "+1555",
+            lastTo: "120363401234567890@g.us",
             lastHeartbeatText: "Final alert",
             lastHeartbeatSentAt: 0,
           },
@@ -863,7 +906,7 @@ describe("runHeartbeatOnce", () => {
       for (const testCase of cases) {
         const tmpDir = await createCaseDir(testCase.caseDir);
         const storePath = path.join(tmpDir, "sessions.json");
-        const cfg: WinClawConfig = {
+        const cfg: OpenClawConfig = {
           agents: {
             defaults: {
               workspace: tmpDir,
@@ -887,7 +930,7 @@ describe("runHeartbeatOnce", () => {
               updatedAt: Date.now(),
               lastChannel: "whatsapp",
               lastProvider: "whatsapp",
-              lastTo: "+1555",
+              lastTo: "120363401234567890@g.us",
             },
           }),
         );
@@ -907,7 +950,7 @@ describe("runHeartbeatOnce", () => {
         for (const [index, text] of testCase.expectedTexts.entries()) {
           expect(sendWhatsApp, testCase.name).toHaveBeenNthCalledWith(
             index + 1,
-            "+1555",
+            "120363401234567890@g.us",
             text,
             expect.any(Object),
           );
@@ -919,13 +962,13 @@ describe("runHeartbeatOnce", () => {
   });
 
   it("loads the default agent session from templated stores", async () => {
-    const tmpDir = await createCaseDir("winclaw-hb");
+    const tmpDir = await createCaseDir("openclaw-hb");
     const storeTemplate = path.join(tmpDir, "agents", "{agentId}", "sessions.json");
     const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
     try {
-      const cfg: WinClawConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
-          defaults: { workspace: tmpDir, heartbeat: { every: "5m" } },
+          defaults: { workspace: tmpDir, heartbeat: { every: "5m", target: "whatsapp" } },
           list: [{ id: "work", default: true }],
         },
         channels: { whatsapp: { allowFrom: ["*"] } },
@@ -944,7 +987,7 @@ describe("runHeartbeatOnce", () => {
             updatedAt: Date.now(),
             lastChannel: "whatsapp",
             lastProvider: "whatsapp",
-            lastTo: "+1555",
+            lastTo: "120363401234567890@g.us",
           },
         }),
       );
@@ -962,7 +1005,7 @@ describe("runHeartbeatOnce", () => {
 
       expect(sendWhatsApp).toHaveBeenCalledTimes(1);
       expect(sendWhatsApp).toHaveBeenCalledWith(
-        "+1555",
+        "120363401234567890@g.us",
         "Hello from heartbeat",
         expect.any(Object),
       );
@@ -979,7 +1022,7 @@ describe("runHeartbeatOnce", () => {
     queueCronEvent?: boolean;
     replyText?: string;
   }) {
-    const tmpDir = await createCaseDir("winclaw-hb");
+    const tmpDir = await createCaseDir("openclaw-hb");
     const storePath = path.join(tmpDir, "sessions.json");
     const workspaceDir = path.join(tmpDir, "workspace");
     await fs.mkdir(workspaceDir, { recursive: true });
@@ -1001,7 +1044,7 @@ describe("runHeartbeatOnce", () => {
       await fs.mkdir(path.join(workspaceDir, "HEARTBEAT.md"), { recursive: true });
     }
 
-    const cfg: WinClawConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           workspace: workspaceDir,
@@ -1019,7 +1062,7 @@ describe("runHeartbeatOnce", () => {
           sessionId: "sid",
           updatedAt: Date.now(),
           lastChannel: "whatsapp",
-          lastTo: "+1555",
+          lastTo: "120363401234567890@g.us",
         },
       }),
     );
@@ -1144,6 +1187,112 @@ describe("runHeartbeatOnce", () => {
       } finally {
         replySpy.mockRestore();
       }
+    }
+  });
+
+  it("uses an internal-only cron prompt when heartbeat delivery target is none", async () => {
+    const tmpDir = await createCaseDir("hb-cron-target-none");
+    const storePath = path.join(tmpDir, "sessions.json");
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          workspace: tmpDir,
+          heartbeat: { every: "5m", target: "none" },
+        },
+      },
+      channels: { whatsapp: { allowFrom: ["*"] } },
+      session: { store: storePath },
+    };
+    const sessionKey = resolveMainSessionKey(cfg);
+    await fs.writeFile(
+      storePath,
+      JSON.stringify({
+        [sessionKey]: {
+          sessionId: "sid",
+          updatedAt: Date.now(),
+          lastChannel: "whatsapp",
+          lastTo: "120363401234567890@g.us",
+        },
+      }),
+    );
+    enqueueSystemEvent("Cron: rotate logs", {
+      sessionKey,
+      contextKey: "cron:rotate-logs",
+    });
+
+    const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
+    replySpy.mockResolvedValue({ text: "Handled internally" });
+    const sendWhatsApp = vi
+      .fn<NonNullable<HeartbeatDeps["sendWhatsApp"]>>()
+      .mockResolvedValue({ messageId: "m1", toJid: "jid" });
+
+    try {
+      const res = await runHeartbeatOnce({
+        cfg,
+        reason: "interval",
+        deps: createHeartbeatDeps(sendWhatsApp),
+      });
+      expect(res.status).toBe("ran");
+      expect(sendWhatsApp).toHaveBeenCalledTimes(0);
+      const calledCtx = replySpy.mock.calls[0]?.[0] as { Provider?: string; Body?: string };
+      expect(calledCtx.Provider).toBe("cron-event");
+      expect(calledCtx.Body).toContain("Handle this reminder internally");
+      expect(calledCtx.Body).not.toContain("Please relay this reminder to the user");
+    } finally {
+      replySpy.mockRestore();
+    }
+  });
+
+  it("uses an internal-only exec prompt when heartbeat delivery target is none", async () => {
+    const tmpDir = await createCaseDir("hb-exec-target-none");
+    const storePath = path.join(tmpDir, "sessions.json");
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          workspace: tmpDir,
+          heartbeat: { every: "5m", target: "none" },
+        },
+      },
+      channels: { whatsapp: { allowFrom: ["*"] } },
+      session: { store: storePath },
+    };
+    const sessionKey = resolveMainSessionKey(cfg);
+    await fs.writeFile(
+      storePath,
+      JSON.stringify({
+        [sessionKey]: {
+          sessionId: "sid",
+          updatedAt: Date.now(),
+          lastChannel: "whatsapp",
+          lastTo: "120363401234567890@g.us",
+        },
+      }),
+    );
+    enqueueSystemEvent("exec finished: backup completed", {
+      sessionKey,
+      contextKey: "exec:backup",
+    });
+
+    const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
+    replySpy.mockResolvedValue({ text: "Handled internally" });
+    const sendWhatsApp = vi
+      .fn<NonNullable<HeartbeatDeps["sendWhatsApp"]>>()
+      .mockResolvedValue({ messageId: "m1", toJid: "jid" });
+
+    try {
+      const res = await runHeartbeatOnce({
+        cfg,
+        reason: "exec-event",
+        deps: createHeartbeatDeps(sendWhatsApp),
+      });
+      expect(res.status).toBe("ran");
+      expect(sendWhatsApp).toHaveBeenCalledTimes(0);
+      const calledCtx = replySpy.mock.calls[0]?.[0] as { Provider?: string; Body?: string };
+      expect(calledCtx.Provider).toBe("exec-event");
+      expect(calledCtx.Body).toContain("Handle the result internally");
+      expect(calledCtx.Body).not.toContain("Please relay the command output to the user");
+    } finally {
+      replySpy.mockRestore();
     }
   });
 });

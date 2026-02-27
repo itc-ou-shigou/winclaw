@@ -1,13 +1,10 @@
 {
-  "name": "@winclaw/telegram",
-  "version": "2026.2.23",
+  "name": "@openclaw/telegram",
+  "version": "2026.2.26",
   "private": true,
-  "description": "WinClaw Telegram channel plugin",
+  "description": "OpenClaw Telegram channel plugin",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
-  "winclaw": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

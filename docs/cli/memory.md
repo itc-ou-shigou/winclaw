@@ -1,12 +1,12 @@
 ---
-summary: "CLI reference for `winclaw memory` (status/index/search)"
+summary: "CLI reference for `openclaw memory` (status/index/search)"
 read_when:
   - You want to index or search semantic memory
   - You’re debugging memory availability or indexing
 title: "memory"
 ---
 
-# `winclaw memory`
+# `openclaw memory`
 
 Manage semantic memory indexing and search.
 Provided by the active memory plugin (default: `memory-core`; set `plugins.slots.memory = "none"` to disable).
@@ -19,15 +19,16 @@ Related:
 ## Examples
 
 ```bash
-winclaw memory status
-winclaw memory status --deep
-winclaw memory status --deep --index
-winclaw memory status --deep --index --verbose
-winclaw memory index
-winclaw memory index --verbose
-winclaw memory search "release checklist"
-winclaw memory status --agent main
-winclaw memory index --agent main --verbose
+openclaw memory status
+openclaw memory status --deep
+openclaw memory status --deep --index
+openclaw memory status --deep --index --verbose
+openclaw memory index
+openclaw memory index --verbose
+openclaw memory search "release checklist"
+openclaw memory search --query "release checklist"
+openclaw memory status --agent main
+openclaw memory index --agent main --verbose
 ```
 
 ## Options
@@ -36,6 +37,12 @@ Common:
 
 - `--agent <id>`: scope to a single agent (default: all configured agents).
 - `--verbose`: emit detailed logs during probes and indexing.
+
+`memory search`:
+
+- Query input: pass either positional `[query]` or `--query <text>`.
+- If both are provided, `--query` wins.
+- If neither is provided, the command exits with an error.
 
 Notes:
 

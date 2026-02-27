@@ -1,5 +1,5 @@
 ---
-summary: "WinClaw CLI reference for `winclaw` commands, subcommands, and options"
+summary: "OpenClaw CLI reference for `openclaw` commands, subcommands, and options"
 read_when:
   - Adding or modifying CLI commands or options
   - Documenting new command surfaces
@@ -52,6 +52,7 @@ This page describes the current CLI behavior. If commands change, update this do
 - [`plugins`](/cli/plugins) (plugin commands)
 - [`channels`](/cli/channels)
 - [`security`](/cli/security)
+- [`secrets`](/cli/secrets)
 - [`skills`](/cli/skills)
 - [`daemon`](/cli/daemon) (legacy alias for gateway service commands)
 - [`clawbot`](/cli/clawbot) (legacy alias namespace)
@@ -59,10 +60,10 @@ This page describes the current CLI behavior. If commands change, update this do
 
 ## Global flags
 
-- `--dev`: isolate state under `~/.winclaw-dev` and shift default ports.
-- `--profile <name>`: isolate state under `~/.winclaw-<name>`.
+- `--dev`: isolate state under `~/.openclaw-dev` and shift default ports.
+- `--profile <name>`: isolate state under `~/.openclaw-<name>`.
 - `--no-color`: disable ANSI colors.
-- `--update`: shorthand for `winclaw update` (source installs only).
+- `--update`: shorthand for `openclaw update` (source installs only).
 - `-V`, `--version`, `-v`: print version and exit.
 
 ## Output styling
@@ -75,7 +76,7 @@ This page describes the current CLI behavior. If commands change, update this do
 
 ## Color palette
 
-WinClaw uses a lobster palette for CLI output.
+OpenClaw uses a lobster palette for CLI output.
 
 - `accent` (#FF5A2D): headings, labels, primary highlights.
 - `accentBright` (#FF7A3D): command names, emphasis.
@@ -91,7 +92,7 @@ Palette source of truth: `src/terminal/palette.ts` (aka “lobster seam”).
 ## Command tree
 
 ```
-winclaw [--dev] [--profile <name>] <command>
+openclaw [--dev] [--profile <name>] <command>
   setup
   onboard
   configure
@@ -104,6 +105,9 @@ winclaw [--dev] [--profile <name>] <command>
   dashboard
   security
     audit
+  secrets
+    reload
+    migrate
   reset
   uninstall
   update
@@ -255,23 +259,30 @@ winclaw [--dev] [--profile <name>] <command>
   tui
 ```
 
-Note: plugins can add additional top-level commands (for example `winclaw voicecall`).
+Note: plugins can add additional top-level commands (for example `openclaw voicecall`).
 
 ## Security
 
-- `winclaw security audit` — audit config + local state for common security foot-guns.
-- `winclaw security audit --deep` — best-effort live Gateway probe.
-- `winclaw security audit --fix` — tighten safe defaults and chmod state/config.
+- `openclaw security audit` — audit config + local state for common security foot-guns.
+- `openclaw security audit --deep` — best-effort live Gateway probe.
+- `openclaw security audit --fix` — tighten safe defaults and chmod state/config.
+
+## Secrets
+
+- `openclaw secrets reload` — re-resolve refs and atomically swap the runtime snapshot.
+- `openclaw secrets audit` — scan for plaintext residues, unresolved refs, and precedence drift.
+- `openclaw secrets configure` — interactive helper for provider setup + SecretRef mapping + preflight/apply.
+- `openclaw secrets apply --from <plan.json>` — apply a previously generated plan (`--dry-run` supported).
 
 ## Plugins
 
 Manage extensions and their config:
 
-- `winclaw plugins list` — discover plugins (use `--json` for machine output).
-- `winclaw plugins info <id>` — show details for a plugin.
-- `winclaw plugins install <path|.tgz|npm-spec>` — install a plugin (or add a plugin path to `plugins.load.paths`).
-- `winclaw plugins enable <id>` / `disable <id>` — toggle `plugins.entries.<id>.enabled`.
-- `winclaw plugins doctor` — report plugin load errors.
+- `openclaw plugins list` — discover plugins (use `--json` for machine output).
+- `openclaw plugins info <id>` — show details for a plugin.
+- `openclaw plugins install <path|.tgz|npm-spec>` — install a plugin (or add a plugin path to `plugins.load.paths`).
+- `openclaw plugins enable <id>` / `disable <id>` — toggle `plugins.entries.<id>.enabled`.
+- `openclaw plugins doctor` — report plugin load errors.
 
 Most plugin changes require a gateway restart. See [/plugin](/tools/plugin).
 
@@ -279,9 +290,9 @@ Most plugin changes require a gateway restart. See [/plugin](/tools/plugin).
 
 Vector search over `MEMORY.md` + `memory/*.md`:
 
-- `winclaw memory status` — show index stats.
-- `winclaw memory index` — reindex memory files.
-- `winclaw memory search "<query>"` — semantic search over memory.
+- `openclaw memory status` — show index stats.
+- `openclaw memory index` — reindex memory files.
+- `openclaw memory search "<query>"` (or `--query "<query>"`) — semantic search over memory.
 
 ## Chat slash commands
 
@@ -301,7 +312,7 @@ Initialize config + workspace.
 
 Options:
 
-- `--workspace <dir>`: agent workspace path (default `~/.winclaw/workspace`).
+- `--workspace <dir>`: agent workspace path (default `~/.openclaw/workspace`).
 - `--wizard`: run the onboarding wizard.
 - `--non-interactive`: run wizard without prompts.
 - `--mode <local|remote>`: wizard mode.
@@ -317,7 +328,8 @@ Interactive wizard to set up gateway, workspace, and skills.
 Options:
 
 - `--workspace <dir>`
-- `--reset` (reset config + credentials + sessions + workspace before wizard)
+- `--reset` (reset config + credentials + sessions before wizard)
+- `--reset-scope <config|config+creds+sessions|full>` (default `config+creds+sessions`; use `full` to also remove workspace)
 - `--non-interactive`
 - `--mode <local|remote>`
 - `--flow <quickstart|advanced|manual>` (manual is an alias for advanced)
@@ -326,6 +338,7 @@ Options:
 - `--token <token>` (non-interactive; used with `--auth-choice token`)
 - `--token-profile-id <id>` (non-interactive; default: `<provider>:manual`)
 - `--token-expires-in <duration>` (non-interactive; e.g. `365d`, `12h`)
+- `--secret-input-mode <plaintext|ref>` (default `plaintext`; use `ref` to store provider default env refs instead of plaintext keys)
 - `--anthropic-api-key <key>`
 - `--openai-api-key <key>`
 - `--mistral-api-key <key>`
@@ -367,7 +380,7 @@ Interactive configuration wizard (models, channels, skills, gateway).
 
 ### `config`
 
-Non-interactive config helpers (get/set/unset). Running `winclaw config` with no
+Non-interactive config helpers (get/set/unset). Running `openclaw config` with no
 subcommand launches the wizard.
 
 Subcommands:
@@ -396,10 +409,12 @@ Manage chat channel accounts (WhatsApp/Telegram/Discord/Google Chat/Slack/Matter
 Subcommands:
 
 - `channels list`: show configured channels and auth profiles.
-- `channels status`: check gateway reachability and channel health (`--probe` runs extra checks; use `winclaw health` or `winclaw status --deep` for gateway health probes).
-- Tip: `channels status` prints warnings with suggested fixes when it can detect common misconfigurations (then points you to `winclaw doctor`).
+- `channels status`: check gateway reachability and channel health (`--probe` runs extra checks; use `openclaw health` or `openclaw status --deep` for gateway health probes).
+- Tip: `channels status` prints warnings with suggested fixes when it can detect common misconfigurations (then points you to `openclaw doctor`).
 - `channels logs`: show recent channel logs from the gateway log file.
 - `channels add`: wizard-style setup when no flags are passed; flags switch to non-interactive mode.
+  - When adding a non-default account to a channel still using single-account top-level config, OpenClaw moves account-scoped values into `channels.<channel>.accounts.default` before writing the new account.
+  - Non-interactive `channels add` does not auto-create/upgrade bindings; channel-only bindings continue to match the default account.
 - `channels remove`: disable by default; pass `--delete` to remove config entries without prompts.
 - `channels login`: interactive channel login (WhatsApp Web only).
 - `channels logout`: log out of a channel session (if supported).
@@ -437,11 +452,11 @@ More detail: [/concepts/oauth](/concepts/oauth)
 Examples:
 
 ```bash
-winclaw channels add --channel telegram --account alerts --name "Alerts Bot" --token $TELEGRAM_BOT_TOKEN
-winclaw channels add --channel discord --account work --name "Work Bot" --token $DISCORD_BOT_TOKEN
-winclaw channels remove --channel discord --account work --delete
-winclaw channels status --probe
-winclaw status --deep
+openclaw channels add --channel telegram --account alerts --name "Alerts Bot" --token $TELEGRAM_BOT_TOKEN
+openclaw channels add --channel discord --account work --name "Work Bot" --token $DISCORD_BOT_TOKEN
+openclaw channels remove --channel discord --account work --delete
+openclaw channels status --probe
+openclaw status --deep
 ```
 
 ### `skills`
@@ -468,8 +483,23 @@ Approve DM pairing requests across channels.
 
 Subcommands:
 
-- `pairing list <channel> [--json]`
-- `pairing approve <channel> <code> [--notify]`
+- `pairing list [channel] [--channel <channel>] [--account <id>] [--json]`
+- `pairing approve <channel> <code> [--account <id>] [--notify]`
+- `pairing approve --channel <channel> [--account <id>] <code> [--notify]`
+
+### `devices`
+
+Manage gateway device pairing entries and per-role device tokens.
+
+Subcommands:
+
+- `devices list [--json]`
+- `devices approve [requestId] [--latest]`
+- `devices reject <requestId>`
+- `devices remove <deviceId>`
+- `devices clear --yes [--pending]`
+- `devices rotate --device <id> --role <role> [--scope <scope...>]`
+- `devices revoke --device <id> --role <role>`
 
 ### `webhooks gmail`
 
@@ -510,8 +540,8 @@ Subcommands:
 
 Examples:
 
-- `winclaw message send --target +15555550123 --message "Hi"`
-- `winclaw message poll --channel discord --target channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
+- `openclaw message send --target +15555550123 --message "Hi"`
+- `openclaw message poll --channel discord --target channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
 
 ### `agent`
 
@@ -559,7 +589,37 @@ Options:
 - `--non-interactive`
 - `--json`
 
-Binding specs use `channel[:accountId]`. When `accountId` is omitted for WhatsApp, the default account id is used.
+Binding specs use `channel[:accountId]`. When `accountId` is omitted, OpenClaw may resolve account scope via channel defaults/plugin hooks; otherwise it is a channel binding without explicit account scope.
+
+#### `agents bindings`
+
+List routing bindings.
+
+Options:
+
+- `--agent <id>`
+- `--json`
+
+#### `agents bind`
+
+Add routing bindings for an agent.
+
+Options:
+
+- `--agent <id>`
+- `--bind <channel[:accountId]>` (repeatable)
+- `--json`
+
+#### `agents unbind`
+
+Remove routing bindings for an agent.
+
+Options:
+
+- `--agent <id>`
+- `--bind <channel[:accountId]>` (repeatable)
+- `--all`
+- `--json`
 
 #### `agents delete <id>`
 
@@ -596,12 +656,12 @@ Notes:
 
 ### Usage tracking
 
-WinClaw can surface provider usage/quota when OAuth/API creds are available.
+OpenClaw can surface provider usage/quota when OAuth/API creds are available.
 
 Surfaces:
 
 - `/status` (adds a short provider usage line when available)
-- `winclaw status --usage` (prints full provider breakdown)
+- `openclaw status --usage` (prints full provider breakdown)
 - macOS menu bar (Usage section under Context)
 
 Notes:
@@ -711,7 +771,7 @@ Notes:
 
 - `gateway status` probes the Gateway RPC by default using the service’s resolved port/config (override with `--url/--token/--password`).
 - `gateway status` supports `--no-probe`, `--deep`, and `--json` for scripting.
-- `gateway status` also surfaces legacy or extra gateway services when it can detect them (`--deep` adds system-level scans). Profile-named WinClaw services are treated as first-class and aren't flagged as "extra".
+- `gateway status` also surfaces legacy or extra gateway services when it can detect them (`--deep` adds system-level scans). Profile-named OpenClaw services are treated as first-class and aren't flagged as "extra".
 - `gateway status` prints which config path the CLI uses vs which config the service likely uses (service env), plus the resolved probe target URL.
 - `gateway install|uninstall|start|stop|restart` support `--json` for scripting (default output stays human-friendly).
 - `gateway install` defaults to Node runtime; bun is **not recommended** (WhatsApp/Telegram bugs).
@@ -729,11 +789,11 @@ Notes:
 Examples:
 
 ```bash
-winclaw logs --follow
-winclaw logs --limit 200
-winclaw logs --plain
-winclaw logs --json
-winclaw logs --no-color
+openclaw logs --follow
+openclaw logs --limit 200
+openclaw logs --plain
+openclaw logs --json
+openclaw logs --no-color
 ```
 
 ### `gateway <subcommand>`
@@ -769,13 +829,13 @@ Preferred Anthropic auth (setup-token):
 
 ```bash
 claude setup-token
-winclaw models auth setup-token --provider anthropic
-winclaw models status
+openclaw models auth setup-token --provider anthropic
+openclaw models status
 ```
 
 ### `models` (root)
 
-`winclaw models` is an alias for `models status`.
+`openclaw models` is an alias for `models status`.
 
 Root options:
 
@@ -931,7 +991,7 @@ All `cron` commands accept `--url`, `--token`, `--timeout`, `--expect-final`.
 ## Node host
 
 `node` runs a **headless node host** or manages it as a background service. See
-[`winclaw node`](/cli/node).
+[`openclaw node`](/cli/node).
 
 Subcommands:
 
@@ -986,7 +1046,7 @@ Location:
 
 ## Browser
 
-Browser control CLI (dedicated Chrome/Brave/Edge/Chromium). See [`winclaw browser`](/cli/browser) and the [Browser tool](/tools/browser).
+Browser control CLI (dedicated Chrome/Brave/Edge/Chromium). See [`openclaw browser`](/cli/browser) and the [Browser tool](/tools/browser).
 
 Common options:
 

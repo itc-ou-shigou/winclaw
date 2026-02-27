@@ -1,6 +1,6 @@
-import WinClawChatUI
-import WinClawKit
-import WinClawProtocol
+import OpenClawChatUI
+import OpenClawKit
+import OpenClawProtocol
 import Observation
 import os
 import Security
@@ -46,6 +46,7 @@ private enum IOSDeepLinkAgentPolicy {
 
 @MainActor
 @Observable
+// swiftlint:disable type_body_length file_length
 final class NodeAppModel {
     struct AgentDeepLinkPrompt: Identifiable, Equatable {
         let id: String
@@ -54,10 +55,10 @@ final class NodeAppModel {
         let request: AgentDeepLink
     }
 
-    private let deepLinkLogger = Logger(subsystem: "ai.winclaw.ios", category: "DeepLink")
-    private let pushWakeLogger = Logger(subsystem: "ai.winclaw.ios", category: "PushWake")
-    private let locationWakeLogger = Logger(subsystem: "ai.winclaw.ios", category: "LocationWake")
-    private let watchReplyLogger = Logger(subsystem: "ai.winclaw.ios", category: "WatchReply")
+    private let deepLinkLogger = Logger(subsystem: "ai.openclaw.ios", category: "DeepLink")
+    private let pushWakeLogger = Logger(subsystem: "ai.openclaw.ios", category: "PushWake")
+    private let locationWakeLogger = Logger(subsystem: "ai.openclaw.ios", category: "LocationWake")
+    private let watchReplyLogger = Logger(subsystem: "ai.openclaw.ios", category: "WatchReply")
     enum CameraHUDKind {
         case photo
         case recording
@@ -229,7 +230,7 @@ final class NodeAppModel {
         }()
         guard !userAction.isEmpty else { return }
 
-        guard let name = WinClawCanvasA2UIAction.extractActionName(userAction) else { return }
+        guard let name = OpenClawCanvasA2UIAction.extractActionName(userAction) else { return }
         let actionId: String = {
             let id = (userAction["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return id.isEmpty ? UUID().uuidString : id
@@ -251,15 +252,15 @@ final class NodeAppModel {
             deviceName: UIDevice.current.name,
             interfaceIdiom: UIDevice.current.userInterfaceIdiom)
         let instanceId = (UserDefaults.standard.string(forKey: "node.instanceId") ?? "ios-node").lowercased()
-        let contextJSON = WinClawCanvasA2UIAction.compactJSON(userAction["context"])
+        let contextJSON = OpenClawCanvasA2UIAction.compactJSON(userAction["context"])
         let sessionKey = self.mainSessionKey
 
-        let messageContext = WinClawCanvasA2UIAction.AgentMessageContext(
+        let messageContext = OpenClawCanvasA2UIAction.AgentMessageContext(
             actionName: name,
             session: .init(key: sessionKey, surfaceId: surfaceId),
             component: .init(id: sourceComponentId, host: host, instanceId: instanceId),
             contextJSON: contextJSON)
-        let message = WinClawCanvasA2UIAction.formatAgentMessage(messageContext)
+        let message = OpenClawCanvasA2UIAction.formatAgentMessage(messageContext)
 
         let ok: Bool
         var errorText: String?
@@ -284,7 +285,7 @@ final class NodeAppModel {
             }
         }
 
-        let js = WinClawCanvasA2UIAction.jsDispatchA2UIActionStatus(actionId: actionId, ok: ok, error: errorText)
+        let js = OpenClawCanvasA2UIAction.jsDispatchA2UIActionStatus(actionId: actionId, ok: ok, error: errorText)
         do {
             _ = try await self.screen.eval(javaScript: js)
         } catch {
@@ -414,8 +415,10 @@ final class NodeAppModel {
         }
         let wasSuppressed = self.backgroundReconnectSuppressed
         self.backgroundReconnectSuppressed = false
-        self.pushWakeLogger.info(
-            "Background reconnect lease reason=\(reason, privacy: .public) seconds=\(leaseSeconds, privacy: .public) wasSuppressed=\(wasSuppressed, privacy: .public)")
+        let leaseLogMessage =
+            "Background reconnect lease reason=\(reason) "
+            + "seconds=\(leaseSeconds) wasSuppressed=\(wasSuppressed)"
+        self.pushWakeLogger.info("\(leaseLogMessage, privacy: .public)")
     }
 
     private func suppressBackgroundReconnect(reason: String, disconnectIfNeeded: Bool) {
@@ -425,8 +428,10 @@ final class NodeAppModel {
         self.backgroundReconnectLeaseUntil = nil
         self.backgroundReconnectSuppressed = true
         guard changed else { return }
-        self.pushWakeLogger.info(
-            "Background reconnect suppressed reason=\(reason, privacy: .public) disconnect=\(disconnectIfNeeded, privacy: .public)")
+        let suppressLogMessage =
+            "Background reconnect suppressed reason=\(reason) "
+            + "disconnect=\(disconnectIfNeeded)"
+        self.pushWakeLogger.info("\(suppressLogMessage, privacy: .public)")
         guard disconnectIfNeeded else { return }
         Task { [weak self] in
             guard let self else { return }
@@ -488,7 +493,7 @@ final class NodeAppModel {
         }
     }
 
-    func requestLocationPermissions(mode: WinClawLocationMode) async -> Bool {
+    func requestLocationPermissions(mode: OpenClawLocationMode) async -> Bool {
         guard mode != .off else { return true }
         let status = await self.locationService.ensureAuthorization(mode: mode)
         switch status {
@@ -607,7 +612,7 @@ final class NodeAppModel {
         self.voiceWakeSyncTask = Task { [weak self] in
             guard let self else { return }
 
-            if !(await self.isGatewayHealthMonitorDisabled()) {
+            if !self.isGatewayHealthMonitorDisabled() {
                 await self.refreshWakeWordsFromGateway()
             }
 
@@ -662,10 +667,14 @@ final class NodeAppModel {
         self.gatewayHealthMonitor.start(
             check: { [weak self] in
                 guard let self else { return false }
-                if await self.isGatewayHealthMonitorDisabled() { return true }
+                if await MainActor.run(body: { self.isGatewayHealthMonitorDisabled() }) { return true }
                 do {
-                    let data = try await self.operatorGateway.request(method: "health", paramsJSON: nil, timeoutSeconds: 6)
-                    guard let decoded = try? JSONDecoder().decode(WinClawGatewayHealthOK.self, from: data) else {
+                    let data = try await self.operatorGateway.request(
+                        method: "health",
+                        paramsJSON: nil,
+                        timeoutSeconds: 6
+                    )
+                    guard let decoded = try? JSONDecoder().decode(OpenClawGatewayHealthOK.self, from: data) else {
                         return false
                     }
                     return decoded.ok ?? false
@@ -704,7 +713,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .backgroundUnavailable,
                     message: "NODE_BACKGROUND_UNAVAILABLE: canvas/camera/screen commands require foreground"))
         }
@@ -713,7 +722,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .unavailable,
                     message: "CAMERA_DISABLED: enable Camera in iOS Settings → Camera → Allow Camera"))
         }
@@ -726,12 +735,12 @@ final class NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                    error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
             case .handlerUnavailable:
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(code: .unavailable, message: "node handler unavailable"))
+                    error: OpenClawNodeError(code: .unavailable, message: "node handler unavailable"))
             }
         } catch {
             if command.hasPrefix("camera.") {
@@ -741,7 +750,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .unavailable, message: error.localizedDescription))
+                error: OpenClawNodeError(code: .unavailable, message: error.localizedDescription))
         }
     }
 
@@ -756,7 +765,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .unavailable,
                     message: "LOCATION_DISABLED: enable Location in Settings"))
         }
@@ -764,12 +773,12 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .backgroundUnavailable,
                     message: "LOCATION_BACKGROUND_UNAVAILABLE: background location requires Always"))
         }
-        let params = (try? Self.decodeParams(WinClawLocationGetParams.self, from: req.paramsJSON)) ??
-            WinClawLocationGetParams()
+        let params = (try? Self.decodeParams(OpenClawLocationGetParams.self, from: req.paramsJSON)) ??
+            OpenClawLocationGetParams()
         let desired = params.desiredAccuracy ??
             (self.isLocationPreciseEnabled() ? .precise : .balanced)
         let status = self.locationService.authorizationStatus()
@@ -777,7 +786,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .unavailable,
                     message: "LOCATION_PERMISSION_REQUIRED: grant Location permission"))
         }
@@ -785,7 +794,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(
+                error: OpenClawNodeError(
                     code: .unavailable,
                     message: "LOCATION_PERMISSION_REQUIRED: enable Always for background access"))
         }
@@ -795,7 +804,7 @@ final class NodeAppModel {
             maxAgeMs: params.maxAgeMs,
             timeoutMs: params.timeoutMs)
         let isPrecise = self.locationService.accuracyAuthorization() == .fullAccuracy
-        let payload = WinClawLocationPayload(
+        let payload = OpenClawLocationPayload(
             lat: location.coordinate.latitude,
             lon: location.coordinate.longitude,
             accuracyMeters: location.horizontalAccuracy,
@@ -811,10 +820,10 @@ final class NodeAppModel {
 
     private func handleCanvasInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawCanvasCommand.present.rawValue:
+        case OpenClawCanvasCommand.present.rawValue:
             // iOS ignores placement hints; canvas always fills the screen.
-            let params = (try? Self.decodeParams(WinClawCanvasPresentParams.self, from: req.paramsJSON)) ??
-                WinClawCanvasPresentParams()
+            let params = (try? Self.decodeParams(OpenClawCanvasPresentParams.self, from: req.paramsJSON)) ??
+                OpenClawCanvasPresentParams()
             let url = params.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if url.isEmpty {
                 self.screen.showDefaultCanvas()
@@ -822,20 +831,20 @@ final class NodeAppModel {
                 self.screen.navigate(to: url)
             }
             return BridgeInvokeResponse(id: req.id, ok: true)
-        case WinClawCanvasCommand.hide.rawValue:
+        case OpenClawCanvasCommand.hide.rawValue:
             self.screen.showDefaultCanvas()
             return BridgeInvokeResponse(id: req.id, ok: true)
-        case WinClawCanvasCommand.navigate.rawValue:
-            let params = try Self.decodeParams(WinClawCanvasNavigateParams.self, from: req.paramsJSON)
+        case OpenClawCanvasCommand.navigate.rawValue:
+            let params = try Self.decodeParams(OpenClawCanvasNavigateParams.self, from: req.paramsJSON)
             self.screen.navigate(to: params.url)
             return BridgeInvokeResponse(id: req.id, ok: true)
-        case WinClawCanvasCommand.evalJS.rawValue:
-            let params = try Self.decodeParams(WinClawCanvasEvalParams.self, from: req.paramsJSON)
+        case OpenClawCanvasCommand.evalJS.rawValue:
+            let params = try Self.decodeParams(OpenClawCanvasEvalParams.self, from: req.paramsJSON)
             let result = try await self.screen.eval(javaScript: params.javaScript)
             let payload = try Self.encodePayload(["result": result])
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: payload)
-        case WinClawCanvasCommand.snapshot.rawValue:
-            let params = try? Self.decodeParams(WinClawCanvasSnapshotParams.self, from: req.paramsJSON)
+        case OpenClawCanvasCommand.snapshot.rawValue:
+            let params = try? Self.decodeParams(OpenClawCanvasSnapshotParams.self, from: req.paramsJSON)
             let format = params?.format ?? .jpeg
             let maxWidth: CGFloat? = {
                 if let raw = params?.maxWidth, raw > 0 { return CGFloat(raw) }
@@ -859,19 +868,19 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleCanvasA2UIInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         let command = req.command
         switch command {
-        case WinClawCanvasA2UICommand.reset.rawValue:
+        case OpenClawCanvasA2UICommand.reset.rawValue:
             guard let a2uiUrl = await self.resolveA2UIHostURL() else {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .unavailable,
                         message: "A2UI_HOST_NOT_CONFIGURED: gateway did not advertise canvas host"))
             }
@@ -880,32 +889,32 @@ final class NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .unavailable,
                         message: "A2UI_HOST_UNAVAILABLE: A2UI host not reachable"))
             }
 
             let json = try await self.screen.eval(javaScript: """
             (() => {
-              const host = globalThis.winclawA2UI;
-              if (!host) return JSON.stringify({ ok: false, error: "missing winclawA2UI" });
+              const host = globalThis.openclawA2UI;
+              if (!host) return JSON.stringify({ ok: false, error: "missing openclawA2UI" });
               return JSON.stringify(host.reset());
             })()
             """)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawCanvasA2UICommand.push.rawValue, WinClawCanvasA2UICommand.pushJSONL.rawValue:
-            let messages: [WinClawKit.AnyCodable]
-            if command == WinClawCanvasA2UICommand.pushJSONL.rawValue {
-                let params = try Self.decodeParams(WinClawCanvasA2UIPushJSONLParams.self, from: req.paramsJSON)
-                messages = try WinClawCanvasA2UIJSONL.decodeMessagesFromJSONL(params.jsonl)
+        case OpenClawCanvasA2UICommand.push.rawValue, OpenClawCanvasA2UICommand.pushJSONL.rawValue:
+            let messages: [OpenClawKit.AnyCodable]
+            if command == OpenClawCanvasA2UICommand.pushJSONL.rawValue {
+                let params = try Self.decodeParams(OpenClawCanvasA2UIPushJSONLParams.self, from: req.paramsJSON)
+                messages = try OpenClawCanvasA2UIJSONL.decodeMessagesFromJSONL(params.jsonl)
             } else {
                 do {
-                    let params = try Self.decodeParams(WinClawCanvasA2UIPushParams.self, from: req.paramsJSON)
+                    let params = try Self.decodeParams(OpenClawCanvasA2UIPushParams.self, from: req.paramsJSON)
                     messages = params.messages
                 } catch {
                     // Be forgiving: some clients still send JSONL payloads to `canvas.a2ui.push`.
-                    let params = try Self.decodeParams(WinClawCanvasA2UIPushJSONLParams.self, from: req.paramsJSON)
-                    messages = try WinClawCanvasA2UIJSONL.decodeMessagesFromJSONL(params.jsonl)
+                    let params = try Self.decodeParams(OpenClawCanvasA2UIPushJSONLParams.self, from: req.paramsJSON)
+                    messages = try OpenClawCanvasA2UIJSONL.decodeMessagesFromJSONL(params.jsonl)
                 }
             }
 
@@ -913,7 +922,7 @@ final class NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .unavailable,
                         message: "A2UI_HOST_NOT_CONFIGURED: gateway did not advertise canvas host"))
             }
@@ -922,17 +931,17 @@ final class NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .unavailable,
                         message: "A2UI_HOST_UNAVAILABLE: A2UI host not reachable"))
             }
 
-            let messagesJSON = try WinClawCanvasA2UIJSONL.encodeMessagesJSONArray(messages)
+            let messagesJSON = try OpenClawCanvasA2UIJSONL.encodeMessagesJSONArray(messages)
             let js = """
             (() => {
               try {
-                const host = globalThis.winclawA2UI;
-                if (!host) return JSON.stringify({ ok: false, error: "missing winclawA2UI" });
+                const host = globalThis.openclawA2UI;
+                if (!host) return JSON.stringify({ ok: false, error: "missing openclawA2UI" });
                 const messages = \(messagesJSON);
                 return JSON.stringify(host.applyMessages(messages));
               } catch (e) {
@@ -946,24 +955,24 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleCameraInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawCameraCommand.list.rawValue:
+        case OpenClawCameraCommand.list.rawValue:
             let devices = await self.camera.listDevices()
             struct Payload: Codable {
                 var devices: [CameraController.CameraDeviceInfo]
             }
             let payload = try Self.encodePayload(Payload(devices: devices))
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: payload)
-        case WinClawCameraCommand.snap.rawValue:
+        case OpenClawCameraCommand.snap.rawValue:
             self.showCameraHUD(text: "Taking photo…", kind: .photo)
             self.triggerCameraFlash()
-            let params = (try? Self.decodeParams(WinClawCameraSnapParams.self, from: req.paramsJSON)) ??
-                WinClawCameraSnapParams()
+            let params = (try? Self.decodeParams(OpenClawCameraSnapParams.self, from: req.paramsJSON)) ??
+                OpenClawCameraSnapParams()
             let res = try await self.camera.snap(params: params)
 
             struct Payload: Codable {
@@ -979,9 +988,9 @@ final class NodeAppModel {
                 height: res.height))
             self.showCameraHUD(text: "Photo captured", kind: .success, autoHideSeconds: 1.6)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: payload)
-        case WinClawCameraCommand.clip.rawValue:
-            let params = (try? Self.decodeParams(WinClawCameraClipParams.self, from: req.paramsJSON)) ??
-                WinClawCameraClipParams()
+        case OpenClawCameraCommand.clip.rawValue:
+            let params = (try? Self.decodeParams(OpenClawCameraClipParams.self, from: req.paramsJSON)) ??
+                OpenClawCameraClipParams()
 
             let suspended = (params.includeAudio ?? true) ? self.voiceWake.suspendForExternalAudioCapture() : false
             defer { self.voiceWake.resumeAfterExternalAudioCapture(wasSuspended: suspended) }
@@ -1006,13 +1015,13 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleScreenRecordInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
-        let params = (try? Self.decodeParams(WinClawScreenRecordParams.self, from: req.paramsJSON)) ??
-            WinClawScreenRecordParams()
+        let params = (try? Self.decodeParams(OpenClawScreenRecordParams.self, from: req.paramsJSON)) ??
+            OpenClawScreenRecordParams()
         if let format = params.format, format.lowercased() != "mp4" {
             throw NSError(domain: "Screen", code: 30, userInfo: [
                 NSLocalizedDescriptionKey: "INVALID_REQUEST: screen format must be mp4",
@@ -1048,14 +1057,14 @@ final class NodeAppModel {
     }
 
     private func handleSystemNotify(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
-        let params = try Self.decodeParams(WinClawSystemNotifyParams.self, from: req.paramsJSON)
+        let params = try Self.decodeParams(OpenClawSystemNotifyParams.self, from: req.paramsJSON)
         let title = params.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = params.body.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.isEmpty, body.isEmpty {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: empty notification"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: empty notification"))
         }
 
         let finalStatus = await self.requestNotificationAuthorizationIfNeeded()
@@ -1063,7 +1072,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .unavailable, message: "NOT_AUTHORIZED: notifications"))
+                error: OpenClawNodeError(code: .unavailable, message: "NOT_AUTHORIZED: notifications"))
         }
 
         let addResult = await self.runNotificationCall(timeoutSeconds: 2.0) { [notificationCenter] in
@@ -1096,19 +1105,19 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .unavailable, message: "NOTIFICATION_FAILED: \(error.message)"))
+                error: OpenClawNodeError(code: .unavailable, message: "NOTIFICATION_FAILED: \(error.message)"))
         }
         return BridgeInvokeResponse(id: req.id, ok: true)
     }
 
     private func handleChatPushInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
-        let params = try Self.decodeParams(WinClawChatPushParams.self, from: req.paramsJSON)
+        let params = try Self.decodeParams(OpenClawChatPushParams.self, from: req.paramsJSON)
         let text = params.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: empty chat.push text"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: empty chat.push text"))
         }
 
         let finalStatus = await self.requestNotificationAuthorizationIfNeeded()
@@ -1116,7 +1125,7 @@ final class NodeAppModel {
         if finalStatus == .authorized || finalStatus == .provisional || finalStatus == .ephemeral {
             let addResult = await self.runNotificationCall(timeoutSeconds: 2.0) { [notificationCenter] in
                 let content = UNMutableNotificationContent()
-                content.title = "WinClaw"
+                content.title = "OpenClaw"
                 content.body = text
                 content.sound = .default
                 content.userInfo = ["messageId": messageId]
@@ -1130,7 +1139,7 @@ final class NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(code: .unavailable, message: "NOTIFICATION_FAILED: \(error.message)"))
+                    error: OpenClawNodeError(code: .unavailable, message: "NOTIFICATION_FAILED: \(error.message)"))
             }
         }
 
@@ -1141,7 +1150,7 @@ final class NodeAppModel {
             }
         }
 
-        let payload = WinClawChatPushPayload(messageId: messageId)
+        let payload = OpenClawChatPushPayload(messageId: messageId)
         let json = try Self.encodePayload(payload)
         return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
     }
@@ -1203,11 +1212,11 @@ final class NodeAppModel {
 
     private func handleDeviceInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawDeviceCommand.status.rawValue:
+        case OpenClawDeviceCommand.status.rawValue:
             let payload = try await self.deviceStatusService.status()
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawDeviceCommand.info.rawValue:
+        case OpenClawDeviceCommand.info.rawValue:
             let payload = self.deviceStatusService.info()
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1215,13 +1224,13 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handlePhotosInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
-        let params = (try? Self.decodeParams(WinClawPhotosLatestParams.self, from: req.paramsJSON)) ??
-            WinClawPhotosLatestParams()
+        let params = (try? Self.decodeParams(OpenClawPhotosLatestParams.self, from: req.paramsJSON)) ??
+            OpenClawPhotosLatestParams()
         let payload = try await self.photosService.latest(params: params)
         let json = try Self.encodePayload(payload)
         return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1229,14 +1238,14 @@ final class NodeAppModel {
 
     private func handleContactsInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawContactsCommand.search.rawValue:
-            let params = (try? Self.decodeParams(WinClawContactsSearchParams.self, from: req.paramsJSON)) ??
-                WinClawContactsSearchParams()
+        case OpenClawContactsCommand.search.rawValue:
+            let params = (try? Self.decodeParams(OpenClawContactsSearchParams.self, from: req.paramsJSON)) ??
+                OpenClawContactsSearchParams()
             let payload = try await self.contactsService.search(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawContactsCommand.add.rawValue:
-            let params = try Self.decodeParams(WinClawContactsAddParams.self, from: req.paramsJSON)
+        case OpenClawContactsCommand.add.rawValue:
+            let params = try Self.decodeParams(OpenClawContactsAddParams.self, from: req.paramsJSON)
             let payload = try await self.contactsService.add(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1244,20 +1253,20 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleCalendarInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawCalendarCommand.events.rawValue:
-            let params = (try? Self.decodeParams(WinClawCalendarEventsParams.self, from: req.paramsJSON)) ??
-                WinClawCalendarEventsParams()
+        case OpenClawCalendarCommand.events.rawValue:
+            let params = (try? Self.decodeParams(OpenClawCalendarEventsParams.self, from: req.paramsJSON)) ??
+                OpenClawCalendarEventsParams()
             let payload = try await self.calendarService.events(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawCalendarCommand.add.rawValue:
-            let params = try Self.decodeParams(WinClawCalendarAddParams.self, from: req.paramsJSON)
+        case OpenClawCalendarCommand.add.rawValue:
+            let params = try Self.decodeParams(OpenClawCalendarAddParams.self, from: req.paramsJSON)
             let payload = try await self.calendarService.add(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1265,20 +1274,20 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleRemindersInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawRemindersCommand.list.rawValue:
-            let params = (try? Self.decodeParams(WinClawRemindersListParams.self, from: req.paramsJSON)) ??
-                WinClawRemindersListParams()
+        case OpenClawRemindersCommand.list.rawValue:
+            let params = (try? Self.decodeParams(OpenClawRemindersListParams.self, from: req.paramsJSON)) ??
+                OpenClawRemindersListParams()
             let payload = try await self.remindersService.list(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawRemindersCommand.add.rawValue:
-            let params = try Self.decodeParams(WinClawRemindersAddParams.self, from: req.paramsJSON)
+        case OpenClawRemindersCommand.add.rawValue:
+            let params = try Self.decodeParams(OpenClawRemindersAddParams.self, from: req.paramsJSON)
             let payload = try await self.remindersService.add(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1286,21 +1295,21 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleMotionInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawMotionCommand.activity.rawValue:
-            let params = (try? Self.decodeParams(WinClawMotionActivityParams.self, from: req.paramsJSON)) ??
-                WinClawMotionActivityParams()
+        case OpenClawMotionCommand.activity.rawValue:
+            let params = (try? Self.decodeParams(OpenClawMotionActivityParams.self, from: req.paramsJSON)) ??
+                OpenClawMotionActivityParams()
             let payload = try await self.motionService.activities(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawMotionCommand.pedometer.rawValue:
-            let params = (try? Self.decodeParams(WinClawPedometerParams.self, from: req.paramsJSON)) ??
-                WinClawPedometerParams()
+        case OpenClawMotionCommand.pedometer.rawValue:
+            let params = (try? Self.decodeParams(OpenClawPedometerParams.self, from: req.paramsJSON)) ??
+                OpenClawPedometerParams()
             let payload = try await self.motionService.pedometer(params: params)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
@@ -1308,30 +1317,30 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
     private func handleTalkInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawTalkCommand.pttStart.rawValue:
+        case OpenClawTalkCommand.pttStart.rawValue:
             self.pttVoiceWakeSuspended = self.voiceWake.suspendForExternalAudioCapture()
             let payload = try await self.talkMode.beginPushToTalk()
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawTalkCommand.pttStop.rawValue:
+        case OpenClawTalkCommand.pttStop.rawValue:
             let payload = await self.talkMode.endPushToTalk()
             self.voiceWake.resumeAfterExternalAudioCapture(wasSuspended: self.pttVoiceWakeSuspended)
             self.pttVoiceWakeSuspended = false
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawTalkCommand.pttCancel.rawValue:
+        case OpenClawTalkCommand.pttCancel.rawValue:
             let payload = await self.talkMode.cancelPushToTalk()
             self.voiceWake.resumeAfterExternalAudioCapture(wasSuspended: self.pttVoiceWakeSuspended)
             self.pttVoiceWakeSuspended = false
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawTalkCommand.pttOnce.rawValue:
+        case OpenClawTalkCommand.pttOnce.rawValue:
             self.pttVoiceWakeSuspended = self.voiceWake.suspendForExternalAudioCapture()
             defer {
                 self.voiceWake.resumeAfterExternalAudioCapture(wasSuspended: self.pttVoiceWakeSuspended)
@@ -1344,7 +1353,7 @@ final class NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
@@ -1361,113 +1370,113 @@ private extension NodeAppModel {
             }
         }
 
-        register([WinClawLocationCommand.get.rawValue]) { [weak self] req in
+        register([OpenClawLocationCommand.get.rawValue]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleLocationInvoke(req)
         }
 
         register([
-            WinClawCanvasCommand.present.rawValue,
-            WinClawCanvasCommand.hide.rawValue,
-            WinClawCanvasCommand.navigate.rawValue,
-            WinClawCanvasCommand.evalJS.rawValue,
-            WinClawCanvasCommand.snapshot.rawValue,
+            OpenClawCanvasCommand.present.rawValue,
+            OpenClawCanvasCommand.hide.rawValue,
+            OpenClawCanvasCommand.navigate.rawValue,
+            OpenClawCanvasCommand.evalJS.rawValue,
+            OpenClawCanvasCommand.snapshot.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleCanvasInvoke(req)
         }
 
         register([
-            WinClawCanvasA2UICommand.reset.rawValue,
-            WinClawCanvasA2UICommand.push.rawValue,
-            WinClawCanvasA2UICommand.pushJSONL.rawValue,
+            OpenClawCanvasA2UICommand.reset.rawValue,
+            OpenClawCanvasA2UICommand.push.rawValue,
+            OpenClawCanvasA2UICommand.pushJSONL.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleCanvasA2UIInvoke(req)
         }
 
         register([
-            WinClawCameraCommand.list.rawValue,
-            WinClawCameraCommand.snap.rawValue,
-            WinClawCameraCommand.clip.rawValue,
+            OpenClawCameraCommand.list.rawValue,
+            OpenClawCameraCommand.snap.rawValue,
+            OpenClawCameraCommand.clip.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleCameraInvoke(req)
         }
 
-        register([WinClawScreenCommand.record.rawValue]) { [weak self] req in
+        register([OpenClawScreenCommand.record.rawValue]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleScreenRecordInvoke(req)
         }
 
-        register([WinClawSystemCommand.notify.rawValue]) { [weak self] req in
+        register([OpenClawSystemCommand.notify.rawValue]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleSystemNotify(req)
         }
 
-        register([WinClawChatCommand.push.rawValue]) { [weak self] req in
+        register([OpenClawChatCommand.push.rawValue]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleChatPushInvoke(req)
         }
 
         register([
-            WinClawDeviceCommand.status.rawValue,
-            WinClawDeviceCommand.info.rawValue,
+            OpenClawDeviceCommand.status.rawValue,
+            OpenClawDeviceCommand.info.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleDeviceInvoke(req)
         }
 
         register([
-            WinClawWatchCommand.status.rawValue,
-            WinClawWatchCommand.notify.rawValue,
+            OpenClawWatchCommand.status.rawValue,
+            OpenClawWatchCommand.notify.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleWatchInvoke(req)
         }
 
-        register([WinClawPhotosCommand.latest.rawValue]) { [weak self] req in
+        register([OpenClawPhotosCommand.latest.rawValue]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handlePhotosInvoke(req)
         }
 
         register([
-            WinClawContactsCommand.search.rawValue,
-            WinClawContactsCommand.add.rawValue,
+            OpenClawContactsCommand.search.rawValue,
+            OpenClawContactsCommand.add.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleContactsInvoke(req)
         }
 
         register([
-            WinClawCalendarCommand.events.rawValue,
-            WinClawCalendarCommand.add.rawValue,
+            OpenClawCalendarCommand.events.rawValue,
+            OpenClawCalendarCommand.add.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleCalendarInvoke(req)
         }
 
         register([
-            WinClawRemindersCommand.list.rawValue,
-            WinClawRemindersCommand.add.rawValue,
+            OpenClawRemindersCommand.list.rawValue,
+            OpenClawRemindersCommand.add.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleRemindersInvoke(req)
         }
 
         register([
-            WinClawMotionCommand.activity.rawValue,
-            WinClawMotionCommand.pedometer.rawValue,
+            OpenClawMotionCommand.activity.rawValue,
+            OpenClawMotionCommand.pedometer.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleMotionInvoke(req)
         }
 
         register([
-            WinClawTalkCommand.pttStart.rawValue,
-            WinClawTalkCommand.pttStop.rawValue,
-            WinClawTalkCommand.pttCancel.rawValue,
-            WinClawTalkCommand.pttOnce.rawValue,
+            OpenClawTalkCommand.pttStart.rawValue,
+            OpenClawTalkCommand.pttStop.rawValue,
+            OpenClawTalkCommand.pttCancel.rawValue,
+            OpenClawTalkCommand.pttOnce.rawValue,
         ]) { [weak self] req in
             guard let self else { throw NodeCapabilityRouter.RouterError.handlerUnavailable }
             return try await self.handleTalkInvoke(req)
@@ -1478,9 +1487,9 @@ private extension NodeAppModel {
 
     func handleWatchInvoke(_ req: BridgeInvokeRequest) async throws -> BridgeInvokeResponse {
         switch req.command {
-        case WinClawWatchCommand.status.rawValue:
+        case OpenClawWatchCommand.status.rawValue:
             let status = await self.watchMessagingService.status()
-            let payload = WinClawWatchStatusPayload(
+            let payload = OpenClawWatchStatusPayload(
                 supported: status.supported,
                 paired: status.paired,
                 appInstalled: status.appInstalled,
@@ -1488,32 +1497,33 @@ private extension NodeAppModel {
                 activationState: status.activationState)
             let json = try Self.encodePayload(payload)
             return BridgeInvokeResponse(id: req.id, ok: true, payloadJSON: json)
-        case WinClawWatchCommand.notify.rawValue:
-            let params = try Self.decodeParams(WinClawWatchNotifyParams.self, from: req.paramsJSON)
-            let title = params.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            let body = params.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        case OpenClawWatchCommand.notify.rawValue:
+            let params = try Self.decodeParams(OpenClawWatchNotifyParams.self, from: req.paramsJSON)
+            let normalizedParams = Self.normalizeWatchNotifyParams(params)
+            let title = normalizedParams.title
+            let body = normalizedParams.body
             if title.isEmpty && body.isEmpty {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .invalidRequest,
                         message: "INVALID_REQUEST: empty watch notification"))
             }
             do {
                 let result = try await self.watchMessagingService.sendNotification(
                     id: req.id,
-                    params: params)
+                    params: normalizedParams)
                 if result.queuedForDelivery || !result.deliveredImmediately {
                     let invokeID = req.id
                     Task { @MainActor in
                         await WatchPromptNotificationBridge.scheduleMirroredWatchPromptNotificationIfNeeded(
                             invokeID: invokeID,
-                            params: params,
+                            params: normalizedParams,
                             sendResult: result)
                     }
                 }
-                let payload = WinClawWatchNotifyPayload(
+                let payload = OpenClawWatchNotifyPayload(
                     deliveredImmediately: result.deliveredImmediately,
                     queuedForDelivery: result.queuedForDelivery,
                     transport: result.transport)
@@ -1523,7 +1533,7 @@ private extension NodeAppModel {
                 return BridgeInvokeResponse(
                     id: req.id,
                     ok: false,
-                    error: WinClawNodeError(
+                    error: OpenClawNodeError(
                         code: .unavailable,
                         message: error.localizedDescription))
             }
@@ -1531,13 +1541,13 @@ private extension NodeAppModel {
             return BridgeInvokeResponse(
                 id: req.id,
                 ok: false,
-                error: WinClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
+                error: OpenClawNodeError(code: .invalidRequest, message: "INVALID_REQUEST: unknown command"))
         }
     }
 
-    func locationMode() -> WinClawLocationMode {
+    func locationMode() -> OpenClawLocationMode {
         let raw = UserDefaults.standard.string(forKey: "location.enabledMode") ?? "off"
-        return WinClawLocationMode(rawValue: raw) ?? .off
+        return OpenClawLocationMode(rawValue: raw) ?? .off
     }
 
     func isLocationPreciseEnabled() -> Bool {
@@ -1764,7 +1774,10 @@ private extension NodeAppModel {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     continue
                 }
-                if self.shouldPauseReconnectLoopInBackground(source: "operator_loop") { try? await Task.sleep(nanoseconds: 2_000_000_000); continue }
+                if self.shouldPauseReconnectLoopInBackground(source: "operator_loop") {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    continue
+                }
                 if await self.isOperatorConnected() {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     continue
@@ -1812,7 +1825,7 @@ private extension NodeAppModel {
                             BridgeInvokeResponse(
                                 id: req.id,
                                 ok: false,
-                                error: WinClawNodeError(
+                                error: OpenClawNodeError(
                                     code: .invalidRequest,
                                     message: "INVALID_REQUEST: operator session cannot invoke node commands"))
                         })
@@ -1829,6 +1842,8 @@ private extension NodeAppModel {
         }
     }
 
+    // Legacy reconnect state machine; follow-up refactor needed to split into helpers.
+    // swiftlint:disable:next function_body_length
     func startNodeGatewayLoop(
         url: URL,
         stableID: String,
@@ -1853,7 +1868,10 @@ private extension NodeAppModel {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     continue
                 }
-                if self.shouldPauseReconnectLoopInBackground(source: "node_loop") { try? await Task.sleep(nanoseconds: 2_000_000_000); continue }
+                if self.shouldPauseReconnectLoopInBackground(source: "node_loop") {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    continue
+                }
                 if await self.isGatewayConnected() {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     continue
@@ -1897,7 +1915,10 @@ private extension NodeAppModel {
                                     sessionKey: relayData.sessionKey,
                                     deliveryChannel: relayData.deliveryChannel,
                                     deliveryTo: relayData.deliveryTo))
-                            GatewayDiagnostics.log("gateway connected host=\(url.host ?? "?") scheme=\(url.scheme ?? "?")")
+                            GatewayDiagnostics.log(
+                                "gateway connected host=\(url.host ?? "?") "
+                                    + "scheme=\(url.scheme ?? "?")"
+                            )
                             if let addr = await self.nodeGateway.currentRemoteAddress() {
                                 await MainActor.run { self.gatewayRemoteAddress = addr }
                             }
@@ -1929,7 +1950,7 @@ private extension NodeAppModel {
                                 return BridgeInvokeResponse(
                                     id: req.id,
                                     ok: false,
-                                    error: WinClawNodeError(
+                                    error: OpenClawNodeError(
                                         code: .unavailable,
                                         message: "UNAVAILABLE: node not ready"))
                             }
@@ -1992,9 +2013,11 @@ private extension NodeAppModel {
                             self.gatewayPairingRequestId = requestId
                             if let requestId, !requestId.isEmpty {
                                 self.gatewayStatusText =
-                                    "Pairing required (requestId: \(requestId)). Approve on gateway and return to WinClaw."
+                                    "Pairing required (requestId: \(requestId)). "
+                                        + "Approve on gateway and return to OpenClaw."
                             } else {
-                                self.gatewayStatusText = "Pairing required. Approve on gateway and return to WinClaw."
+                                self.gatewayStatusText =
+                                    "Pairing required. Approve on gateway and return to OpenClaw."
                             }
                         }
                         // Hard stop the underlying WebSocket watchdog reconnects so the UI stays stable and
@@ -2048,7 +2071,7 @@ private extension NodeAppModel {
 
     func legacyClientIdFallback(currentClientId: String, error: Error) -> String? {
         let normalizedClientId = currentClientId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard normalizedClientId == "winclaw-ios" else { return nil }
+        guard normalizedClientId == "openclaw-ios" else { return nil }
         let message = error.localizedDescription.lowercased()
         guard message.contains("invalid connect params"), message.contains("/client/id") else {
             return nil
@@ -2124,8 +2147,8 @@ extension NodeAppModel {
         self.recordShareEvent("Share self-test running…")
 
         let payload = SharedContentPayload(
-            title: "WinClaw Share Self-Test",
-            url: URL(string: "https://winclaw.ai/share-self-test"),
+            title: "OpenClaw Share Self-Test",
+            url: URL(string: "https://openclaw.ai/share-self-test"),
             text: "Validate iOS share->deep-link->gateway forwarding.")
         guard let deepLink = ShareToAgentDeepLink.buildURL(
             from: payload,
@@ -2212,12 +2235,16 @@ extension NodeAppModel {
             key: event.replyId)
         do {
             try await self.sendAgentRequest(link: link)
-            self.watchReplyLogger.info(
-                "watch reply forwarded replyId=\(event.replyId, privacy: .public) action=\(event.actionId, privacy: .public)")
+            let forwardedMessage =
+                "watch reply forwarded replyId=\(event.replyId) "
+                + "action=\(event.actionId)"
+            self.watchReplyLogger.info("\(forwardedMessage, privacy: .public)")
             self.openChatRequestID &+= 1
         } catch {
-            self.watchReplyLogger.error(
-                "watch reply forwarding failed replyId=\(event.replyId, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+            let failedMessage =
+                "watch reply forwarding failed replyId=\(event.replyId) "
+                + "error=\(error.localizedDescription)"
+            self.watchReplyLogger.error("\(failedMessage, privacy: .public)")
             self.queuedWatchReplies.insert(event, at: 0)
         }
     }
@@ -2250,22 +2277,38 @@ extension NodeAppModel {
             self.pushWakeLogger.info("Ignored APNs payload wakeId=\(wakeId, privacy: .public): not silent push")
             return false
         }
-        let pushKind = Self.winclawPushKind(userInfo)
-        self.pushWakeLogger.info(
-            "Silent push received wakeId=\(wakeId, privacy: .public) kind=\(pushKind, privacy: .public) backgrounded=\(self.isBackgrounded, privacy: .public) autoReconnect=\(self.gatewayAutoReconnectEnabled, privacy: .public)")
+        let pushKind = Self.openclawPushKind(userInfo)
+        let receivedMessage =
+            "Silent push received wakeId=\(wakeId) "
+            + "kind=\(pushKind) "
+            + "backgrounded=\(self.isBackgrounded) "
+            + "autoReconnect=\(self.gatewayAutoReconnectEnabled)"
+        self.pushWakeLogger.info("\(receivedMessage, privacy: .public)")
         let result = await self.reconnectGatewaySessionsForSilentPushIfNeeded(wakeId: wakeId)
-        self.pushWakeLogger.info(
-            "Silent push outcome wakeId=\(wakeId, privacy: .public) applied=\(result.applied, privacy: .public) reason=\(result.reason, privacy: .public) durationMs=\(result.durationMs, privacy: .public)")
+        let outcomeMessage =
+            "Silent push outcome wakeId=\(wakeId) "
+            + "applied=\(result.applied) "
+            + "reason=\(result.reason) "
+            + "durationMs=\(result.durationMs)"
+        self.pushWakeLogger.info("\(outcomeMessage, privacy: .public)")
         return result.applied
     }
 
     func handleBackgroundRefreshWake(trigger: String = "bg_app_refresh") async -> Bool {
         let wakeId = Self.makePushWakeAttemptID()
-        self.pushWakeLogger.info(
-            "Background refresh wake received wakeId=\(wakeId, privacy: .public) trigger=\(trigger, privacy: .public) backgrounded=\(self.isBackgrounded, privacy: .public) autoReconnect=\(self.gatewayAutoReconnectEnabled, privacy: .public)")
+        let receivedMessage =
+            "Background refresh wake received wakeId=\(wakeId) "
+            + "trigger=\(trigger) "
+            + "backgrounded=\(self.isBackgrounded) "
+            + "autoReconnect=\(self.gatewayAutoReconnectEnabled)"
+        self.pushWakeLogger.info("\(receivedMessage, privacy: .public)")
         let result = await self.reconnectGatewaySessionsForSilentPushIfNeeded(wakeId: wakeId)
-        self.pushWakeLogger.info(
-            "Background refresh wake outcome wakeId=\(wakeId, privacy: .public) applied=\(result.applied, privacy: .public) reason=\(result.reason, privacy: .public) durationMs=\(result.durationMs, privacy: .public)")
+        let outcomeMessage =
+            "Background refresh wake outcome wakeId=\(wakeId) "
+            + "applied=\(result.applied) "
+            + "reason=\(result.reason) "
+            + "durationMs=\(result.durationMs)"
+        self.pushWakeLogger.info("\(outcomeMessage, privacy: .public)")
         return result.applied
     }
 
@@ -2282,17 +2325,26 @@ extension NodeAppModel {
         if let last = self.lastSignificantLocationWakeAt,
            now.timeIntervalSince(last) < throttleWindowSeconds
         {
-            self.locationWakeLogger.info(
-                "Location wake throttled wakeId=\(wakeId, privacy: .public) elapsedSec=\(now.timeIntervalSince(last), privacy: .public)")
+            let throttledMessage =
+                "Location wake throttled wakeId=\(wakeId) "
+                + "elapsedSec=\(now.timeIntervalSince(last))"
+            self.locationWakeLogger.info("\(throttledMessage, privacy: .public)")
             return
         }
         self.lastSignificantLocationWakeAt = now
 
-        self.locationWakeLogger.info(
-            "Location wake begin wakeId=\(wakeId, privacy: .public) backgrounded=\(self.isBackgrounded, privacy: .public) autoReconnect=\(self.gatewayAutoReconnectEnabled, privacy: .public)")
+        let beginMessage =
+            "Location wake begin wakeId=\(wakeId) "
+            + "backgrounded=\(self.isBackgrounded) "
+            + "autoReconnect=\(self.gatewayAutoReconnectEnabled)"
+        self.locationWakeLogger.info("\(beginMessage, privacy: .public)")
         let result = await self.reconnectGatewaySessionsForSilentPushIfNeeded(wakeId: wakeId)
-        self.locationWakeLogger.info(
-            "Location wake trigger wakeId=\(wakeId, privacy: .public) applied=\(result.applied, privacy: .public) reason=\(result.reason, privacy: .public) durationMs=\(result.durationMs, privacy: .public)")
+        let triggerMessage =
+            "Location wake trigger wakeId=\(wakeId) "
+            + "applied=\(result.applied) "
+            + "reason=\(result.reason) "
+            + "durationMs=\(result.durationMs)"
+        self.locationWakeLogger.info("\(triggerMessage, privacy: .public)")
 
         guard result.applied else { return }
         let connected = await self.waitForGatewayConnection(timeoutMs: 5000, pollMs: 250)
@@ -2372,14 +2424,14 @@ extension NodeAppModel {
         return String(raw.prefix(8))
     }
 
-    private static func winclawPushKind(_ userInfo: [AnyHashable: Any]) -> String {
-        if let payload = userInfo["winclaw"] as? [String: Any],
+    private static func openclawPushKind(_ userInfo: [AnyHashable: Any]) -> String {
+        if let payload = userInfo["openclaw"] as? [String: Any],
            let kind = payload["kind"] as? String
         {
             let trimmed = kind.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty { return trimmed }
         }
-        if let payload = userInfo["winclaw"] as? [AnyHashable: Any],
+        if let payload = userInfo["openclaw"] as? [AnyHashable: Any],
            let kind = payload["kind"] as? String
         {
             let trimmed = kind.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2450,14 +2502,18 @@ extension NodeAppModel {
 extension NodeAppModel {
     private func refreshWakeWordsFromGateway() async {
         do {
-            let data = try await self.operatorGateway.request(method: "voicewake.get", paramsJSON: "{}", timeoutSeconds: 8)
+            let data = try await self.operatorGateway.request(
+                method: "voicewake.get",
+                paramsJSON: "{}",
+                timeoutSeconds: 8
+            )
             guard let triggers = VoiceWakePreferences.decodeGatewayTriggers(from: data) else { return }
             VoiceWakePreferences.saveTriggerWords(triggers)
         } catch {
             if let gatewayError = error as? GatewayResponseError {
                 let lower = gatewayError.message.lowercased()
                 if lower.contains("unauthorized role") || lower.contains("missing scope") {
-                    await self.setGatewayHealthMonitorDisabled(true)
+                    self.setGatewayHealthMonitorDisabled(true)
                     return
                 }
             }
@@ -2512,7 +2568,8 @@ extension NodeAppModel {
         )
 
         if message.count > IOSDeepLinkAgentPolicy.maxMessageChars {
-            self.screen.errorText = "Deep link too large (message exceeds \(IOSDeepLinkAgentPolicy.maxMessageChars) characters)."
+            self.screen.errorText = "Deep link too large (message exceeds "
+                + "\(IOSDeepLinkAgentPolicy.maxMessageChars) characters)."
             self.recordShareEvent("Rejected: message too large (\(message.count) chars).")
             return
         }
@@ -2727,3 +2784,4 @@ extension NodeAppModel {
     }
 }
 #endif
+// swiftlint:enable type_body_length file_length

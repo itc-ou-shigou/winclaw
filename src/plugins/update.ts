@@ -1,11 +1,12 @@
-import fs from "node:fs/promises";
-import type { WinClawConfig } from "../config/config.js";
+import fsSync from "node:fs";
+import path from "node:path";
+import type { OpenClawConfig } from "../config/config.js";
+import { openBoundaryFileSync } from "../infra/boundary-file-read.js";
 import type { UpdateChannel } from "../infra/update-channels.js";
 import { resolveUserPath } from "../utils.js";
-import { discoverWinClawPlugins } from "./discovery.js";
+import { resolveBundledPluginSources } from "./bundled-sources.js";
 import { installPluginFromNpmSpec, resolvePluginInstallDir } from "./install.js";
 import { buildNpmResolutionInstallFields, recordPluginInstall } from "./installs.js";
-import { loadPluginManifest } from "./manifest.js";
 
 export type PluginUpdateLogger = {
   info?: (message: string) => void;
@@ -24,7 +25,7 @@ export type PluginUpdateOutcome = {
 };
 
 export type PluginUpdateSummary = {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   changed: boolean;
   outcomes: PluginUpdateOutcome[];
 };
@@ -47,15 +48,9 @@ export type PluginChannelSyncSummary = {
 };
 
 export type PluginChannelSyncResult = {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   changed: boolean;
   summary: PluginChannelSyncSummary;
-};
-
-type BundledPluginSource = {
-  pluginId: string;
-  localPath: string;
-  npmSpec?: string;
 };
 
 type InstallIntegrityDrift = {
@@ -69,47 +64,24 @@ type InstallIntegrityDrift = {
 };
 
 async function readInstalledPackageVersion(dir: string): Promise<string | undefined> {
+  const manifestPath = path.join(dir, "package.json");
+  const opened = openBoundaryFileSync({
+    absolutePath: manifestPath,
+    rootPath: dir,
+    boundaryLabel: "installed plugin directory",
+  });
+  if (!opened.ok) {
+    return undefined;
+  }
   try {
-    const raw = await fs.readFile(`${dir}/package.json`, "utf-8");
+    const raw = fsSync.readFileSync(opened.fd, "utf-8");
     const parsed = JSON.parse(raw) as { version?: unknown };
     return typeof parsed.version === "string" ? parsed.version : undefined;
   } catch {
     return undefined;
+  } finally {
+    fsSync.closeSync(opened.fd);
   }
-}
-
-function resolveBundledPluginSources(params: {
-  workspaceDir?: string;
-}): Map<string, BundledPluginSource> {
-  const discovery = discoverWinClawPlugins({ workspaceDir: params.workspaceDir });
-  const bundled = new Map<string, BundledPluginSource>();
-
-  for (const candidate of discovery.candidates) {
-    if (candidate.origin !== "bundled") {
-      continue;
-    }
-    const manifest = loadPluginManifest(candidate.rootDir);
-    if (!manifest.ok) {
-      continue;
-    }
-    const pluginId = manifest.manifest.id;
-    if (bundled.has(pluginId)) {
-      continue;
-    }
-
-    const npmSpec =
-      candidate.packageManifest?.install?.npmSpec?.trim() ||
-      candidate.packageName?.trim() ||
-      undefined;
-
-    bundled.set(pluginId, {
-      pluginId,
-      localPath: candidate.rootDir,
-      npmSpec,
-    });
-  }
-
-  return bundled;
 }
 
 function pathsEqual(left?: string, right?: string): boolean {
@@ -184,7 +156,7 @@ function createPluginUpdateIntegrityDriftHandler(params: {
 }
 
 export async function updateNpmInstalledPlugins(params: {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   logger?: PluginUpdateLogger;
   pluginIds?: string[];
   skipIds?: Set<string>;
@@ -373,7 +345,7 @@ export async function updateNpmInstalledPlugins(params: {
 }
 
 export async function syncPluginsForUpdateChannel(params: {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   channel: UpdateChannel;
   workspaceDir?: string;
   logger?: PluginUpdateLogger;

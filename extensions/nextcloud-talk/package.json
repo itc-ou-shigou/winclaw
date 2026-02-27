@@ -1,12 +1,9 @@
 {
-  "name": "@winclaw/nextcloud-talk",
-  "version": "2026.2.23",
-  "description": "WinClaw Nextcloud Talk channel plugin",
+  "name": "@openclaw/nextcloud-talk",
+  "version": "2026.2.26",
+  "description": "OpenClaw Nextcloud Talk channel plugin",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
-  "winclaw": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -25,7 +22,7 @@
       "quickstartAllowFrom": true
     },
     "install": {
-      "npmSpec": "@winclaw/nextcloud-talk",
+      "npmSpec": "@openclaw/nextcloud-talk",
       "localPath": "extensions/nextcloud-talk",
       "defaultChoice": "npm"
     }

@@ -3,15 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SubagentRunRecord } from "../../agents/subagent-registry.js";
-import type { WinClawConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   getAbortMemory,
   getAbortMemorySizeForTest,
   isAbortRequestText,
   isAbortTrigger,
   resetAbortMemoryForTest,
+  resolveAbortCutoffFromContext,
   resolveSessionEntryForKey,
   setAbortMemory,
+  shouldSkipMessageByAbortCutoff,
   tryFastAbortFromMessage,
 } from "./abort.js";
 import { enqueueFollowupRun, getFollowupQueueDepth, type FollowupRun } from "./queue.js";
@@ -61,14 +63,14 @@ describe("abort detection", () => {
     sessionIdsByKey?: Record<string, string>;
     nowMs?: number;
   }) {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-abort-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-abort-"));
     const storePath = path.join(root, "sessions.json");
     const cfg = {
       session: { store: storePath },
       ...(typeof params?.commandsTextEnabled === "boolean"
         ? { commands: { text: params.commandsTextEnabled } }
         : {}),
-    } as WinClawConfig;
+    } as OpenClawConfig;
     if (params?.sessionIdsByKey) {
       await writeSessionStore(storePath, params.sessionIdsByKey, params.nowMs);
     }
@@ -76,10 +78,13 @@ describe("abort detection", () => {
   }
 
   async function runStopCommand(params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     sessionKey: string;
     from: string;
     to: string;
+    targetSessionKey?: string;
+    messageSid?: string;
+    timestamp?: number;
   }) {
     return tryFastAbortFromMessage({
       ctx: buildTestCtx({
@@ -91,6 +96,9 @@ describe("abort detection", () => {
         Surface: "telegram",
         From: params.from,
         To: params.to,
+        ...(params.targetSessionKey ? { CommandTargetSessionKey: params.targetSessionKey } : {}),
+        ...(params.messageSid ? { MessageSid: params.messageSid } : {}),
+        ...(typeof params.timestamp === "number" ? { Timestamp: params.timestamp } : {}),
       }),
       cfg: params.cfg,
     });
@@ -101,9 +109,9 @@ describe("abort detection", () => {
   });
 
   it("triggerBodyNormalized extracts /stop from RawBody for abort detection", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-abort-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-abort-"));
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as WinClawConfig;
+    const cfg = { session: { store: storePath } } as OpenClawConfig;
 
     const groupMessageCtx = {
       Body: `[Context]\nJake: /stop\n[from: Jake]`,
@@ -130,8 +138,8 @@ describe("abort detection", () => {
       "wait",
       "exit",
       "interrupt",
-      "stop winclaw",
-      "winclaw stop",
+      "stop openclaw",
+      "openclaw stop",
       "stop action",
       "stop current action",
       "stop run",
@@ -142,10 +150,11 @@ describe("abort detection", () => {
       "stop dont do anything",
       "stop do not do anything",
       "stop doing anything",
+      "do not do that",
       "please stop",
       "stop please",
-      "STOP WINCLAW",
-      "stop winclaw!!!",
+      "STOP OPENCLAW",
+      "stop openclaw!!!",
       "stop don’t do anything",
       "detente",
       "detén",
@@ -172,27 +181,33 @@ describe("abort detection", () => {
     }
 
     expect(isAbortTrigger("hello")).toBe(false);
-    expect(isAbortTrigger("do not do that")).toBe(false);
+    expect(isAbortTrigger("please do not do that")).toBe(false);
     // /stop is NOT matched by isAbortTrigger - it's handled separately.
     expect(isAbortTrigger("/stop")).toBe(false);
   });
 
   it("isAbortRequestText aligns abort command semantics", () => {
     expect(isAbortRequestText("/stop")).toBe(true);
+    expect(isAbortRequestText("/STOP")).toBe(true);
     expect(isAbortRequestText("/stop!!!")).toBe(true);
+    expect(isAbortRequestText("/Stop!!!")).toBe(true);
     expect(isAbortRequestText("stop")).toBe(true);
+    expect(isAbortRequestText("Stop")).toBe(true);
+    expect(isAbortRequestText("STOP")).toBe(true);
     expect(isAbortRequestText("stop action")).toBe(true);
-    expect(isAbortRequestText("stop winclaw!!!")).toBe(true);
+    expect(isAbortRequestText("stop openclaw!!!")).toBe(true);
     expect(isAbortRequestText("やめて")).toBe(true);
     expect(isAbortRequestText("остановись")).toBe(true);
     expect(isAbortRequestText("halt")).toBe(true);
     expect(isAbortRequestText("stopp")).toBe(true);
     expect(isAbortRequestText("pare")).toBe(true);
     expect(isAbortRequestText(" توقف ")).toBe(true);
-    expect(isAbortRequestText("/stop@winclaw_bot", { botUsername: "winclaw_bot" })).toBe(true);
+    expect(isAbortRequestText("/stop@openclaw_bot", { botUsername: "openclaw_bot" })).toBe(true);
+    expect(isAbortRequestText("/Stop@openclaw_bot", { botUsername: "openclaw_bot" })).toBe(true);
 
     expect(isAbortRequestText("/status")).toBe(false);
-    expect(isAbortRequestText("do not do that")).toBe(false);
+    expect(isAbortRequestText("do not do that")).toBe(true);
+    expect(isAbortRequestText("please do not do that")).toBe(false);
     expect(isAbortRequestText("/abort")).toBe(false);
   });
 
@@ -212,6 +227,62 @@ describe("abort detection", () => {
     expect(getAbortMemorySizeForTest()).toBe(2000);
     expect(getAbortMemory("session-0")).toBeUndefined();
     expect(getAbortMemory("session-2104")).toBe(true);
+  });
+
+  it("extracts abort cutoff metadata from context", () => {
+    expect(
+      resolveAbortCutoffFromContext(
+        buildTestCtx({
+          MessageSid: "42",
+          Timestamp: 123,
+        }),
+      ),
+    ).toEqual({
+      messageSid: "42",
+      timestamp: 123,
+    });
+  });
+
+  it("treats numeric message IDs at or before cutoff as stale", () => {
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffMessageSid: "200",
+        messageSid: "199",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffMessageSid: "200",
+        messageSid: "200",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffMessageSid: "200",
+        messageSid: "201",
+      }),
+    ).toBe(false);
+  });
+
+  it("falls back to timestamp cutoff when message IDs are unavailable", () => {
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffTimestamp: 2000,
+        timestamp: 1999,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffTimestamp: 2000,
+        timestamp: 2000,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipMessageByAbortCutoff({
+        cutoffTimestamp: 2000,
+        timestamp: 2001,
+      }),
+    ).toBe(false);
   });
 
   it("resolves session entry when key exists in store", () => {
@@ -282,6 +353,64 @@ describe("abort detection", () => {
     expect(result.handled).toBe(true);
     expect(getFollowupQueueDepth(sessionKey)).toBe(0);
     expect(commandQueueMocks.clearCommandLane).toHaveBeenCalledWith(`session:${sessionKey}`);
+  });
+
+  it("persists abort cutoff metadata on /stop when command and target session match", async () => {
+    const sessionKey = "telegram:123";
+    const sessionId = "session-123";
+    const { storePath, cfg } = await createAbortConfig({
+      sessionIdsByKey: { [sessionKey]: sessionId },
+    });
+
+    const result = await runStopCommand({
+      cfg,
+      sessionKey,
+      from: "telegram:123",
+      to: "telegram:123",
+      messageSid: "55",
+      timestamp: 1234567890000,
+    });
+
+    expect(result.handled).toBe(true);
+    const store = JSON.parse(await fs.readFile(storePath, "utf8")) as Record<string, unknown>;
+    const entry = store[sessionKey] as {
+      abortedLastRun?: boolean;
+      abortCutoffMessageSid?: string;
+      abortCutoffTimestamp?: number;
+    };
+    expect(entry.abortedLastRun).toBe(true);
+    expect(entry.abortCutoffMessageSid).toBe("55");
+    expect(entry.abortCutoffTimestamp).toBe(1234567890000);
+  });
+
+  it("does not persist cutoff metadata when native /stop targets a different session", async () => {
+    const slashSessionKey = "telegram:slash:123";
+    const targetSessionKey = "agent:main:telegram:group:123";
+    const targetSessionId = "session-target";
+    const { storePath, cfg } = await createAbortConfig({
+      sessionIdsByKey: { [targetSessionKey]: targetSessionId },
+    });
+
+    const result = await runStopCommand({
+      cfg,
+      sessionKey: slashSessionKey,
+      from: "telegram:123",
+      to: "telegram:123",
+      targetSessionKey,
+      messageSid: "999",
+      timestamp: 1234567890000,
+    });
+
+    expect(result.handled).toBe(true);
+    const store = JSON.parse(await fs.readFile(storePath, "utf8")) as Record<string, unknown>;
+    const entry = store[targetSessionKey] as {
+      abortedLastRun?: boolean;
+      abortCutoffMessageSid?: string;
+      abortCutoffTimestamp?: number;
+    };
+    expect(entry.abortedLastRun).toBe(true);
+    expect(entry.abortCutoffMessageSid).toBeUndefined();
+    expect(entry.abortCutoffTimestamp).toBeUndefined();
   });
 
   it("fast-abort stops active subagent runs for requester session", async () => {

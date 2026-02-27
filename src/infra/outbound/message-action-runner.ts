@@ -12,7 +12,10 @@ import type {
   ChannelMessageActionName,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.js";
-import type { WinClawConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
+import { buildChannelAccountBindings } from "../../routing/bindings.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 import {
   isDeliverableMessageChannel,
   normalizeMessageChannel,
@@ -27,14 +30,14 @@ import {
 import { applyTargetToParams } from "./channel-target.js";
 import type { OutboundSendDeps } from "./deliver.js";
 import {
-  hydrateSendAttachmentParams,
-  hydrateSetGroupIconParams,
+  hydrateAttachmentParamsForAction,
   normalizeSandboxMediaList,
   normalizeSandboxMediaParams,
   parseButtonsParam,
   parseCardParam,
   parseComponentsParam,
   readBooleanParam,
+  resolveAttachmentMediaPolicy,
   resolveSlackAutoThreadId,
   resolveTelegramAutoThreadId,
 } from "./message-action-params.js";
@@ -89,7 +92,7 @@ function resolveAndApplyOutboundThreadId(
 }
 
 export type RunMessageActionParams = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   action: ChannelMessageActionName;
   params: Record<string, unknown>;
   defaultAccountId?: string;
@@ -183,7 +186,7 @@ function applyCrossContextMessageDecoration({
 }
 
 async function maybeApplyCrossContextMarker(params: {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   target: string;
@@ -214,7 +217,7 @@ async function maybeApplyCrossContextMarker(params: {
   });
 }
 
-async function resolveChannel(cfg: WinClawConfig, params: Record<string, unknown>) {
+async function resolveChannel(cfg: OpenClawConfig, params: Record<string, unknown>) {
   const channelHint = readStringParam(params, "channel");
   const selection = await resolveMessageChannelSelection({
     cfg,
@@ -224,7 +227,7 @@ async function resolveChannel(cfg: WinClawConfig, params: Record<string, unknown
 }
 
 async function resolveActionTarget(params: {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   action: ChannelMessageActionName;
   args: Record<string, unknown>;
@@ -269,7 +272,7 @@ async function resolveActionTarget(params: {
 }
 
 type ResolvedActionContext = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   params: Record<string, unknown>;
   channel: ChannelId;
   accountId?: string | null;
@@ -752,33 +755,37 @@ export async function runMessageAction(
   }
 
   const channel = await resolveChannel(cfg, params);
-  const accountId = readStringParam(params, "accountId") ?? input.defaultAccountId;
+  let accountId = readStringParam(params, "accountId") ?? input.defaultAccountId;
+  if (!accountId && resolvedAgentId) {
+    const byAgent = buildChannelAccountBindings(cfg).get(channel);
+    const boundAccountIds = byAgent?.get(normalizeAgentId(resolvedAgentId));
+    if (boundAccountIds && boundAccountIds.length > 0) {
+      accountId = boundAccountIds[0];
+    }
+  }
   if (accountId) {
     params.accountId = accountId;
   }
   const dryRun = Boolean(input.dryRun ?? readBooleanParam(params, "dryRun"));
+  const mediaLocalRoots = getAgentScopedMediaLocalRoots(cfg, resolvedAgentId);
+  const mediaPolicy = resolveAttachmentMediaPolicy({
+    sandboxRoot: input.sandboxRoot,
+    mediaLocalRoots,
+  });
 
   await normalizeSandboxMediaParams({
     args: params,
-    sandboxRoot: input.sandboxRoot,
+    mediaPolicy,
   });
 
-  await hydrateSendAttachmentParams({
+  await hydrateAttachmentParamsForAction({
     cfg,
     channel,
     accountId,
     args: params,
     action,
     dryRun,
-  });
-
-  await hydrateSetGroupIconParams({
-    cfg,
-    channel,
-    accountId,
-    args: params,
-    action,
-    dryRun,
+    mediaPolicy,
   });
 
   const resolvedTarget = await resolveActionTarget({

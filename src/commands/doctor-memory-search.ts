@@ -3,17 +3,17 @@ import { resolveAgentDir, resolveDefaultAgentId } from "../agents/agent-scope.js
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
 import { resolveApiKeyForProvider } from "../agents/model-auth.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { WinClawConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveMemoryBackendConfig } from "../memory/backend-config.js";
 import { note } from "../terminal/note.js";
 import { resolveUserPath } from "../utils.js";
 
 /**
  * Check whether memory search has a usable embedding provider.
- * Runs as part of `winclaw doctor` — config-only, no network calls.
+ * Runs as part of `openclaw doctor` — config-only, no network calls.
  */
 export async function noteMemorySearchHealth(
-  cfg: WinClawConfig,
+  cfg: OpenClawConfig,
   opts?: {
     gatewayMemoryProbe?: {
       checked: boolean;
@@ -51,9 +51,9 @@ export async function noteMemorySearchHealth(
           "",
           "Fix (pick one):",
           `- Install node-llama-cpp and set a local model path in config`,
-          `- Switch to a remote provider: ${formatCliCommand("winclaw config set agents.defaults.memorySearch.provider openai")}`,
+          `- Switch to a remote provider: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.provider openai")}`,
           "",
-          `Verify: ${formatCliCommand("winclaw memory status --deep")}`,
+          `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
         ].join("\n"),
         "Memory search",
       );
@@ -68,7 +68,7 @@ export async function noteMemorySearchHealth(
         [
           `Memory search provider is set to "${resolved.provider}" but the API key was not found in the CLI environment.`,
           "The running gateway reports memory embeddings are ready for the default agent.",
-          `Verify: ${formatCliCommand("winclaw memory status --deep")}`,
+          `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
         ].join("\n"),
         "Memory search",
       );
@@ -84,10 +84,10 @@ export async function noteMemorySearchHealth(
         "",
         "Fix (pick one):",
         `- Set ${envVar} in your environment`,
-        `- Configure credentials: ${formatCliCommand("winclaw configure")}`,
-        `- To disable: ${formatCliCommand("winclaw config set agents.defaults.memorySearch.enabled false")}`,
+        `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
+        `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
         "",
-        `Verify: ${formatCliCommand("winclaw memory status --deep")}`,
+        `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
       ].join("\n"),
       "Memory search",
     );
@@ -109,7 +109,7 @@ export async function noteMemorySearchHealth(
       [
         'Memory search provider is set to "auto" but the API key was not found in the CLI environment.',
         "The running gateway reports memory embeddings are ready for the default agent.",
-        `Verify: ${formatCliCommand("winclaw memory status --deep")}`,
+        `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
       ].join("\n"),
       "Memory search",
     );
@@ -125,11 +125,11 @@ export async function noteMemorySearchHealth(
       "",
       "Fix (pick one):",
       "- Set OPENAI_API_KEY, GEMINI_API_KEY, VOYAGE_API_KEY, or MISTRAL_API_KEY in your environment",
-      `- Configure credentials: ${formatCliCommand("winclaw configure")}`,
+      `- Configure credentials: ${formatCliCommand("openclaw configure --section model")}`,
       `- For local embeddings: configure agents.defaults.memorySearch.provider and local model path`,
-      `- To disable: ${formatCliCommand("winclaw config set agents.defaults.memorySearch.enabled false")}`,
+      `- To disable: ${formatCliCommand("openclaw config set agents.defaults.memorySearch.enabled false")}`,
       "",
-      `Verify: ${formatCliCommand("winclaw memory status --deep")}`,
+      `Verify: ${formatCliCommand("openclaw memory status --deep")}`,
     ].join("\n"),
     "Memory search",
   );
@@ -156,7 +156,7 @@ function hasLocalEmbeddings(local: { modelPath?: string }): boolean {
 
 async function hasApiKeyForProvider(
   provider: "openai" | "gemini" | "voyage" | "mistral",
-  cfg: WinClawConfig,
+  cfg: OpenClawConfig,
   agentDir: string,
 ): Promise<boolean> {
   // Map embedding provider names to model-auth provider names

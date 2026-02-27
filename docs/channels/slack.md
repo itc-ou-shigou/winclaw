@@ -34,7 +34,7 @@ Status: production-ready for DMs + channels via Slack app integrations. Default 
         - install app and copy **Bot Token** (`xoxb-...`)
       </Step>
 
-      <Step title="Configure WinClaw">
+      <Step title="Configure OpenClaw">
 
 ```json5
 {
@@ -74,7 +74,7 @@ SLACK_BOT_TOKEN=xoxb-...
       <Step title="Start gateway">
 
 ```bash
-winclaw gateway
+openclaw gateway
 ```
 
       </Step>
@@ -92,7 +92,7 @@ winclaw gateway
 
       </Step>
 
-      <Step title="Configure WinClaw HTTP mode">
+      <Step title="Configure OpenClaw HTTP mode">
 
 ```json5
 {
@@ -152,7 +152,13 @@ For actions/directory reads, user token can be preferred when configured. For wr
     - `dm.groupEnabled` (group DMs default false)
     - `dm.groupChannels` (optional MPIM allowlist)
 
-    Pairing in DMs uses `winclaw pairing approve slack <code>`.
+    Multi-account precedence:
+
+    - `channels.slack.accounts.default.allowFrom` applies only to the `default` account.
+    - Named accounts inherit `channels.slack.allowFrom` when their own `allowFrom` is unset.
+    - Named accounts do not inherit `channels.slack.accounts.default.allowFrom`.
+
+    Pairing in DMs uses `openclaw pairing approve slack <code>`.
 
   </Tab>
 
@@ -214,7 +220,7 @@ For actions/directory reads, user token can be preferred when configured. For wr
 Default slash command settings:
 
 - `enabled: false`
-- `name: "winclaw"`
+- `name: "openclaw"`
 - `sessionPrefix: "slack:slash"`
 - `ephemeral: true`
 
@@ -302,7 +308,7 @@ Available action groups in current Slack tooling:
 
 ## Ack reactions
 
-`ackReaction` sends an acknowledgement emoji while WinClaw is processing an inbound message.
+`ackReaction` sends an acknowledgement emoji while OpenClaw is processing an inbound message.
 
 Resolution order:
 
@@ -324,12 +330,12 @@ Notes:
 ```json
 {
   "display_information": {
-    "name": "WinClaw",
-    "description": "Slack connector for WinClaw"
+    "name": "OpenClaw",
+    "description": "Slack connector for OpenClaw"
   },
   "features": {
     "bot_user": {
-      "display_name": "WinClaw",
+      "display_name": "OpenClaw",
       "always_online": false
     },
     "app_home": {
@@ -338,8 +344,8 @@ Notes:
     },
     "slash_commands": [
       {
-        "command": "/winclaw",
-        "description": "Send a message to WinClaw",
+        "command": "/openclaw",
+        "description": "Send a message to OpenClaw",
         "should_escape": false
       }
     ]
@@ -419,9 +425,9 @@ Notes:
     Useful commands:
 
 ```bash
-winclaw channels status --probe
-winclaw logs --follow
-winclaw doctor
+openclaw channels status --probe
+openclaw logs --follow
+openclaw doctor
 ```
 
   </Accordion>
@@ -434,7 +440,7 @@ winclaw doctor
     - pairing approvals / allowlist entries
 
 ```bash
-winclaw pairing list slack
+openclaw pairing list slack
 ```
 
   </Accordion>
@@ -466,7 +472,7 @@ winclaw pairing list slack
 
 ## Text streaming
 
-WinClaw supports Slack native text streaming via the Agents and AI Apps API.
+OpenClaw supports Slack native text streaming via the Agents and AI Apps API.
 
 `channels.slack.streaming` controls live preview behavior:
 
@@ -503,7 +509,7 @@ Legacy keys:
 - Later text chunks append to the same stream (`chat.appendStream`).
 - End of reply finalizes stream (`chat.stopStream`).
 - Media and non-text payloads fall back to normal delivery.
-- If streaming fails mid-reply, WinClaw falls back to normal delivery for remaining payloads.
+- If streaming fails mid-reply, OpenClaw falls back to normal delivery for remaining payloads.
 
 ## Configuration reference pointers
 

@@ -1,4 +1,4 @@
-package ai.winclaw.android
+package ai.openclaw.android
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -29,7 +29,7 @@ class NodeForegroundService : Service() {
   override fun onCreate() {
     super.onCreate()
     ensureChannel()
-    val initial = buildNotification(title = "WinClaw Node", text = "Starting…")
+    val initial = buildNotification(title = "OpenClaw Node", text = "Starting…")
     startForegroundWithTypes(notification = initial, requiresMic = false)
 
     val runtime = (application as NodeApp).runtime
@@ -39,22 +39,22 @@ class NodeForegroundService : Service() {
           runtime.statusText,
           runtime.serverName,
           runtime.isConnected,
-          runtime.voiceWakeMode,
-          runtime.voiceWakeIsListening,
-        ) { status, server, connected, voiceMode, voiceListening ->
-          Quint(status, server, connected, voiceMode, voiceListening)
-        }.collect { (status, server, connected, voiceMode, voiceListening) ->
-          val title = if (connected) "WinClaw Node · Connected" else "WinClaw Node"
-          val voiceSuffix =
-            if (voiceMode == VoiceWakeMode.Always) {
-              if (voiceListening) " · Voice Wake: Listening" else " · Voice Wake: Paused"
+          runtime.micEnabled,
+          runtime.micIsListening,
+        ) { status, server, connected, micEnabled, micListening ->
+          Quint(status, server, connected, micEnabled, micListening)
+        }.collect { (status, server, connected, micEnabled, micListening) ->
+          val title = if (connected) "OpenClaw Node · Connected" else "OpenClaw Node"
+          val micSuffix =
+            if (micEnabled) {
+              if (micListening) " · Mic: Listening" else " · Mic: Pending"
             } else {
               ""
             }
-          val text = (server?.let { "$status · $it" } ?: status) + voiceSuffix
+          val text = (server?.let { "$status · $it" } ?: status) + micSuffix
 
           val requiresMic =
-            voiceMode == VoiceWakeMode.Always && hasRecordAudioPermission()
+            micEnabled && hasRecordAudioPermission()
           startForegroundWithTypes(
             notification = buildNotification(title = title, text = text),
             requiresMic = requiresMic,
@@ -91,7 +91,7 @@ class NodeForegroundService : Service() {
         "Connection",
         NotificationManager.IMPORTANCE_LOW,
       ).apply {
-        description = "WinClaw node connection status"
+        description = "OpenClaw node connection status"
         setShowBadge(false)
       }
     mgr.createNotificationChannel(channel)
@@ -163,7 +163,7 @@ class NodeForegroundService : Service() {
     private const val CHANNEL_ID = "connection"
     private const val NOTIFICATION_ID = 1
 
-    private const val ACTION_STOP = "ai.winclaw.android.action.STOP"
+    private const val ACTION_STOP = "ai.openclaw.android.action.STOP"
 
     fun start(context: Context) {
       val intent = Intent(context, NodeForegroundService::class.java)

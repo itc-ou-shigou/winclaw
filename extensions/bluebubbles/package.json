@@ -1,12 +1,9 @@
 {
-  "name": "@winclaw/bluebubbles",
-  "version": "2026.2.23",
-  "description": "WinClaw BlueBubbles channel plugin",
+  "name": "@openclaw/bluebubbles",
+  "version": "2026.2.26",
+  "description": "OpenClaw BlueBubbles channel plugin",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
-  "winclaw": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -28,7 +25,7 @@
       "order": 75
     },
     "install": {
-      "npmSpec": "@winclaw/bluebubbles",
+      "npmSpec": "@openclaw/bluebubbles",
       "localPath": "extensions/bluebubbles",
       "defaultChoice": "npm"
     }

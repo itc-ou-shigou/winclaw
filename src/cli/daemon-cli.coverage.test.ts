@@ -138,7 +138,7 @@ describe("daemon-cli coverage", () => {
         WINCLAW_CONFIG_PATH: "/tmp/winclaw-daemon-state/winclaw.json",
         WINCLAW_GATEWAY_PORT: "19001",
       },
-      sourcePath: "/tmp/bot.molt.gateway.plist",
+      sourcePath: "/tmp/ai.openclaw.gateway.plist",
     });
 
     await runDaemonCommand(["daemon", "status", "--json"]);

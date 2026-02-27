@@ -1,13 +1,10 @@
 {
-  "name": "@winclaw/google-gemini-cli-auth",
-  "version": "2026.2.23",
+  "name": "@openclaw/google-gemini-cli-auth",
+  "version": "2026.2.26",
   "private": true,
-  "description": "WinClaw Gemini CLI OAuth provider plugin",
+  "description": "OpenClaw Gemini CLI OAuth provider plugin",
   "type": "module",
-  "devDependencies": {
-    "winclaw": "workspace:*"
-  },
-  "winclaw": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

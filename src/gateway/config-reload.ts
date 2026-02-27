@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import chokidar from "chokidar";
 import { type ChannelId, listChannelPlugins } from "../channels/plugins/index.js";
-import type { WinClawConfig, ConfigFileSnapshot, GatewayReloadMode } from "../config/config.js";
+import type { OpenClawConfig, ConfigFileSnapshot, GatewayReloadMode } from "../config/config.js";
 import { getActivePluginRegistry } from "../plugins/runtime.js";
 import { isPlainObject } from "../utils.js";
 
@@ -82,6 +82,7 @@ const BASE_RELOAD_RULES_TAIL: ReloadRule[] = [
   { prefix: "session", kind: "none" },
   { prefix: "talk", kind: "none" },
   { prefix: "skills", kind: "none" },
+  { prefix: "secrets", kind: "none" },
   { prefix: "plugins", kind: "restart" },
   { prefix: "ui", kind: "none" },
   { prefix: "gateway", kind: "restart" },
@@ -162,7 +163,7 @@ export function diffConfigPaths(prev: unknown, next: unknown, prefix = ""): stri
   return [prefix || "<root>"];
 }
 
-export function resolveGatewayReloadSettings(cfg: WinClawConfig): GatewayReloadSettings {
+export function resolveGatewayReloadSettings(cfg: OpenClawConfig): GatewayReloadSettings {
   const rawMode = cfg.gateway?.reload?.mode;
   const mode =
     rawMode === "off" || rawMode === "restart" || rawMode === "hot" || rawMode === "hybrid"
@@ -252,10 +253,10 @@ export type GatewayConfigReloader = {
 };
 
 export function startGatewayConfigReloader(opts: {
-  initialConfig: WinClawConfig;
+  initialConfig: OpenClawConfig;
   readSnapshot: () => Promise<ConfigFileSnapshot>;
-  onHotReload: (plan: GatewayReloadPlan, nextConfig: WinClawConfig) => Promise<void>;
-  onRestart: (plan: GatewayReloadPlan, nextConfig: WinClawConfig) => void;
+  onHotReload: (plan: GatewayReloadPlan, nextConfig: OpenClawConfig) => Promise<void>;
+  onRestart: (plan: GatewayReloadPlan, nextConfig: OpenClawConfig) => void | Promise<void>;
   log: {
     info: (msg: string) => void;
     warn: (msg: string) => void;
@@ -286,12 +287,21 @@ export function startGatewayConfigReloader(opts: {
   const schedule = () => {
     scheduleAfter(settings.debounceMs);
   };
-  const queueRestart = (plan: GatewayReloadPlan, nextConfig: WinClawConfig) => {
+  const queueRestart = (plan: GatewayReloadPlan, nextConfig: OpenClawConfig) => {
     if (restartQueued) {
       return;
     }
     restartQueued = true;
-    opts.onRestart(plan, nextConfig);
+    void (async () => {
+      try {
+        await opts.onRestart(plan, nextConfig);
+      } catch (err) {
+        // Restart checks can fail (for example unresolved SecretRefs). Keep the
+        // reloader alive and allow a future change to retry restart scheduling.
+        restartQueued = false;
+        opts.log.error(`config restart failed: ${String(err)}`);
+      }
+    })();
   };
 
   const handleMissingSnapshot = (snapshot: ConfigFileSnapshot): boolean => {
@@ -320,7 +330,7 @@ export function startGatewayConfigReloader(opts: {
     return true;
   };
 
-  const applySnapshot = async (nextConfig: WinClawConfig) => {
+  const applySnapshot = async (nextConfig: OpenClawConfig) => {
     const changedPaths = diffConfigPaths(currentConfig, nextConfig);
     currentConfig = nextConfig;
     settings = resolveGatewayReloadSettings(nextConfig);

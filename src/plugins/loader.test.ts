@@ -4,13 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { withEnv } from "../test-utils/env.js";
-import { loadWinClawPlugins } from "./loader.js";
+import { __testing, loadOpenClawPlugins } from "./loader.js";
 
 type TempPlugin = { dir: string; file: string; id: string };
 
-const fixtureRoot = path.join(os.tmpdir(), `winclaw-plugin-${randomUUID()}`);
+const fixtureRoot = path.join(os.tmpdir(), `openclaw-plugin-${randomUUID()}`);
 let tempDirIndex = 0;
-const prevBundledDir = process.env.WINCLAW_BUNDLED_PLUGINS_DIR;
+const prevBundledDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
 const EMPTY_PLUGIN_SCHEMA = { type: "object", additionalProperties: false, properties: {} };
 const BUNDLED_TELEGRAM_PLUGIN_BODY = `export default { id: "telegram", register(api) {
   api.registerChannel({
@@ -50,7 +50,7 @@ function writePlugin(params: {
   const file = path.join(dir, filename);
   fs.writeFileSync(file, params.body, "utf-8");
   fs.writeFileSync(
-    path.join(dir, "winclaw.plugin.json"),
+    path.join(dir, "openclaw.plugin.json"),
     JSON.stringify(
       {
         id: params.id,
@@ -84,7 +84,7 @@ function loadBundledMemoryPluginRegistry(options?: {
           name: options.packageMeta.name,
           version: options.packageMeta.version,
           description: options.packageMeta.description,
-          winclaw: { extensions: ["./index.js"] },
+          openclaw: { extensions: ["./index.js"] },
         },
         null,
         2,
@@ -100,9 +100,9 @@ function loadBundledMemoryPluginRegistry(options?: {
     dir: pluginDir,
     filename: pluginFilename,
   });
-  process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
 
-  return loadWinClawPlugins({
+  return loadOpenClawPlugins({
     cache: false,
     config: {
       plugins: {
@@ -122,10 +122,10 @@ function setupBundledTelegramPlugin() {
     dir: bundledDir,
     filename: "telegram.js",
   });
-  process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
 }
 
-function expectTelegramLoaded(registry: ReturnType<typeof loadWinClawPlugins>) {
+function expectTelegramLoaded(registry: ReturnType<typeof loadOpenClawPlugins>) {
   const telegram = registry.plugins.find((entry) => entry.id === "telegram");
   expect(telegram?.status).toBe("loaded");
   expect(registry.channels.some((entry) => entry.plugin.id === "telegram")).toBe(true);
@@ -133,9 +133,9 @@ function expectTelegramLoaded(registry: ReturnType<typeof loadWinClawPlugins>) {
 
 afterEach(() => {
   if (prevBundledDir === undefined) {
-    delete process.env.WINCLAW_BUNDLED_PLUGINS_DIR;
+    delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
   } else {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = prevBundledDir;
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = prevBundledDir;
   }
 });
 
@@ -147,7 +147,7 @@ afterAll(() => {
   }
 });
 
-describe("loadWinClawPlugins", () => {
+describe("loadOpenClawPlugins", () => {
   it("disables bundled plugins by default", () => {
     const bundledDir = makeTempDir();
     writePlugin({
@@ -156,9 +156,9 @@ describe("loadWinClawPlugins", () => {
       dir: bundledDir,
       filename: "bundled.js",
     });
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -170,7 +170,7 @@ describe("loadWinClawPlugins", () => {
     const bundled = registry.plugins.find((entry) => entry.id === "bundled");
     expect(bundled?.status).toBe("disabled");
 
-    const enabledRegistry = loadWinClawPlugins({
+    const enabledRegistry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -189,7 +189,7 @@ describe("loadWinClawPlugins", () => {
   it("loads bundled telegram plugin when enabled", () => {
     setupBundledTelegramPlugin();
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -207,7 +207,7 @@ describe("loadWinClawPlugins", () => {
   it("loads bundled channel plugins when channels.<id>.enabled=true", () => {
     setupBundledTelegramPlugin();
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         channels: {
@@ -227,7 +227,7 @@ describe("loadWinClawPlugins", () => {
   it("still respects explicit disable via plugins.entries for bundled channels", () => {
     setupBundledTelegramPlugin();
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         channels: {
@@ -258,7 +258,7 @@ describe("loadWinClawPlugins", () => {
   it("preserves package.json metadata for bundled memory plugins", () => {
     const registry = loadBundledMemoryPluginRegistry({
       packageMeta: {
-        name: "@winclaw/memory-core",
+        name: "@openclaw/memory-core",
         version: "1.2.3",
         description: "Memory plugin package",
       },
@@ -273,13 +273,13 @@ describe("loadWinClawPlugins", () => {
     expect(memory?.version).toBe("1.2.3");
   });
   it("loads plugins from config paths", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "allowed",
       body: `export default { id: "allowed", register(api) { api.registerGatewayMethod("allowed.ping", ({ respond }) => respond(true, { ok: true })); } };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -295,14 +295,40 @@ describe("loadWinClawPlugins", () => {
     expect(Object.keys(registry.gatewayHandlers)).toContain("allowed.ping");
   });
 
+  it("loads plugins when source and root differ only by realpath alias", () => {
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    const plugin = writePlugin({
+      id: "alias-safe",
+      body: `export default { id: "alias-safe", register() {} };`,
+    });
+    const realRoot = fs.realpathSync(plugin.dir);
+    if (realRoot === plugin.dir) {
+      return;
+    }
+
+    const registry = loadOpenClawPlugins({
+      cache: false,
+      workspaceDir: plugin.dir,
+      config: {
+        plugins: {
+          load: { paths: [plugin.file] },
+          allow: ["alias-safe"],
+        },
+      },
+    });
+
+    const loaded = registry.plugins.find((entry) => entry.id === "alias-safe");
+    expect(loaded?.status).toBe("loaded");
+  });
+
   it("denylist disables plugins even if allowed", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "blocked",
       body: `export default { id: "blocked", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -319,13 +345,13 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("fails fast on invalid plugin config", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "configurable",
       body: `export default { id: "configurable", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -346,7 +372,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("registers channel plugins", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "channel-demo",
       body: `export default { id: "channel-demo", register(api) {
@@ -371,7 +397,7 @@ describe("loadWinClawPlugins", () => {
 } };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -387,7 +413,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("registers http handlers", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "http-demo",
       body: `export default { id: "http-demo", register(api) {
@@ -395,7 +421,7 @@ describe("loadWinClawPlugins", () => {
 } };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -413,7 +439,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("registers http routes", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "http-route-demo",
       body: `export default { id: "http-route-demo", register(api) {
@@ -421,7 +447,7 @@ describe("loadWinClawPlugins", () => {
 } };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       workspaceDir: plugin.dir,
       config: {
@@ -440,13 +466,13 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("respects explicit disable in config", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "config-disable",
       body: `export default { id: "config-disable", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -463,7 +489,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("enforces memory slot selection", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const memoryA = writePlugin({
       id: "memory-a",
       body: `export default { id: "memory-a", kind: "memory", register() {} };`,
@@ -473,7 +499,7 @@ describe("loadWinClawPlugins", () => {
       body: `export default { id: "memory-b", kind: "memory", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -490,13 +516,13 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("disables memory plugins when slot is none", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const memory = writePlugin({
       id: "memory-off",
       body: `export default { id: "memory-off", kind: "memory", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -518,14 +544,14 @@ describe("loadWinClawPlugins", () => {
       dir: bundledDir,
       filename: "shadow.js",
     });
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledDir;
 
     const override = writePlugin({
       id: "shadow",
       body: `export default { id: "shadow", register() {} };`,
     });
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -544,13 +570,13 @@ describe("loadWinClawPlugins", () => {
     expect(overridden?.origin).toBe("bundled");
   });
   it("warns when plugins.allow is empty and non-bundled plugins are discoverable", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const plugin = writePlugin({
       id: "warn-open-allow",
       body: `export default { id: "warn-open-allow", register() {} };`,
     });
     const warnings: string[] = [];
-    loadWinClawPlugins({
+    loadOpenClawPlugins({
       cache: false,
       logger: {
         info: () => {},
@@ -569,9 +595,9 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("warns when loaded non-bundled plugin has no install/load-path provenance", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const stateDir = makeTempDir();
-    withEnv({ WINCLAW_STATE_DIR: stateDir, CLAWDBOT_STATE_DIR: undefined }, () => {
+    withEnv({ OPENCLAW_STATE_DIR: stateDir, CLAWDBOT_STATE_DIR: undefined }, () => {
       const globalDir = path.join(stateDir, "extensions", "rogue");
       fs.mkdirSync(globalDir, { recursive: true });
       writePlugin({
@@ -582,7 +608,7 @@ describe("loadWinClawPlugins", () => {
       });
 
       const warnings: string[] = [];
-      const registry = loadWinClawPlugins({
+      const registry = loadOpenClawPlugins({
         cache: false,
         logger: {
           info: () => {},
@@ -608,7 +634,7 @@ describe("loadWinClawPlugins", () => {
   });
 
   it("rejects plugin entry files that escape plugin root via symlink", () => {
-    process.env.WINCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
     const pluginDir = makeTempDir();
     const outsideDir = makeTempDir();
     const outsideEntry = path.join(outsideDir, "outside.js");
@@ -619,7 +645,7 @@ describe("loadWinClawPlugins", () => {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "winclaw.plugin.json"),
+      path.join(pluginDir, "openclaw.plugin.json"),
       JSON.stringify(
         {
           id: "symlinked",
@@ -636,7 +662,7 @@ describe("loadWinClawPlugins", () => {
       return;
     }
 
-    const registry = loadWinClawPlugins({
+    const registry = loadOpenClawPlugins({
       cache: false,
       config: {
         plugins: {
@@ -649,5 +675,91 @@ describe("loadWinClawPlugins", () => {
     const record = registry.plugins.find((entry) => entry.id === "symlinked");
     expect(record?.status).not.toBe("loaded");
     expect(registry.diagnostics.some((entry) => entry.message.includes("escapes"))).toBe(true);
+  });
+
+  it("rejects plugin entry files that escape plugin root via hardlink", () => {
+    if (process.platform === "win32") {
+      return;
+    }
+    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled/plugins";
+    const pluginDir = makeTempDir();
+    const outsideDir = makeTempDir();
+    const outsideEntry = path.join(outsideDir, "outside.js");
+    const linkedEntry = path.join(pluginDir, "entry.js");
+    fs.writeFileSync(
+      outsideEntry,
+      'export default { id: "hardlinked", register() { throw new Error("should not run"); } };',
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(pluginDir, "openclaw.plugin.json"),
+      JSON.stringify(
+        {
+          id: "hardlinked",
+          configSchema: EMPTY_PLUGIN_SCHEMA,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+    try {
+      fs.linkSync(outsideEntry, linkedEntry);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "EXDEV") {
+        return;
+      }
+      throw err;
+    }
+
+    const registry = loadOpenClawPlugins({
+      cache: false,
+      config: {
+        plugins: {
+          load: { paths: [linkedEntry] },
+          allow: ["hardlinked"],
+        },
+      },
+    });
+
+    const record = registry.plugins.find((entry) => entry.id === "hardlinked");
+    expect(record?.status).not.toBe("loaded");
+    expect(registry.diagnostics.some((entry) => entry.message.includes("escapes"))).toBe(true);
+  });
+
+  it("prefers dist plugin-sdk alias when loader runs from dist", () => {
+    const root = makeTempDir();
+    const srcFile = path.join(root, "src", "plugin-sdk", "index.ts");
+    const distFile = path.join(root, "dist", "plugin-sdk", "index.js");
+    fs.mkdirSync(path.dirname(srcFile), { recursive: true });
+    fs.mkdirSync(path.dirname(distFile), { recursive: true });
+    fs.writeFileSync(srcFile, "export {};\n", "utf-8");
+    fs.writeFileSync(distFile, "export {};\n", "utf-8");
+
+    const resolved = __testing.resolvePluginSdkAliasFile({
+      srcFile: "index.ts",
+      distFile: "index.js",
+      modulePath: path.join(root, "dist", "plugins", "loader.js"),
+    });
+    expect(resolved).toBe(distFile);
+  });
+
+  it("prefers src plugin-sdk alias when loader runs from src in non-production", () => {
+    const root = makeTempDir();
+    const srcFile = path.join(root, "src", "plugin-sdk", "index.ts");
+    const distFile = path.join(root, "dist", "plugin-sdk", "index.js");
+    fs.mkdirSync(path.dirname(srcFile), { recursive: true });
+    fs.mkdirSync(path.dirname(distFile), { recursive: true });
+    fs.writeFileSync(srcFile, "export {};\n", "utf-8");
+    fs.writeFileSync(distFile, "export {};\n", "utf-8");
+
+    const resolved = withEnv({ NODE_ENV: undefined }, () =>
+      __testing.resolvePluginSdkAliasFile({
+        srcFile: "index.ts",
+        distFile: "index.js",
+        modulePath: path.join(root, "src", "plugins", "loader.ts"),
+      }),
+    );
+    expect(resolved).toBe(srcFile);
   });
 });

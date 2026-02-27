@@ -1,21 +1,15 @@
-package ai.winclaw.android.node
+package ai.openclaw.android.node
 
 import android.os.Build
-import ai.winclaw.android.BuildConfig
-import ai.winclaw.android.SecurePrefs
-import ai.winclaw.android.gateway.GatewayClientInfo
-import ai.winclaw.android.gateway.GatewayConnectOptions
-import ai.winclaw.android.gateway.GatewayEndpoint
-import ai.winclaw.android.gateway.GatewayTlsParams
-import ai.winclaw.android.protocol.WinClawCanvasA2UICommand
-import ai.winclaw.android.protocol.WinClawCanvasCommand
-import ai.winclaw.android.protocol.WinClawCameraCommand
-import ai.winclaw.android.protocol.WinClawLocationCommand
-import ai.winclaw.android.protocol.WinClawScreenCommand
-import ai.winclaw.android.protocol.WinClawSmsCommand
-import ai.winclaw.android.protocol.WinClawCapability
-import ai.winclaw.android.LocationMode
-import ai.winclaw.android.VoiceWakeMode
+import ai.openclaw.android.BuildConfig
+import ai.openclaw.android.SecurePrefs
+import ai.openclaw.android.gateway.GatewayClientInfo
+import ai.openclaw.android.gateway.GatewayConnectOptions
+import ai.openclaw.android.gateway.GatewayEndpoint
+import ai.openclaw.android.gateway.GatewayTlsParams
+import ai.openclaw.android.protocol.OpenClawCapability
+import ai.openclaw.android.LocationMode
+import ai.openclaw.android.VoiceWakeMode
 
 class ConnectionManager(
   private val prefs: SecurePrefs,
@@ -80,44 +74,25 @@ class ConnectionManager(
   }
 
   fun buildInvokeCommands(): List<String> =
-    buildList {
-      add(WinClawCanvasCommand.Present.rawValue)
-      add(WinClawCanvasCommand.Hide.rawValue)
-      add(WinClawCanvasCommand.Navigate.rawValue)
-      add(WinClawCanvasCommand.Eval.rawValue)
-      add(WinClawCanvasCommand.Snapshot.rawValue)
-      add(WinClawCanvasA2UICommand.Push.rawValue)
-      add(WinClawCanvasA2UICommand.PushJSONL.rawValue)
-      add(WinClawCanvasA2UICommand.Reset.rawValue)
-      add(WinClawScreenCommand.Record.rawValue)
-      if (cameraEnabled()) {
-        add(WinClawCameraCommand.Snap.rawValue)
-        add(WinClawCameraCommand.Clip.rawValue)
-      }
-      if (locationMode() != LocationMode.Off) {
-        add(WinClawLocationCommand.Get.rawValue)
-      }
-      if (smsAvailable()) {
-        add(WinClawSmsCommand.Send.rawValue)
-      }
-      if (BuildConfig.DEBUG) {
-        add("debug.logs")
-        add("debug.ed25519")
-      }
-      add("app.update")
-    }
+    InvokeCommandRegistry.advertisedCommands(
+      cameraEnabled = cameraEnabled(),
+      locationEnabled = locationMode() != LocationMode.Off,
+      smsAvailable = smsAvailable(),
+      debugBuild = BuildConfig.DEBUG,
+    )
 
   fun buildCapabilities(): List<String> =
     buildList {
-      add(WinClawCapability.Canvas.rawValue)
-      add(WinClawCapability.Screen.rawValue)
-      if (cameraEnabled()) add(WinClawCapability.Camera.rawValue)
-      if (smsAvailable()) add(WinClawCapability.Sms.rawValue)
+      add(OpenClawCapability.Canvas.rawValue)
+      add(OpenClawCapability.Screen.rawValue)
+      add(OpenClawCapability.Device.rawValue)
+      if (cameraEnabled()) add(OpenClawCapability.Camera.rawValue)
+      if (smsAvailable()) add(OpenClawCapability.Sms.rawValue)
       if (voiceWakeMode() != VoiceWakeMode.Off && hasRecordAudioPermission()) {
-        add(WinClawCapability.VoiceWake.rawValue)
+        add(OpenClawCapability.VoiceWake.rawValue)
       }
       if (locationMode() != LocationMode.Off) {
-        add(WinClawCapability.Location.rawValue)
+        add(OpenClawCapability.Location.rawValue)
       }
     }
 
@@ -141,7 +116,7 @@ class ConnectionManager(
     val version = resolvedVersionName()
     val release = Build.VERSION.RELEASE?.trim().orEmpty()
     val releaseLabel = if (release.isEmpty()) "unknown" else release
-    return "WinClawAndroid/$version (Android $releaseLabel; SDK ${Build.VERSION.SDK_INT})"
+    return "OpenClawAndroid/$version (Android $releaseLabel; SDK ${Build.VERSION.SDK_INT})"
   }
 
   fun buildClientInfo(clientId: String, clientMode: String): GatewayClientInfo {
@@ -164,7 +139,7 @@ class ConnectionManager(
       caps = buildCapabilities(),
       commands = buildInvokeCommands(),
       permissions = emptyMap(),
-      client = buildClientInfo(clientId = "winclaw-android", clientMode = "node"),
+      client = buildClientInfo(clientId = "openclaw-android", clientMode = "node"),
       userAgent = buildUserAgent(),
     )
   }
@@ -176,7 +151,7 @@ class ConnectionManager(
       caps = emptyList(),
       commands = emptyList(),
       permissions = emptyMap(),
-      client = buildClientInfo(clientId = "winclaw-control-ui", clientMode = "ui"),
+      client = buildClientInfo(clientId = "openclaw-android", clientMode = "ui"),
       userAgent = buildUserAgent(),
     )
   }

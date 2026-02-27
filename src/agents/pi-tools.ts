@@ -1,11 +1,5 @@
-import {
-  codingTools,
-  createEditTool,
-  createReadTool,
-  createWriteTool,
-  readTool,
-} from "@mariozechner/pi-coding-agent";
-import type { WinClawConfig } from "../config/config.js";
+import { codingTools, createReadTool, readTool } from "@mariozechner/pi-coding-agent";
+import type { OpenClawConfig } from "../config/config.js";
 import type { ToolLoopDetectionConfig } from "../config/types.tools.js";
 import { resolveMergedSafeBinProfileFixtures } from "../infra/exec-safe-bin-runtime-policy.js";
 import { logWarn } from "../logger.js";
@@ -23,7 +17,7 @@ import {
 import { listChannelAgentTools } from "./channel-tools.js";
 import { resolveImageSanitizationLimits } from "./image-sanitization.js";
 import type { ModelAuthMode } from "./model-auth.js";
-import { createWinClawTools } from "./winclaw-tools.js";
+import { createOpenClawTools } from "./openclaw-tools.js";
 import { wrapToolWithAbortSignal } from "./pi-tools.abort.js";
 import { wrapToolWithBeforeToolCallHook } from "./pi-tools.before-tool-call.js";
 import {
@@ -34,8 +28,9 @@ import {
 } from "./pi-tools.policy.js";
 import {
   assertRequiredParams,
-  CLAUDE_PARAM_GROUPS,
-  createWinClawReadTool,
+  createHostWorkspaceEditTool,
+  createHostWorkspaceWriteTool,
+  createOpenClawReadTool,
   createSandboxedEditTool,
   createSandboxedReadTool,
   createSandboxedWriteTool,
@@ -49,7 +44,7 @@ import { cleanToolSchemaForGemini, normalizeToolParameters } from "./pi-tools.sc
 import type { AnyAgentTool } from "./pi-tools.types.js";
 import type { SandboxContext } from "./sandbox.js";
 import { getSubagentDepthFromSessionStore } from "./subagent-depth.js";
-import { createToolFsPolicy } from "./tool-fs-policy.js";
+import { createToolFsPolicy, resolveToolFsConfig } from "./tool-fs-policy.js";
 import {
   applyToolPolicyPipeline,
   buildDefaultToolPolicyPipelineSteps,
@@ -65,6 +60,31 @@ import { resolveWorkspaceRoot } from "./workspace-dir.js";
 function isOpenAIProvider(provider?: string) {
   const normalized = provider?.trim().toLowerCase();
   return normalized === "openai" || normalized === "openai-codex";
+}
+
+const TOOL_DENY_BY_MESSAGE_PROVIDER: Readonly<Record<string, readonly string[]>> = {
+  voice: ["tts"],
+};
+
+function normalizeMessageProvider(messageProvider?: string): string | undefined {
+  const normalized = messageProvider?.trim().toLowerCase();
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function applyMessageProviderToolPolicy(
+  tools: AnyAgentTool[],
+  messageProvider?: string,
+): AnyAgentTool[] {
+  const normalizedProvider = normalizeMessageProvider(messageProvider);
+  if (!normalizedProvider) {
+    return tools;
+  }
+  const deniedTools = TOOL_DENY_BY_MESSAGE_PROVIDER[normalizedProvider];
+  if (!deniedTools || deniedTools.length === 0) {
+    return tools;
+  }
+  const deniedSet = new Set(deniedTools);
+  return tools.filter((tool) => !deniedSet.has(tool.name));
 }
 
 function isApplyPatchAllowedForModel(params: {
@@ -95,7 +115,7 @@ function isApplyPatchAllowedForModel(params: {
   });
 }
 
-function resolveExecConfig(params: { cfg?: WinClawConfig; agentId?: string }) {
+function resolveExecConfig(params: { cfg?: OpenClawConfig; agentId?: string }) {
   const cfg = params.cfg;
   const globalExec = cfg?.tools?.exec;
   const agentExec =
@@ -124,18 +144,8 @@ function resolveExecConfig(params: { cfg?: WinClawConfig; agentId?: string }) {
   };
 }
 
-function resolveFsConfig(params: { cfg?: WinClawConfig; agentId?: string }) {
-  const cfg = params.cfg;
-  const globalFs = cfg?.tools?.fs;
-  const agentFs =
-    cfg && params.agentId ? resolveAgentConfig(cfg, params.agentId)?.tools?.fs : undefined;
-  return {
-    workspaceOnly: agentFs?.workspaceOnly ?? globalFs?.workspaceOnly,
-  };
-}
-
 export function resolveToolLoopDetectionConfig(params: {
-  cfg?: WinClawConfig;
+  cfg?: OpenClawConfig;
   agentId?: string;
 }): ToolLoopDetectionConfig | undefined {
   const global = params.cfg?.tools?.loopDetection;
@@ -169,7 +179,7 @@ export const __testing = {
   assertRequiredParams,
 } as const;
 
-export function createWinClawCodingTools(options?: {
+export function createOpenClawCodingTools(options?: {
   agentId?: string;
   exec?: ExecToolDefaults & ProcessToolDefaults;
   messageProvider?: string;
@@ -180,7 +190,7 @@ export function createWinClawCodingTools(options?: {
   sessionKey?: string;
   agentDir?: string;
   workspaceDir?: string;
-  config?: WinClawConfig;
+  config?: OpenClawConfig;
   abortSignal?: AbortSignal;
   /**
    * Provider of the currently selected model (used for provider-specific tool quirks).
@@ -291,7 +301,7 @@ export function createWinClawCodingTools(options?: {
     subagentPolicy,
   ]);
   const execConfig = resolveExecConfig({ cfg: options?.config, agentId });
-  const fsConfig = resolveFsConfig({ cfg: options?.config, agentId });
+  const fsConfig = resolveToolFsConfig({ cfg: options?.config, agentId });
   const fsPolicy = createToolFsPolicy({
     workspaceOnly: fsConfig.workspaceOnly,
   });
@@ -336,7 +346,7 @@ export function createWinClawCodingTools(options?: {
         ];
       }
       const freshReadTool = createReadTool(workspaceRoot);
-      const wrapped = createWinClawReadTool(freshReadTool, {
+      const wrapped = createOpenClawReadTool(freshReadTool, {
         modelContextWindowTokens: options?.modelContextWindowTokens,
         imageSanitization,
       });
@@ -349,22 +359,14 @@ export function createWinClawCodingTools(options?: {
       if (sandboxRoot) {
         return [];
       }
-      // Wrap with param normalization for Claude Code compatibility
-      const wrapped = wrapToolParamNormalization(
-        createWriteTool(workspaceRoot),
-        CLAUDE_PARAM_GROUPS.write,
-      );
+      const wrapped = createHostWorkspaceWriteTool(workspaceRoot);
       return [workspaceOnly ? wrapToolWorkspaceRootGuard(wrapped, workspaceRoot) : wrapped];
     }
     if (tool.name === "edit") {
       if (sandboxRoot) {
         return [];
       }
-      // Wrap with param normalization for Claude Code compatibility
-      const wrapped = wrapToolParamNormalization(
-        createEditTool(workspaceRoot),
-        CLAUDE_PARAM_GROUPS.edit,
-      );
+      const wrapped = createHostWorkspaceEditTool(workspaceRoot);
       return [workspaceOnly ? wrapToolWorkspaceRootGuard(wrapped, workspaceRoot) : wrapped];
     }
     return [tool];
@@ -386,6 +388,9 @@ export function createWinClawCodingTools(options?: {
     scopeKey,
     sessionKey: options?.sessionKey,
     messageProvider: options?.messageProvider,
+    currentChannelId: options?.currentChannelId,
+    currentThreadTs: options?.currentThreadTs,
+    accountId: options?.agentAccountId,
     backgroundMs: options?.exec?.backgroundMs ?? execConfig.backgroundMs,
     timeoutSec: options?.exec?.timeoutSec ?? execConfig.timeoutSec,
     approvalRunningNoticeMs:
@@ -448,7 +453,7 @@ export function createWinClawCodingTools(options?: {
     processTool as unknown as AnyAgentTool,
     // Channel docking: include channel-defined agent tools (login, etc.).
     ...listChannelAgentTools({ cfg: options?.config }),
-    ...createWinClawTools({
+    ...createOpenClawTools({
       sandboxBrowserBridgeUrl: sandbox?.browser?.bridgeUrl,
       allowHostBrowserControl: sandbox ? sandbox.browserAllowHostControl : true,
       agentSessionKey: options?.sessionKey,
@@ -490,9 +495,10 @@ export function createWinClawCodingTools(options?: {
       senderIsOwner: options?.senderIsOwner,
     }),
   ];
+  const toolsForMessageProvider = applyMessageProviderToolPolicy(tools, options?.messageProvider);
   // Security: treat unknown/undefined as unauthorized (opt-in, not opt-out)
   const senderIsOwner = options?.senderIsOwner === true;
-  const toolsByAuthorization = applyOwnerOnlyToolPolicy(tools, senderIsOwner);
+  const toolsByAuthorization = applyOwnerOnlyToolPolicy(toolsForMessageProvider, senderIsOwner);
   const subagentFiltered = applyToolPolicyPipeline({
     tools: toolsByAuthorization,
     toolMeta: (tool) => getPluginToolMeta(tool),

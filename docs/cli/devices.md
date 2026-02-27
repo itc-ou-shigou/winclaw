@@ -1,59 +1,78 @@
 ---
-summary: "CLI reference for `winclaw devices` (device pairing + token rotation/revocation)"
+summary: "CLI reference for `openclaw devices` (device pairing + token rotation/revocation)"
 read_when:
   - You are approving device pairing requests
   - You need to rotate or revoke device tokens
 title: "devices"
 ---
 
-# `winclaw devices`
+# `openclaw devices`
 
 Manage device pairing requests and device-scoped tokens.
 
 ## Commands
 
-### `winclaw devices list`
+### `openclaw devices list`
 
 List pending pairing requests and paired devices.
 
 ```
-winclaw devices list
-winclaw devices list --json
+openclaw devices list
+openclaw devices list --json
 ```
 
-### `winclaw devices approve [requestId] [--latest]`
+### `openclaw devices remove <deviceId>`
 
-Approve a pending device pairing request. If `requestId` is omitted, WinClaw
+Remove one paired device entry.
+
+```
+openclaw devices remove <deviceId>
+openclaw devices remove <deviceId> --json
+```
+
+### `openclaw devices clear --yes [--pending]`
+
+Clear paired devices in bulk.
+
+```
+openclaw devices clear --yes
+openclaw devices clear --yes --pending
+openclaw devices clear --yes --pending --json
+```
+
+### `openclaw devices approve [requestId] [--latest]`
+
+Approve a pending device pairing request. If `requestId` is omitted, OpenClaw
 automatically approves the most recent pending request.
 
 ```
-winclaw devices approve
-winclaw devices approve <requestId>
-winclaw devices approve --latest
+openclaw devices approve
+openclaw devices approve <requestId>
+openclaw devices approve --latest
 ```
 
-### `winclaw devices reject <requestId>`
+### `openclaw devices reject <requestId>`
 
 Reject a pending device pairing request.
 
 ```
-winclaw devices reject <requestId>
+openclaw devices reject <requestId>
 ```
 
-### `winclaw devices rotate --device <id> --role <role> [--scope <scope...>]`
+### `openclaw devices rotate --device <id> --role <role> [--scope <scope...>]`
 
 Rotate a device token for a specific role (optionally updating scopes).
 
 ```
-winclaw devices rotate --device <deviceId> --role operator --scope operator.read --scope operator.write
+openclaw devices rotate --device <deviceId> --role operator --scope operator.read --scope operator.write
 ```
 
-### `winclaw devices revoke --device <id> --role <role>`
+### `openclaw devices revoke --device <id> --role <role>`
 
 Revoke a device token for a specific role.
 
 ```
-winclaw devices revoke --device <deviceId> --role node
+openclaw devices revoke --device <deviceId> --role node
 ```
 
 ## Common options
@@ -71,3 +90,5 @@ Pass `--token` or `--password` explicitly. Missing explicit credentials is an er
 
 - Token rotation returns a new token (sensitive). Treat it like a secret.
 - These commands require `operator.pairing` (or `operator.admin`) scope.
+- `devices clear` is intentionally gated by `--yes`.
+- If pairing scope is unavailable on local loopback (and no explicit `--url` is passed), list/approve can use a local pairing fallback.

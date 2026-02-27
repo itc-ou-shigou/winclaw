@@ -1,5 +1,6 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
-import { resolveWinClawAgentDir } from "../../agents/agent-paths.js";
+import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { resolveOpenClawAgentDir } from "../../agents/agent-paths.js";
 import type { AuthProfileStore } from "../../agents/auth-profiles.js";
 import { listProfilesForProvider } from "../../agents/auth-profiles.js";
 import {
@@ -7,11 +8,9 @@ import {
   resolveAwsSdkEnvVarName,
   resolveEnvApiKey,
 } from "../../agents/model-auth.js";
-import { ensureWinClawModelsJson } from "../../agents/models-config.js";
-import { ensurePiAuthJsonFromAuthProfiles } from "../../agents/pi-auth-json.js";
-import type { ModelRegistry } from "../../agents/pi-model-discovery.js";
+import { ensureOpenClawModelsJson } from "../../agents/models-config.js";
 import { discoverAuthStorage, discoverModels } from "../../agents/pi-model-discovery.js";
-import type { WinClawConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   formatErrorWithStack,
   MODEL_AVAILABILITY_UNAVAILABLE_CODE,
@@ -22,7 +21,7 @@ import { isLocalBaseUrl, modelKey } from "./shared.js";
 
 const hasAuthForProvider = (
   provider: string,
-  cfg?: WinClawConfig,
+  cfg?: OpenClawConfig,
   authStore?: AuthProfileStore,
 ) => {
   if (!cfg || !authStore) {
@@ -95,10 +94,9 @@ function loadAvailableModels(registry: ModelRegistry): Model<Api>[] {
   }
 }
 
-export async function loadModelRegistry(cfg: WinClawConfig) {
-  await ensureWinClawModelsJson(cfg);
-  const agentDir = resolveWinClawAgentDir();
-  await ensurePiAuthJsonFromAuthProfiles(agentDir);
+export async function loadModelRegistry(cfg: OpenClawConfig) {
+  await ensureOpenClawModelsJson(cfg);
+  const agentDir = resolveOpenClawAgentDir();
   const authStorage = discoverAuthStorage(agentDir);
   const registry = discoverModels(authStorage, agentDir);
   const models = registry.getAll();
@@ -129,7 +127,7 @@ export function toModelRow(params: {
   tags: string[];
   aliases?: string[];
   availableKeys?: Set<string>;
-  cfg?: WinClawConfig;
+  cfg?: OpenClawConfig;
   authStore?: AuthProfileStore;
 }): ModelRow {
   const { model, key, tags, aliases = [], availableKeys, cfg, authStore } = params;

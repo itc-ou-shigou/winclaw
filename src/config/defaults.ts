@@ -2,8 +2,13 @@ import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import { normalizeProviderId, parseModelRef } from "../agents/model-selection.js";
 import { DEFAULT_AGENT_MAX_CONCURRENT, DEFAULT_SUBAGENT_MAX_CONCURRENT } from "./agent-limits.js";
 import { resolveAgentModelPrimaryValue } from "./model-input.js";
-import { resolveTalkApiKey } from "./talk.js";
-import type { WinClawConfig } from "./types.js";
+import {
+  DEFAULT_TALK_PROVIDER,
+  normalizeTalkConfig,
+  resolveActiveTalkProviderConfig,
+  resolveTalkApiKey,
+} from "./talk.js";
+import type { OpenClawConfig } from "./types.js";
 import type { ModelDefinitionConfig } from "./types.models.js";
 
 type WarnState = { warned: boolean };
@@ -64,7 +69,7 @@ function resolveModelCost(
   };
 }
 
-function resolveAnthropicDefaultAuthMode(cfg: WinClawConfig): AnthropicAuthDefaultsMode | null {
+function resolveAnthropicDefaultAuthMode(cfg: OpenClawConfig): AnthropicAuthDefaultsMode | null {
   const profiles = cfg.auth?.profiles ?? {};
   const anthropicProfiles = Object.entries(profiles).filter(
     ([, profile]) => profile?.provider === "anthropic",
@@ -121,7 +126,7 @@ export type SessionDefaultsOptions = {
   warnState?: WarnState;
 };
 
-export function applyMessageDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyMessageDefaults(cfg: OpenClawConfig): OpenClawConfig {
   const messages = cfg.messages;
   const hasAckScope = messages?.ackReactionScope !== undefined;
   if (hasAckScope) {
@@ -137,9 +142,9 @@ export function applyMessageDefaults(cfg: WinClawConfig): WinClawConfig {
 }
 
 export function applySessionDefaults(
-  cfg: WinClawConfig,
+  cfg: OpenClawConfig,
   options: SessionDefaultsOptions = {},
-): WinClawConfig {
+): OpenClawConfig {
   const session = cfg.session;
   if (!session || session.mainKey === undefined) {
     return cfg;
@@ -149,7 +154,7 @@ export function applySessionDefaults(
   const warn = options.warn ?? console.warn;
   const warnState = options.warnState ?? defaultWarnState;
 
-  const next: WinClawConfig = {
+  const next: OpenClawConfig = {
     ...cfg,
     session: { ...session, mainKey: "main" },
   };
@@ -162,25 +167,50 @@ export function applySessionDefaults(
   return next;
 }
 
-export function applyTalkApiKey(config: WinClawConfig): WinClawConfig {
+export function applyTalkApiKey(config: OpenClawConfig): OpenClawConfig {
+  const normalized = normalizeTalkConfig(config);
   const resolved = resolveTalkApiKey();
   if (!resolved) {
-    return config;
+    return normalized;
   }
-  const existing = config.talk?.apiKey?.trim();
-  if (existing) {
-    return config;
+
+  const talk = normalized.talk;
+  const active = resolveActiveTalkProviderConfig(talk);
+  if (active.provider && active.provider !== DEFAULT_TALK_PROVIDER) {
+    return normalized;
   }
+
+  const existingProviderApiKey =
+    typeof active.config?.apiKey === "string" ? active.config.apiKey.trim() : "";
+  const existingLegacyApiKey = typeof talk?.apiKey === "string" ? talk.apiKey.trim() : "";
+  if (existingProviderApiKey || existingLegacyApiKey) {
+    return normalized;
+  }
+
+  const providerId = active.provider ?? DEFAULT_TALK_PROVIDER;
+  const providers = { ...talk?.providers };
+  const providerConfig = { ...providers[providerId], apiKey: resolved };
+  providers[providerId] = providerConfig;
+
+  const nextTalk = {
+    ...talk,
+    provider: talk?.provider ?? providerId,
+    providers,
+    // Keep legacy shape populated during compatibility rollout.
+    apiKey: resolved,
+  };
+
   return {
-    ...config,
-    talk: {
-      ...config.talk,
-      apiKey: resolved,
-    },
+    ...normalized,
+    talk: nextTalk,
   };
 }
 
-export function applyModelDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyTalkConfigNormalization(config: OpenClawConfig): OpenClawConfig {
+  return normalizeTalkConfig(config);
+}
+
+export function applyModelDefaults(cfg: OpenClawConfig): OpenClawConfig {
   let mutated = false;
   let nextCfg = cfg;
 
@@ -316,7 +346,7 @@ export function applyModelDefaults(cfg: WinClawConfig): WinClawConfig {
   };
 }
 
-export function applyAgentDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyAgentDefaults(cfg: OpenClawConfig): OpenClawConfig {
   const agents = cfg.agents;
   const defaults = agents?.defaults;
   const hasMax =
@@ -357,7 +387,7 @@ export function applyAgentDefaults(cfg: WinClawConfig): WinClawConfig {
   };
 }
 
-export function applyLoggingDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyLoggingDefaults(cfg: OpenClawConfig): OpenClawConfig {
   const logging = cfg.logging;
   if (!logging) {
     return cfg;
@@ -374,7 +404,7 @@ export function applyLoggingDefaults(cfg: WinClawConfig): WinClawConfig {
   };
 }
 
-export function applyContextPruningDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyContextPruningDefaults(cfg: OpenClawConfig): OpenClawConfig {
   const defaults = cfg.agents?.defaults;
   if (!defaults) {
     return cfg;
@@ -476,7 +506,7 @@ export function applyContextPruningDefaults(cfg: WinClawConfig): WinClawConfig {
   };
 }
 
-export function applyCompactionDefaults(cfg: WinClawConfig): WinClawConfig {
+export function applyCompactionDefaults(cfg: OpenClawConfig): OpenClawConfig {
   const defaults = cfg.agents?.defaults;
   if (!defaults) {
     return cfg;

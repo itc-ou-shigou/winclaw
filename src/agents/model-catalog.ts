@@ -1,7 +1,7 @@
-import { type WinClawConfig, loadConfig } from "../config/config.js";
+import { type OpenClawConfig, loadConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { resolveWinClawAgentDir } from "./agent-paths.js";
-import { ensureWinClawModelsJson } from "./models-config.js";
+import { resolveOpenClawAgentDir } from "./agent-paths.js";
+import { ensureOpenClawModelsJson } from "./models-config.js";
 
 const log = createSubsystemLogger("model-catalog");
 
@@ -70,7 +70,7 @@ function normalizeConfiguredModelInput(input: unknown): Array<"text" | "image"> 
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function readConfiguredOptInProviderModels(config: WinClawConfig): ModelCatalogEntry[] {
+function readConfiguredOptInProviderModels(config: OpenClawConfig): ModelCatalogEntry[] {
   const providers = config.models?.providers;
   if (!providers || typeof providers !== "object") {
     return [];
@@ -119,7 +119,7 @@ function readConfiguredOptInProviderModels(config: WinClawConfig): ModelCatalogE
 }
 
 function mergeConfiguredOptInProviderModels(params: {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   models: ModelCatalogEntry[];
 }): void {
   const configured = readConfiguredOptInProviderModels(params.config);
@@ -154,16 +154,8 @@ export function __setModelCatalogImportForTest(loader?: () => Promise<PiSdkModul
   importPiSdk = loader ?? defaultImportPiSdk;
 }
 
-function createAuthStorage(AuthStorageLike: unknown, path: string) {
-  const withFactory = AuthStorageLike as { create?: (path: string) => unknown };
-  if (typeof withFactory.create === "function") {
-    return withFactory.create(path);
-  }
-  return new (AuthStorageLike as { new (path: string): unknown })(path);
-}
-
 export async function loadModelCatalog(params?: {
-  config?: WinClawConfig;
+  config?: OpenClawConfig;
   useCache?: boolean;
 }): Promise<ModelCatalogEntry[]> {
   if (params?.useCache === false) {
@@ -185,18 +177,15 @@ export async function loadModelCatalog(params?: {
       });
     try {
       const cfg = params?.config ?? loadConfig();
-      await ensureWinClawModelsJson(cfg);
-      await (
-        await import("./pi-auth-json.js")
-      ).ensurePiAuthJsonFromAuthProfiles(resolveWinClawAgentDir());
+      await ensureOpenClawModelsJson(cfg);
       // IMPORTANT: keep the dynamic import *inside* the try/catch.
       // If this fails once (e.g. during a pnpm install that temporarily swaps node_modules),
       // we must not poison the cache with a rejected promise (otherwise all channel handlers
       // will keep failing until restart).
       const piSdk = await importPiSdk();
-      const agentDir = resolveWinClawAgentDir();
+      const agentDir = resolveOpenClawAgentDir();
       const { join } = await import("node:path");
-      const authStorage = createAuthStorage(piSdk.AuthStorage, join(agentDir, "auth.json"));
+      const authStorage = piSdk.discoverAuthStorage(agentDir);
       const registry = new (piSdk.ModelRegistry as unknown as {
         new (
           authStorage: unknown,

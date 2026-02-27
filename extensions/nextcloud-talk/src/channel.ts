@@ -9,9 +9,10 @@ import {
   resolveDefaultGroupPolicy,
   setAccountEnabledInConfigSection,
   type ChannelPlugin,
-  type WinClawConfig,
+  type OpenClawConfig,
   type ChannelSetupInput,
-} from "winclaw/plugin-sdk";
+} from "openclaw/plugin-sdk";
+import { waitForAbortSignal } from "../../../src/infra/abort-signal.js";
 import {
   listNextcloudTalkAccountIds,
   resolveDefaultNextcloudTalkAccountId,
@@ -229,7 +230,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
                     : {}),
             },
           },
-        } as WinClawConfig;
+        } as OpenClawConfig;
       }
       return {
         ...namedConfig,
@@ -253,7 +254,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
             },
           },
         },
-      } as WinClawConfig;
+      } as OpenClawConfig;
     },
   },
   outbound: {
@@ -332,10 +333,12 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
         statusSink: (patch) => ctx.setStatus({ accountId: ctx.accountId, ...patch }),
       });
 
-      return { stop };
+      // Keep webhook channels pending for the account lifecycle.
+      await waitForAbortSignal(ctx.abortSignal);
+      stop();
     },
     logoutAccount: async ({ accountId, cfg }) => {
-      const nextCfg = { ...cfg } as WinClawConfig;
+      const nextCfg = { ...cfg } as OpenClawConfig;
       const nextSection = cfg.channels?.["nextcloud-talk"]
         ? { ...cfg.channels["nextcloud-talk"] }
         : undefined;
@@ -389,7 +392,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
           const nextChannels = { ...nextCfg.channels } as Record<string, unknown>;
           delete nextChannels["nextcloud-talk"];
           if (Object.keys(nextChannels).length > 0) {
-            nextCfg.channels = nextChannels as WinClawConfig["channels"];
+            nextCfg.channels = nextChannels as OpenClawConfig["channels"];
           } else {
             delete nextCfg.channels;
           }

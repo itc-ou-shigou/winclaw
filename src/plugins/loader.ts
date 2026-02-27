@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
-import type { WinClawConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { GatewayRequestHandler } from "../gateway/server-methods/types.js";
+import { openBoundaryFileSync } from "../infra/boundary-file-read.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { isPathInsideWithRealpath } from "../security/scan-paths.js";
 import { resolveUserPath } from "../utils.js";
 import { clearPluginCommands } from "./commands.js";
 import {
@@ -15,7 +15,7 @@ import {
   resolveMemorySlotDecision,
   type NormalizedPluginsConfig,
 } from "./config-state.js";
-import { discoverWinClawPlugins } from "./discovery.js";
+import { discoverOpenClawPlugins } from "./discovery.js";
 import { initializeGlobalHookRunner } from "./hook-runner-global.js";
 import { loadPluginManifestRegistry } from "./manifest-registry.js";
 import { isPathInside, safeStatSync } from "./path-safety.js";
@@ -24,8 +24,8 @@ import { setActivePluginRegistry } from "./runtime.js";
 import { createPluginRuntime } from "./runtime/index.js";
 import { validateJsonSchemaValue } from "./schema-validator.js";
 import type {
-  WinClawPluginDefinition,
-  WinClawPluginModule,
+  OpenClawPluginDefinition,
+  OpenClawPluginModule,
   PluginDiagnostic,
   PluginLogger,
 } from "./types.js";
@@ -33,7 +33,7 @@ import type {
 export type PluginLoadResult = PluginRegistry;
 
 export type PluginLoadOptions = {
-  config?: WinClawConfig;
+  config?: OpenClawConfig;
   workspaceDir?: string;
   logger?: PluginLogger;
   coreGatewayHandlers?: Record<string, GatewayRequestHandler>;
@@ -48,20 +48,25 @@ const defaultLogger = () => createSubsystemLogger("plugins");
 const resolvePluginSdkAliasFile = (params: {
   srcFile: string;
   distFile: string;
+  modulePath?: string;
 }): string | null => {
   try {
-    const modulePath = fileURLToPath(import.meta.url);
+    const modulePath = params.modulePath ?? fileURLToPath(import.meta.url);
     const isProduction = process.env.NODE_ENV === "production";
     const isTest = process.env.VITEST || process.env.NODE_ENV === "test";
+    const normalizedModulePath = modulePath.replace(/\\/g, "/");
+    const isDistRuntime = normalizedModulePath.includes("/dist/");
     let cursor = path.dirname(modulePath);
     for (let i = 0; i < 6; i += 1) {
       const srcCandidate = path.join(cursor, "src", "plugin-sdk", params.srcFile);
       const distCandidate = path.join(cursor, "dist", "plugin-sdk", params.distFile);
-      const orderedCandidates = isProduction
-        ? isTest
-          ? [distCandidate, srcCandidate]
-          : [distCandidate]
-        : [srcCandidate, distCandidate];
+      const orderedCandidates = isDistRuntime
+        ? [distCandidate, srcCandidate]
+        : isProduction
+          ? isTest
+            ? [distCandidate, srcCandidate]
+            : [distCandidate]
+          : [srcCandidate, distCandidate];
       for (const candidate of orderedCandidates) {
         if (fs.existsSync(candidate)) {
           return candidate;
@@ -84,6 +89,10 @@ const resolvePluginSdkAlias = (): string | null =>
 
 const resolvePluginSdkAccountIdAlias = (): string | null => {
   return resolvePluginSdkAliasFile({ srcFile: "account-id.ts", distFile: "account-id.js" });
+};
+
+export const __testing = {
+  resolvePluginSdkAliasFile,
 };
 
 function buildCacheKey(params: {
@@ -116,8 +125,8 @@ function validatePluginConfig(params: {
 }
 
 function resolvePluginModuleExport(moduleExport: unknown): {
-  definition?: WinClawPluginDefinition;
-  register?: WinClawPluginDefinition["register"];
+  definition?: OpenClawPluginDefinition;
+  register?: OpenClawPluginDefinition["register"];
 } {
   const resolved =
     moduleExport &&
@@ -127,11 +136,11 @@ function resolvePluginModuleExport(moduleExport: unknown): {
       : moduleExport;
   if (typeof resolved === "function") {
     return {
-      register: resolved as WinClawPluginDefinition["register"],
+      register: resolved as OpenClawPluginDefinition["register"],
     };
   }
   if (resolved && typeof resolved === "object") {
-    const def = resolved as WinClawPluginDefinition;
+    const def = resolved as OpenClawPluginDefinition;
     const register = def.register ?? def.activate;
     return { definition: def, register };
   }
@@ -251,7 +260,7 @@ function matchesPathMatcher(matcher: PathMatcher, sourcePath: string): boolean {
 }
 
 function buildProvenanceIndex(params: {
-  config: WinClawConfig;
+  config: OpenClawConfig;
   normalizedLoadPaths: string[];
 }): PluginProvenanceIndex {
   const loadPathMatcher = createPathMatcher();
@@ -356,7 +365,7 @@ function warnAboutUntrackedLoadedPlugins(params: {
   }
 }
 
-export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegistry {
+export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegistry {
   // Test env: default-disable plugins unless explicitly configured.
   // This keeps unit/gateway suites fast and avoids loading heavyweight plugin deps by accident.
   const cfg = applyTestPluginDefaults(options.config ?? {}, process.env);
@@ -386,7 +395,7 @@ export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegis
     coreGatewayHandlers: options.coreGatewayHandlers as Record<string, GatewayRequestHandler>,
   });
 
-  const discovery = discoverWinClawPlugins({
+  const discovery = discoverOpenClawPlugins({
     workspaceDir: options.workspaceDir,
     extraPaths: normalized.loadPaths,
   });
@@ -427,9 +436,9 @@ export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegis
       ...(pluginSdkAlias || pluginSdkAccountIdAlias
         ? {
             alias: {
-              ...(pluginSdkAlias ? { "winclaw/plugin-sdk": pluginSdkAlias } : {}),
+              ...(pluginSdkAlias ? { "openclaw/plugin-sdk": pluginSdkAlias } : {}),
               ...(pluginSdkAccountIdAlias
-                ? { "winclaw/plugin-sdk/account-id": pluginSdkAccountIdAlias }
+                ? { "openclaw/plugin-sdk/account-id": pluginSdkAccountIdAlias }
                 : {}),
             },
           }
@@ -516,13 +525,19 @@ export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegis
       continue;
     }
 
-    if (
-      !isPathInsideWithRealpath(candidate.rootDir, candidate.source, {
-        requireRealpath: true,
-      })
-    ) {
+    const pluginRoot = safeRealpathOrResolve(candidate.rootDir);
+    const opened = openBoundaryFileSync({
+      absolutePath: candidate.source,
+      rootPath: pluginRoot,
+      boundaryLabel: "plugin root",
+      // Discovery stores rootDir as realpath but source may still be a lexical alias
+      // (e.g. /var/... vs /private/var/... on macOS). Canonical boundary checks
+      // still enforce containment; skip lexical pre-check to avoid false escapes.
+      skipLexicalRootCheck: true,
+    });
+    if (!opened.ok) {
       record.status = "error";
-      record.error = "plugin entry path escapes plugin root";
+      record.error = "plugin entry path escapes plugin root or fails alias checks";
       registry.plugins.push(record);
       seenIds.set(pluginId, candidate.origin);
       registry.diagnostics.push({
@@ -533,10 +548,12 @@ export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegis
       });
       continue;
     }
+    const safeSource = opened.path;
+    fs.closeSync(opened.fd);
 
-    let mod: WinClawPluginModule | null = null;
+    let mod: OpenClawPluginModule | null = null;
     try {
-      mod = getJiti()(candidate.source) as WinClawPluginModule;
+      mod = getJiti()(safeSource) as OpenClawPluginModule;
     } catch (err) {
       recordPluginError({
         logger,
@@ -697,4 +714,12 @@ export function loadWinClawPlugins(options: PluginLoadOptions = {}): PluginRegis
   setActivePluginRegistry(registry, cacheKey);
   initializeGlobalHookRunner(registry);
   return registry;
+}
+
+function safeRealpathOrResolve(value: string): string {
+  try {
+    return fs.realpathSync(value);
+  } catch {
+    return path.resolve(value);
+  }
 }

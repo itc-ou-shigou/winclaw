@@ -3,15 +3,20 @@ import { resolveContextTokensForModel } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { isCliProvider } from "../../agents/model-selection.js";
 import { deriveSessionTotalTokens, hasNonzeroUsage } from "../../agents/usage.js";
-import type { WinClawConfig } from "../../config/config.js";
-import { type SessionEntry, updateSessionStore } from "../../config/sessions.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import {
+  mergeSessionEntry,
+  setSessionRuntimeModel,
+  type SessionEntry,
+  updateSessionStore,
+} from "../../config/sessions.js";
 
 type RunResult = Awaited<
   ReturnType<(typeof import("../../agents/pi-embedded.js"))["runEmbeddedPiAgent"]>
 >;
 
 export async function updateSessionStoreAfterAgentRun(params: {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   contextTokensOverride?: number;
   sessionId: string;
   sessionKey: string;
@@ -58,10 +63,12 @@ export async function updateSessionStoreAfterAgentRun(params: {
     ...entry,
     sessionId,
     updatedAt: Date.now(),
-    modelProvider: providerUsed,
-    model: modelUsed,
     contextTokens,
   };
+  setSessionRuntimeModel(next, {
+    provider: providerUsed,
+    model: modelUsed,
+  });
   if (isCliProvider(providerUsed, cfg)) {
     const cliSessionId = result.meta.agentMeta?.sessionId?.trim();
     if (cliSessionId) {
@@ -88,8 +95,10 @@ export async function updateSessionStoreAfterAgentRun(params: {
   if (compactionsThisRun > 0) {
     next.compactionCount = (entry.compactionCount ?? 0) + compactionsThisRun;
   }
-  sessionStore[sessionKey] = next;
-  await updateSessionStore(storePath, (store) => {
-    store[sessionKey] = next;
+  const persisted = await updateSessionStore(storePath, (store) => {
+    const merged = mergeSessionEntry(store[sessionKey], next);
+    store[sessionKey] = merged;
+    return merged;
   });
+  sessionStore[sessionKey] = persisted;
 }

@@ -1,5 +1,5 @@
 import type { ReplyPayload } from "../../auto-reply/types.js";
-import type { WinClawConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { GroupToolPolicyConfig } from "../../config/types.tools.js";
 import type { OutboundDeliveryResult, OutboundSendDeps } from "../../infra/outbound/deliver.js";
 import type { OutboundIdentity } from "../../infra/outbound/identity.js";
@@ -21,50 +21,59 @@ import type {
 } from "./types.core.js";
 
 export type ChannelSetupAdapter = {
-  resolveAccountId?: (params: { cfg: WinClawConfig; accountId?: string }) => string;
+  resolveAccountId?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string;
+    input?: ChannelSetupInput;
+  }) => string;
+  resolveBindingAccountId?: (params: {
+    cfg: OpenClawConfig;
+    agentId: string;
+    accountId?: string;
+  }) => string | undefined;
   applyAccountName?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     name?: string;
-  }) => WinClawConfig;
+  }) => OpenClawConfig;
   applyAccountConfig: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     input: ChannelSetupInput;
-  }) => WinClawConfig;
+  }) => OpenClawConfig;
   validateInput?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     input: ChannelSetupInput;
   }) => string | null;
 };
 
 export type ChannelConfigAdapter<ResolvedAccount> = {
-  listAccountIds: (cfg: WinClawConfig) => string[];
-  resolveAccount: (cfg: WinClawConfig, accountId?: string | null) => ResolvedAccount;
-  defaultAccountId?: (cfg: WinClawConfig) => string;
+  listAccountIds: (cfg: OpenClawConfig) => string[];
+  resolveAccount: (cfg: OpenClawConfig, accountId?: string | null) => ResolvedAccount;
+  defaultAccountId?: (cfg: OpenClawConfig) => string;
   setAccountEnabled?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     enabled: boolean;
-  }) => WinClawConfig;
-  deleteAccount?: (params: { cfg: WinClawConfig; accountId: string }) => WinClawConfig;
-  isEnabled?: (account: ResolvedAccount, cfg: WinClawConfig) => boolean;
-  disabledReason?: (account: ResolvedAccount, cfg: WinClawConfig) => string;
-  isConfigured?: (account: ResolvedAccount, cfg: WinClawConfig) => boolean | Promise<boolean>;
-  unconfiguredReason?: (account: ResolvedAccount, cfg: WinClawConfig) => string;
-  describeAccount?: (account: ResolvedAccount, cfg: WinClawConfig) => ChannelAccountSnapshot;
+  }) => OpenClawConfig;
+  deleteAccount?: (params: { cfg: OpenClawConfig; accountId: string }) => OpenClawConfig;
+  isEnabled?: (account: ResolvedAccount, cfg: OpenClawConfig) => boolean;
+  disabledReason?: (account: ResolvedAccount, cfg: OpenClawConfig) => string;
+  isConfigured?: (account: ResolvedAccount, cfg: OpenClawConfig) => boolean | Promise<boolean>;
+  unconfiguredReason?: (account: ResolvedAccount, cfg: OpenClawConfig) => string;
+  describeAccount?: (account: ResolvedAccount, cfg: OpenClawConfig) => ChannelAccountSnapshot;
   resolveAllowFrom?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
   }) => Array<string | number> | undefined;
   formatAllowFrom?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     allowFrom: Array<string | number>;
   }) => string[];
   resolveDefaultTo?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
   }) => string | undefined;
 };
@@ -76,7 +85,7 @@ export type ChannelGroupAdapter = {
 };
 
 export type ChannelOutboundContext = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   to: string;
   text: string;
   mediaUrl?: string;
@@ -101,7 +110,7 @@ export type ChannelOutboundAdapter = {
   textChunkLimit?: number;
   pollMaxOptions?: number;
   resolveTarget?: (params: {
-    cfg?: WinClawConfig;
+    cfg?: OpenClawConfig;
     to?: string;
     allowFrom?: string[];
     accountId?: string | null;
@@ -117,37 +126,37 @@ export type ChannelStatusAdapter<ResolvedAccount, Probe = unknown, Audit = unkno
   defaultRuntime?: ChannelAccountSnapshot;
   buildChannelSummary?: (params: {
     account: ResolvedAccount;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     defaultAccountId: string;
     snapshot: ChannelAccountSnapshot;
   }) => Record<string, unknown> | Promise<Record<string, unknown>>;
   probeAccount?: (params: {
     account: ResolvedAccount;
     timeoutMs: number;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
   }) => Promise<Probe>;
   auditAccount?: (params: {
     account: ResolvedAccount;
     timeoutMs: number;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     probe?: Probe;
   }) => Promise<Audit>;
   buildAccountSnapshot?: (params: {
     account: ResolvedAccount;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     runtime?: ChannelAccountSnapshot;
     probe?: Probe;
     audit?: Audit;
   }) => ChannelAccountSnapshot | Promise<ChannelAccountSnapshot>;
   logSelfId?: (params: {
     account: ResolvedAccount;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     runtime: RuntimeEnv;
     includeChannelPrefix?: boolean;
   }) => void;
   resolveAccountState?: (params: {
     account: ResolvedAccount;
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     configured: boolean;
     enabled: boolean;
   }) => ChannelAccountState;
@@ -155,7 +164,7 @@ export type ChannelStatusAdapter<ResolvedAccount, Probe = unknown, Audit = unkno
 };
 
 export type ChannelGatewayContext<ResolvedAccount = unknown> = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   account: ResolvedAccount;
   runtime: RuntimeEnv;
@@ -182,7 +191,7 @@ export type ChannelLoginWithQrWaitResult = {
 };
 
 export type ChannelLogoutContext<ResolvedAccount = unknown> = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   account: ResolvedAccount;
   runtime: RuntimeEnv;
@@ -193,7 +202,7 @@ export type ChannelPairingAdapter = {
   idLabel: string;
   normalizeAllowEntry?: (entry: string) => string;
   notifyApproval?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     id: string;
     runtime?: RuntimeEnv;
   }) => Promise<void>;
@@ -217,7 +226,7 @@ export type ChannelGatewayAdapter<ResolvedAccount = unknown> = {
 
 export type ChannelAuthAdapter = {
   login?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     runtime: RuntimeEnv;
     verbose?: boolean;
@@ -227,24 +236,24 @@ export type ChannelAuthAdapter = {
 
 export type ChannelHeartbeatAdapter = {
   checkReady?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     deps?: ChannelHeartbeatDeps;
   }) => Promise<{ ok: boolean; reason: string }>;
-  resolveRecipients?: (params: { cfg: WinClawConfig; opts?: { to?: string; all?: boolean } }) => {
+  resolveRecipients?: (params: { cfg: OpenClawConfig; opts?: { to?: string; all?: boolean } }) => {
     recipients: string[];
     source: string;
   };
 };
 
 type ChannelDirectorySelfParams = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   runtime: RuntimeEnv;
 };
 
 type ChannelDirectoryListParams = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   query?: string | null;
   limit?: number | null;
@@ -252,7 +261,7 @@ type ChannelDirectoryListParams = {
 };
 
 type ChannelDirectoryListGroupMembersParams = {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId: string;
   limit?: number | null;
@@ -282,7 +291,7 @@ export type ChannelResolveResult = {
 
 export type ChannelResolverAdapter = {
   resolveTargets: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     inputs: string[];
     kind: ChannelResolveKind;
@@ -292,7 +301,7 @@ export type ChannelResolverAdapter = {
 
 export type ChannelElevatedAdapter = {
   allowFromFallback?: (params: {
-    cfg: WinClawConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
   }) => Array<string | number> | undefined;
 };

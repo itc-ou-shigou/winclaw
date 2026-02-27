@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { WinClawConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveOAuthDir, resolveStateDir } from "../config/paths.js";
 import {
   formatSessionArchiveTimestamp,
@@ -16,6 +16,7 @@ import {
   resolveStorePath,
 } from "../config/sessions.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
+import { parseAgentSessionKey } from "../sessions/session-key-utils.js";
 import { note } from "../terminal/note.js";
 import { shortenHomePath } from "../utils.js";
 
@@ -122,7 +123,7 @@ function findOtherStateDirs(stateDir: string): string[] {
       if (entry.name.startsWith(".")) {
         continue;
       }
-      const candidates = [".winclaw"].map((dir) => path.resolve(root, entry.name, dir));
+      const candidates = [".openclaw"].map((dir) => path.resolve(root, entry.name, dir));
       for (const candidate of candidates) {
         if (candidate === resolvedState) {
           continue;
@@ -165,8 +166,17 @@ function hasPairingPolicy(value: unknown): boolean {
   return false;
 }
 
-function shouldRequireOAuthDir(cfg: WinClawConfig, env: NodeJS.ProcessEnv): boolean {
-  if (env.WINCLAW_OAUTH_DIR?.trim()) {
+function isSlashRoutingSessionKey(sessionKey: string): boolean {
+  const raw = sessionKey.trim().toLowerCase();
+  if (!raw) {
+    return false;
+  }
+  const scoped = parseAgentSessionKey(raw)?.rest ?? raw;
+  return /^[^:]+:slash:[^:]+(?:$|:)/.test(scoped);
+}
+
+function shouldRequireOAuthDir(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
+  if (env.OPENCLAW_OAUTH_DIR?.trim()) {
     return true;
   }
   const channels = cfg.channels;
@@ -190,7 +200,7 @@ function shouldRequireOAuthDir(cfg: WinClawConfig, env: NodeJS.ProcessEnv): bool
 }
 
 export async function noteStateIntegrity(
-  cfg: WinClawConfig,
+  cfg: OpenClawConfig,
   prompter: DoctorPrompterLike,
   configPath?: string,
 ) {
@@ -199,7 +209,7 @@ export async function noteStateIntegrity(
   const env = process.env;
   const homedir = () => resolveRequiredHomeDir(env, os.homedir);
   const stateDir = resolveStateDir(env, homedir);
-  const defaultStateDir = path.join(homedir(), ".winclaw");
+  const defaultStateDir = path.join(homedir(), ".openclaw");
   const oauthDir = resolveOAuthDir(env, stateDir);
   const agentId = resolveDefaultAgentId(cfg);
   const sessionsDir = resolveSessionTranscriptsDirForAgent(agentId, env, homedir);
@@ -413,7 +423,8 @@ export async function noteStateIntegrity(
         return bUpdated - aUpdated;
       })
       .slice(0, 5);
-    const missing = recent.filter(([, entry]) => {
+    const recentTranscriptCandidates = recent.filter(([key]) => !isSlashRoutingSessionKey(key));
+    const missing = recentTranscriptCandidates.filter(([, entry]) => {
       const sessionId = entry.sessionId;
       if (!sessionId) {
         return false;
@@ -424,9 +435,10 @@ export async function noteStateIntegrity(
     if (missing.length > 0) {
       warnings.push(
         [
-          `- ${missing.length}/${recent.length} recent sessions are missing transcripts.`,
-          `  Verify sessions in store: ${formatCliCommand(`winclaw sessions --store "${absoluteStorePath}"`)}`,
-          `  Preview cleanup impact: ${formatCliCommand(`winclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+          `- ${missing.length}/${recentTranscriptCandidates.length} recent sessions are missing transcripts.`,
+          `  Verify sessions in store: ${formatCliCommand(`openclaw sessions --store "${absoluteStorePath}"`)}`,
+          `  Preview cleanup impact: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+          `  Prune missing entries: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
         ].join("\n"),
       );
     }
@@ -521,7 +533,7 @@ export function noteWorkspaceBackupTip(workspaceDir: string) {
   note(
     [
       "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
-      "- Keep ~/.winclaw out of git; it contains credentials and session history.",
+      "- Keep ~/.openclaw out of git; it contains credentials and session history.",
       "- Details: /concepts/agent-workspace#git-backup-recommended",
     ].join("\n"),
     "Workspace",

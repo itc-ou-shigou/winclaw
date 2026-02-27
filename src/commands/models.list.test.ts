@@ -5,17 +5,14 @@ let loadModelRegistry: typeof import("./models/list.registry.js").loadModelRegis
 let toModelRow: typeof import("./models/list.registry.js").toModelRow;
 
 const loadConfig = vi.fn();
-const ensureWinClawModelsJson = vi.fn().mockResolvedValue(undefined);
-const ensurePiAuthJsonFromAuthProfiles = vi
-  .fn()
-  .mockResolvedValue({ wrote: false, authPath: "/tmp/winclaw-agent/auth.json" });
-const resolveWinClawAgentDir = vi.fn().mockReturnValue("/tmp/winclaw-agent");
+const ensureOpenClawModelsJson = vi.fn().mockResolvedValue(undefined);
+const resolveOpenClawAgentDir = vi.fn().mockReturnValue("/tmp/openclaw-agent");
 const ensureAuthProfileStore = vi.fn().mockReturnValue({ version: 1, profiles: {} });
 const listProfilesForProvider = vi.fn().mockReturnValue([]);
 const resolveAuthProfileDisplayLabel = vi.fn(({ profileId }: { profileId: string }) => profileId);
 const resolveAuthStorePathForDisplay = vi
   .fn()
-  .mockReturnValue("/tmp/winclaw-agent/auth-profiles.json");
+  .mockReturnValue("/tmp/openclaw-agent/auth-profiles.json");
 const resolveProfileUnusableUntilForDisplay = vi.fn().mockReturnValue(null);
 const resolveEnvApiKey = vi.fn().mockReturnValue(undefined);
 const resolveAwsSdkEnvVarName = vi.fn().mockReturnValue(undefined);
@@ -29,21 +26,17 @@ const modelRegistryState = {
 let previousExitCode: typeof process.exitCode;
 
 vi.mock("../config/config.js", () => ({
-  CONFIG_PATH: "/tmp/winclaw.json",
-  STATE_DIR: "/tmp/winclaw-state",
+  CONFIG_PATH: "/tmp/openclaw.json",
+  STATE_DIR: "/tmp/openclaw-state",
   loadConfig,
 }));
 
 vi.mock("../agents/models-config.js", () => ({
-  ensureWinClawModelsJson,
-}));
-
-vi.mock("../agents/pi-auth-json.js", () => ({
-  ensurePiAuthJsonFromAuthProfiles,
+  ensureOpenClawModelsJson,
 }));
 
 vi.mock("../agents/agent-paths.js", () => ({
-  resolveWinClawAgentDir,
+  resolveOpenClawAgentDir,
 }));
 
 vi.mock("../agents/auth-profiles.js", () => ({
@@ -121,7 +114,6 @@ beforeEach(() => {
   modelRegistryState.getAllError = undefined;
   modelRegistryState.getAvailableError = undefined;
   listProfilesForProvider.mockReturnValue([]);
-  ensurePiAuthJsonFromAuthProfiles.mockClear();
 });
 
 afterEach(() => {
@@ -223,13 +215,12 @@ describe("models list/status", () => {
     ({ loadModelRegistry, toModelRow } = await import("./models/list.registry.js"));
   });
 
-  it("models list syncs auth-profiles into auth.json before availability checks", async () => {
+  it("models list runs model discovery without auth.json sync", async () => {
     setDefaultZaiRegistry();
     const runtime = makeRuntime();
 
     await modelsListCommand({ all: true, json: true }, runtime);
-
-    expect(ensurePiAuthJsonFromAuthProfiles).toHaveBeenCalledWith("/tmp/winclaw-agent");
+    expect(runtime.error).not.toHaveBeenCalled();
   });
 
   it("models list outputs canonical zai key for configured z.ai model", async () => {

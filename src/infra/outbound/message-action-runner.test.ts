@@ -7,11 +7,12 @@ import { telegramPlugin } from "../../../extensions/telegram/src/channel.js";
 import { whatsappPlugin } from "../../../extensions/whatsapp/src/channel.js";
 import { jsonResult } from "../../agents/tools/common.js";
 import type { ChannelPlugin } from "../../channels/plugins/types.js";
-import type { WinClawConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
 import { loadWebMedia } from "../../web/media.js";
+import { resolvePreferredOpenClawTmpDir } from "../tmp-openclaw-dir.js";
 import { runMessageAction } from "./message-action-runner.js";
 
 vi.mock("../../web/media.js", async () => {
@@ -29,7 +30,7 @@ const slackConfig = {
       appToken: "xapp-test",
     },
   },
-} as WinClawConfig;
+} as OpenClawConfig;
 
 const whatsappConfig = {
   channels: {
@@ -37,7 +38,7 @@ const whatsappConfig = {
       allowFrom: ["*"],
     },
   },
-} as WinClawConfig;
+} as OpenClawConfig;
 
 async function withSandbox(test: (sandboxDir: string) => Promise<void>) {
   const sandboxDir = await fs.mkdtemp(path.join(os.tmpdir(), "msg-sandbox-"));
@@ -49,7 +50,7 @@ async function withSandbox(test: (sandboxDir: string) => Promise<void>) {
 }
 
 const runDryAction = (params: {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   action: "send" | "thread-reply" | "broadcast";
   actionParams: Record<string, unknown>;
   toolContext?: Record<string, unknown>;
@@ -67,7 +68,7 @@ const runDryAction = (params: {
   });
 
 const runDrySend = (params: {
-  cfg: WinClawConfig;
+  cfg: OpenClawConfig;
   actionParams: Record<string, unknown>;
   toolContext?: Record<string, unknown>;
   abortSignal?: AbortSignal;
@@ -334,7 +335,7 @@ describe("runMessageAction context isolation", () => {
           token: "tg-test",
         },
       },
-    } as WinClawConfig;
+    } as OpenClawConfig;
 
     const result = await runDrySend({
       cfg: multiConfig,
@@ -372,7 +373,7 @@ describe("runMessageAction context isolation", () => {
           },
         },
       },
-    } as WinClawConfig;
+    } as OpenClawConfig;
 
     await expect(
       runDrySend({
@@ -423,6 +424,15 @@ describe("runMessageAction context isolation", () => {
 });
 
 describe("runMessageAction sendAttachment hydration", () => {
+  const cfg = {
+    channels: {
+      bluebubbles: {
+        enabled: true,
+        serverUrl: "http://localhost:1234",
+        password: "test-password",
+      },
+    },
+  } as OpenClawConfig;
   const attachmentPlugin: ChannelPlugin = {
     id: "bluebubbles",
     meta: {
@@ -432,15 +442,15 @@ describe("runMessageAction sendAttachment hydration", () => {
       docsPath: "/channels/bluebubbles",
       blurb: "BlueBubbles test plugin.",
     },
-    capabilities: { chatTypes: ["direct"], media: true },
+    capabilities: { chatTypes: ["direct", "group"], media: true },
     config: {
       listAccountIds: () => ["default"],
       resolveAccount: () => ({ enabled: true }),
       isConfigured: () => true,
     },
     actions: {
-      listActions: () => ["sendAttachment"],
-      supportsAction: ({ action }) => action === "sendAttachment",
+      listActions: () => ["sendAttachment", "setGroupIcon"],
+      supportsAction: ({ action }) => action === "sendAttachment" || action === "setGroupIcon",
       handleAction: async ({ params }) =>
         jsonResult({
           ok: true,
@@ -475,17 +485,46 @@ describe("runMessageAction sendAttachment hydration", () => {
     vi.clearAllMocks();
   });
 
-  it("hydrates buffer and filename from media for sendAttachment", async () => {
-    const cfg = {
-      channels: {
-        bluebubbles: {
-          enabled: true,
-          serverUrl: "http://localhost:1234",
-          password: "test-password",
-        },
-      },
-    } as WinClawConfig;
+  async function restoreRealMediaLoader() {
+    const actual = await vi.importActual<typeof import("../../web/media.js")>("../../web/media.js");
+    vi.mocked(loadWebMedia).mockImplementation(actual.loadWebMedia);
+  }
 
+  async function expectRejectsLocalAbsolutePathWithoutSandbox(params: {
+    action: "sendAttachment" | "setGroupIcon";
+    target: string;
+    message?: string;
+    tempPrefix: string;
+  }) {
+    await restoreRealMediaLoader();
+
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), params.tempPrefix));
+    try {
+      const outsidePath = path.join(tempDir, "secret.txt");
+      await fs.writeFile(outsidePath, "secret", "utf8");
+
+      const actionParams: Record<string, unknown> = {
+        channel: "bluebubbles",
+        target: params.target,
+        media: outsidePath,
+      };
+      if (params.message) {
+        actionParams.message = params.message;
+      }
+
+      await expect(
+        runMessageAction({
+          cfg,
+          action: params.action,
+          params: actionParams,
+        }),
+      ).rejects.toThrow(/allowed directory|path-not-allowed/i);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  it("hydrates buffer and filename from media for sendAttachment", async () => {
     const result = await runMessageAction({
       cfg,
       action: "sendAttachment",
@@ -507,18 +546,18 @@ describe("runMessageAction sendAttachment hydration", () => {
     expect((result.payload as { buffer?: string }).buffer).toBe(
       Buffer.from("hello").toString("base64"),
     );
+    const call = vi.mocked(loadWebMedia).mock.calls[0];
+    expect(call?.[1]).toEqual(
+      expect.objectContaining({
+        localRoots: expect.any(Array),
+      }),
+    );
+    expect((call?.[1] as { sandboxValidated?: boolean } | undefined)?.sandboxValidated).not.toBe(
+      true,
+    );
   });
 
   it("rewrites sandboxed media paths for sendAttachment", async () => {
-    const cfg = {
-      channels: {
-        bluebubbles: {
-          enabled: true,
-          serverUrl: "http://localhost:1234",
-          password: "test-password",
-        },
-      },
-    } as WinClawConfig;
     await withSandbox(async (sandboxDir) => {
       await runMessageAction({
         cfg,
@@ -534,6 +573,28 @@ describe("runMessageAction sendAttachment hydration", () => {
 
       const call = vi.mocked(loadWebMedia).mock.calls[0];
       expect(call?.[0]).toBe(path.join(sandboxDir, "data", "pic.png"));
+      expect(call?.[1]).toEqual(
+        expect.objectContaining({
+          sandboxValidated: true,
+        }),
+      );
+    });
+  });
+
+  it("rejects local absolute path for sendAttachment when sandboxRoot is missing", async () => {
+    await expectRejectsLocalAbsolutePathWithoutSandbox({
+      action: "sendAttachment",
+      target: "+15551234567",
+      message: "caption",
+      tempPrefix: "msg-attachment-",
+    });
+  });
+
+  it("rejects local absolute path for setGroupIcon when sandboxRoot is missing", async () => {
+    await expectRejectsLocalAbsolutePathWithoutSandbox({
+      action: "setGroupIcon",
+      target: "group:123",
+      tempPrefix: "msg-group-icon-",
     });
   });
 });
@@ -622,10 +683,12 @@ describe("runMessageAction sandboxed media validation", () => {
     });
   });
 
-  it("allows media paths under os.tmpdir()", async () => {
+  it("allows media paths under preferred OpenClaw tmp root", async () => {
+    const tmpRoot = resolvePreferredOpenClawTmpDir();
+    await fs.mkdir(tmpRoot, { recursive: true });
     const sandboxDir = await fs.mkdtemp(path.join(os.tmpdir(), "msg-sandbox-"));
     try {
-      const tmpFile = path.join(os.tmpdir(), "test-media-image.png");
+      const tmpFile = path.join(tmpRoot, "test-media-image.png");
       const result = await runMessageAction({
         cfg: slackConfig,
         action: "send",
@@ -643,7 +706,23 @@ describe("runMessageAction sandboxed media validation", () => {
       if (result.kind !== "send") {
         throw new Error("expected send result");
       }
-      expect(result.sendResult?.mediaUrl).toBe(tmpFile);
+      // runMessageAction normalizes media paths through platform resolution.
+      expect(result.sendResult?.mediaUrl).toBe(path.resolve(tmpFile));
+      const hostTmpOutsideOpenClaw = path.join(os.tmpdir(), "outside-openclaw", "test-media.png");
+      await expect(
+        runMessageAction({
+          cfg: slackConfig,
+          action: "send",
+          params: {
+            channel: "slack",
+            target: "#C12345678",
+            media: hostTmpOutsideOpenClaw,
+            message: "",
+          },
+          sandboxRoot: sandboxDir,
+          dryRun: true,
+        }),
+      ).rejects.toThrow(/sandbox/i);
     } finally {
       await fs.rm(sandboxDir, { recursive: true, force: true });
     }
@@ -687,7 +766,7 @@ describe("runMessageAction media caption behavior", () => {
           enabled: true,
         },
       },
-    } as WinClawConfig;
+    } as OpenClawConfig;
 
     const result = await runMessageAction({
       cfg,
@@ -763,7 +842,7 @@ describe("runMessageAction card-only send behavior", () => {
           enabled: true,
         },
       },
-    } as WinClawConfig;
+    } as OpenClawConfig;
 
     const card = {
       type: "AdaptiveCard",
@@ -842,7 +921,7 @@ describe("runMessageAction components parsing", () => {
       buttons: [{ label: "A", customId: "a" }],
     };
     const result = await runMessageAction({
-      cfg: {} as WinClawConfig,
+      cfg: {} as OpenClawConfig,
       action: "send",
       params: {
         channel: "discord",
@@ -861,7 +940,7 @@ describe("runMessageAction components parsing", () => {
   it("throws on invalid components JSON strings", async () => {
     await expect(
       runMessageAction({
-        cfg: {} as WinClawConfig,
+        cfg: {} as OpenClawConfig,
         action: "send",
         params: {
           channel: "discord",
@@ -919,7 +998,7 @@ describe("runMessageAction accountId defaults", () => {
 
   it("propagates defaultAccountId into params", async () => {
     await runMessageAction({
-      cfg: {} as WinClawConfig,
+      cfg: {} as OpenClawConfig,
       action: "send",
       params: {
         channel: "discord",
@@ -941,5 +1020,33 @@ describe("runMessageAction accountId defaults", () => {
     }
     expect(ctx.accountId).toBe("ops");
     expect(ctx.params.accountId).toBe("ops");
+  });
+
+  it("falls back to the agent's bound account when accountId is omitted", async () => {
+    await runMessageAction({
+      cfg: {
+        bindings: [{ agentId: "agent-b", match: { channel: "discord", accountId: "account-b" } }],
+      } as OpenClawConfig,
+      action: "send",
+      params: {
+        channel: "discord",
+        target: "channel:123",
+        message: "hi",
+      },
+      agentId: "agent-b",
+    });
+
+    expect(handleAction).toHaveBeenCalled();
+    const ctx = (handleAction.mock.calls as unknown as Array<[unknown]>)[0]?.[0] as
+      | {
+          accountId?: string | null;
+          params: Record<string, unknown>;
+        }
+      | undefined;
+    if (!ctx) {
+      throw new Error("expected action context");
+    }
+    expect(ctx.accountId).toBe("account-b");
+    expect(ctx.params.accountId).toBe("account-b");
   });
 });

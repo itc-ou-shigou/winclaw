@@ -30,6 +30,7 @@ type RegisteredViewHandler = (args: {
     view?: {
       id?: string;
       callback_id?: string;
+      private_metadata?: string;
       root_view_id?: string;
       previous_view_id?: string;
       external_id?: string;
@@ -58,7 +59,23 @@ type RegisteredViewClosedHandler = (args: {
   };
 }) => Promise<void>;
 
-function createContext() {
+function createContext(overrides?: {
+  dmEnabled?: boolean;
+  dmPolicy?: "open" | "allowlist" | "pairing" | "disabled";
+  allowFrom?: string[];
+  allowNameMatching?: boolean;
+  channelsConfig?: Record<string, { users?: string[] }>;
+  isChannelAllowed?: (params: {
+    channelId?: string;
+    channelName?: string;
+    channelType?: "im" | "mpim" | "channel" | "group";
+  }) => boolean;
+  resolveUserName?: (userId: string) => Promise<{ name?: string }>;
+  resolveChannelName?: (channelId: string) => Promise<{
+    name?: string;
+    type?: "im" | "mpim" | "channel" | "group";
+  }>;
+}) {
   let handler: RegisteredHandler | null = null;
   let viewHandler: RegisteredViewHandler | null = null;
   let viewClosedHandler: RegisteredViewClosedHandler | null = null;
@@ -80,9 +97,40 @@ function createContext() {
   };
   const runtimeLog = vi.fn();
   const resolveSessionKey = vi.fn().mockReturnValue("agent:ops:slack:channel:C1");
+  const isChannelAllowed = vi
+    .fn<
+      (params: {
+        channelId?: string;
+        channelName?: string;
+        channelType?: "im" | "mpim" | "channel" | "group";
+      }) => boolean
+    >()
+    .mockImplementation((params) => overrides?.isChannelAllowed?.(params) ?? true);
+  const resolveUserName = vi
+    .fn<(userId: string) => Promise<{ name?: string }>>()
+    .mockImplementation((userId) => overrides?.resolveUserName?.(userId) ?? Promise.resolve({}));
+  const resolveChannelName = vi
+    .fn<
+      (channelId: string) => Promise<{
+        name?: string;
+        type?: "im" | "mpim" | "channel" | "group";
+      }>
+    >()
+    .mockImplementation(
+      (channelId) => overrides?.resolveChannelName?.(channelId) ?? Promise.resolve({}),
+    );
   const ctx = {
     app,
     runtime: { log: runtimeLog },
+    dmEnabled: overrides?.dmEnabled ?? true,
+    dmPolicy: overrides?.dmPolicy ?? ("open" as const),
+    allowFrom: overrides?.allowFrom ?? [],
+    allowNameMatching: overrides?.allowNameMatching ?? false,
+    channelsConfig: overrides?.channelsConfig ?? {},
+    defaultRequireMention: true,
+    isChannelAllowed,
+    resolveUserName,
+    resolveChannelName,
     resolveSlackSystemEventSessionKey: resolveSessionKey,
   };
   return {
@@ -90,6 +138,9 @@ function createContext() {
     app,
     runtimeLog,
     resolveSessionKey,
+    isChannelAllowed,
+    resolveUserName,
+    resolveChannelName,
     getHandler: () => handler,
     getViewHandler: () => viewHandler,
     getViewClosedHandler: () => viewClosedHandler,
@@ -124,14 +175,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "verify_block",
-              elements: [{ type: "button", action_id: "winclaw:verify" }],
+              elements: [{ type: "button", action_id: "openclaw:verify" }],
             },
           ],
         },
       },
       action: {
         type: "button",
-        action_id: "winclaw:verify",
+        action_id: "openclaw:verify",
         block_id: "verify_block",
         value: "approved",
         text: { type: "plain_text", text: "Approve" },
@@ -155,7 +206,7 @@ describe("registerSlackInteractionEvents", () => {
       threadTs?: string;
     };
     expect(payload).toMatchObject({
-      actionId: "winclaw:verify",
+      actionId: "openclaw:verify",
       actionType: "button",
       value: "approved",
       userId: "U123",
@@ -168,7 +219,7 @@ describe("registerSlackInteractionEvents", () => {
     });
     expect(resolveSessionKey).toHaveBeenCalledWith({
       channelId: "C1",
-      channelType: undefined,
+      channelType: "channel",
     });
     expect(app.client.chat.update).toHaveBeenCalledTimes(1);
   });
@@ -193,7 +244,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "static_select",
-        action_id: "winclaw:pick",
+        action_id: "openclaw:pick",
         block_id: "select_block",
         selected_option: {
           text: { type: "plain_text", text: "Canary" },
@@ -228,6 +279,85 @@ describe("registerSlackInteractionEvents", () => {
     );
   });
 
+  it("blocks block actions from users outside configured channel users allowlist", async () => {
+    enqueueSystemEventMock.mockClear();
+    const { ctx, app, getHandler } = createContext({
+      channelsConfig: {
+        C1: { users: ["U_ALLOWED"] },
+      },
+    });
+    registerSlackInteractionEvents({ ctx: ctx as never });
+    const handler = getHandler();
+    expect(handler).toBeTruthy();
+
+    const ack = vi.fn().mockResolvedValue(undefined);
+    const respond = vi.fn().mockResolvedValue(undefined);
+    await handler!({
+      ack,
+      respond,
+      body: {
+        user: { id: "U_DENIED" },
+        channel: { id: "C1" },
+        message: {
+          ts: "201.202",
+          blocks: [{ type: "actions", block_id: "verify_block", elements: [] }],
+        },
+      },
+      action: {
+        type: "button",
+        action_id: "openclaw:verify",
+        block_id: "verify_block",
+      },
+    });
+
+    expect(ack).toHaveBeenCalled();
+    expect(enqueueSystemEventMock).not.toHaveBeenCalled();
+    expect(app.client.chat.update).not.toHaveBeenCalled();
+    expect(respond).toHaveBeenCalledWith({
+      text: "You are not authorized to use this control.",
+      response_type: "ephemeral",
+    });
+  });
+
+  it("blocks DM block actions when sender is not in allowFrom", async () => {
+    enqueueSystemEventMock.mockClear();
+    const { ctx, app, getHandler } = createContext({
+      dmPolicy: "allowlist",
+      allowFrom: ["U_OWNER"],
+    });
+    registerSlackInteractionEvents({ ctx: ctx as never });
+    const handler = getHandler();
+    expect(handler).toBeTruthy();
+
+    const ack = vi.fn().mockResolvedValue(undefined);
+    const respond = vi.fn().mockResolvedValue(undefined);
+    await handler!({
+      ack,
+      respond,
+      body: {
+        user: { id: "U_ATTACKER" },
+        channel: { id: "D222" },
+        message: {
+          ts: "301.302",
+          blocks: [{ type: "actions", block_id: "verify_block", elements: [] }],
+        },
+      },
+      action: {
+        type: "button",
+        action_id: "openclaw:verify",
+        block_id: "verify_block",
+      },
+    });
+
+    expect(ack).toHaveBeenCalled();
+    expect(enqueueSystemEventMock).not.toHaveBeenCalled();
+    expect(app.client.chat.update).not.toHaveBeenCalled();
+    expect(respond).toHaveBeenCalledWith({
+      text: "You are not authorized to use this control.",
+      response_type: "ephemeral",
+    });
+  });
+
   it("ignores malformed action payloads after ack and logs warning", async () => {
     enqueueSystemEventMock.mockClear();
     const { ctx, app, getHandler, runtimeLog } = createContext();
@@ -248,7 +378,7 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "verify_block",
-              elements: [{ type: "button", action_id: "winclaw:verify" }],
+              elements: [{ type: "button", action_id: "openclaw:verify" }],
             },
           ],
         },
@@ -282,7 +412,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "static_select",
-        action_id: "winclaw:pick",
+        action_id: "openclaw:pick",
         block_id: "select_block",
         selected_option: {
           text: { type: "plain_text", text: "Canary_*`~<&>" },
@@ -328,7 +458,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "button",
-        action_id: "winclaw:container",
+        action_id: "openclaw:container",
         block_id: "container_block",
         value: "ok",
         text: { type: "plain_text", text: "Container" },
@@ -338,7 +468,7 @@ describe("registerSlackInteractionEvents", () => {
     expect(ack).toHaveBeenCalled();
     expect(resolveSessionKey).toHaveBeenCalledWith({
       channelId: "C222",
-      channelType: undefined,
+      channelType: "channel",
     });
     expect(enqueueSystemEventMock).toHaveBeenCalledTimes(1);
     const [eventText] = enqueueSystemEventMock.mock.calls[0] as [string];
@@ -377,14 +507,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "multi_block",
-              elements: [{ type: "multi_static_select", action_id: "winclaw:multi" }],
+              elements: [{ type: "multi_static_select", action_id: "openclaw:multi" }],
             },
           ],
         },
       },
       action: {
         type: "multi_static_select",
-        action_id: "winclaw:multi",
+        action_id: "openclaw:multi",
         block_id: "multi_block",
         selected_options: [
           { text: { type: "plain_text", text: "Alpha" }, value: "alpha" },
@@ -436,24 +566,24 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "date_block",
-              elements: [{ type: "datepicker", action_id: "winclaw:date" }],
+              elements: [{ type: "datepicker", action_id: "openclaw:date" }],
             },
             {
               type: "actions",
               block_id: "time_block",
-              elements: [{ type: "timepicker", action_id: "winclaw:time" }],
+              elements: [{ type: "timepicker", action_id: "openclaw:time" }],
             },
             {
               type: "actions",
               block_id: "datetime_block",
-              elements: [{ type: "datetimepicker", action_id: "winclaw:datetime" }],
+              elements: [{ type: "datetimepicker", action_id: "openclaw:datetime" }],
             },
           ],
         },
       },
       action: {
         type: "datepicker",
-        action_id: "winclaw:date",
+        action_id: "openclaw:date",
         block_id: "date_block",
         selected_date: "2026-02-16",
       },
@@ -471,14 +601,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "time_block",
-              elements: [{ type: "timepicker", action_id: "winclaw:time" }],
+              elements: [{ type: "timepicker", action_id: "openclaw:time" }],
             },
           ],
         },
       },
       action: {
         type: "timepicker",
-        action_id: "winclaw:time",
+        action_id: "openclaw:time",
         block_id: "time_block",
         selected_time: "14:30",
       },
@@ -496,14 +626,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "datetime_block",
-              elements: [{ type: "datetimepicker", action_id: "winclaw:datetime" }],
+              elements: [{ type: "datetimepicker", action_id: "openclaw:datetime" }],
             },
           ],
         },
       },
       action: {
         type: "datetimepicker",
-        action_id: "winclaw:datetime",
+        action_id: "openclaw:datetime",
         block_id: "datetime_block",
         selected_date_time: selectedDateTimeEpoch,
       },
@@ -578,7 +708,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "multi_conversations_select",
-        action_id: "winclaw:route",
+        action_id: "openclaw:route",
         selected_user: "U777",
         selected_users: ["U777", "U888"],
         selected_channel: "C777",
@@ -648,7 +778,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "workflow_button",
-        action_id: "winclaw:workflow",
+        action_id: "openclaw:workflow",
         block_id: "workflow_block",
         text: { type: "plain_text", text: "Launch workflow" },
         workflow: {
@@ -692,12 +822,16 @@ describe("registerSlackInteractionEvents", () => {
         team: { id: "T1" },
         view: {
           id: "V123",
-          callback_id: "winclaw:deploy_form",
+          callback_id: "openclaw:deploy_form",
           root_view_id: "VROOT",
           previous_view_id: "VPREV",
           external_id: "deploy-ext-1",
           hash: "view-hash-1",
-          private_metadata: JSON.stringify({ channelId: "D123", channelType: "im" }),
+          private_metadata: JSON.stringify({
+            channelId: "D123",
+            channelType: "im",
+            userId: "U777",
+          }),
           state: {
             values: {
               env_block: {
@@ -752,8 +886,8 @@ describe("registerSlackInteractionEvents", () => {
     };
     expect(payload).toMatchObject({
       interactionType: "view_submission",
-      actionId: "view:winclaw:deploy_form",
-      callbackId: "winclaw:deploy_form",
+      actionId: "view:openclaw:deploy_form",
+      callbackId: "openclaw:deploy_form",
       viewId: "V123",
       userId: "U777",
       routedChannelId: "D123",
@@ -771,6 +905,59 @@ describe("registerSlackInteractionEvents", () => {
     );
   });
 
+  it("blocks modal events when private metadata userId does not match submitter", async () => {
+    enqueueSystemEventMock.mockClear();
+    const { ctx, getViewHandler } = createContext();
+    registerSlackInteractionEvents({ ctx: ctx as never });
+    const viewHandler = getViewHandler();
+    expect(viewHandler).toBeTruthy();
+
+    const ack = vi.fn().mockResolvedValue(undefined);
+    await viewHandler!({
+      ack,
+      body: {
+        user: { id: "U222" },
+        view: {
+          callback_id: "openclaw:deploy_form",
+          private_metadata: JSON.stringify({
+            channelId: "D123",
+            channelType: "im",
+            userId: "U111",
+          }),
+        },
+      },
+    } as never);
+
+    expect(ack).toHaveBeenCalled();
+    expect(enqueueSystemEventMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks modal events when private metadata is missing userId", async () => {
+    enqueueSystemEventMock.mockClear();
+    const { ctx, getViewHandler } = createContext();
+    registerSlackInteractionEvents({ ctx: ctx as never });
+    const viewHandler = getViewHandler();
+    expect(viewHandler).toBeTruthy();
+
+    const ack = vi.fn().mockResolvedValue(undefined);
+    await viewHandler!({
+      ack,
+      body: {
+        user: { id: "U222" },
+        view: {
+          callback_id: "openclaw:deploy_form",
+          private_metadata: JSON.stringify({
+            channelId: "D123",
+            channelType: "im",
+          }),
+        },
+      },
+    } as never);
+
+    expect(ack).toHaveBeenCalled();
+    expect(enqueueSystemEventMock).not.toHaveBeenCalled();
+  });
+
   it("captures modal input labels and picker values across block types", async () => {
     enqueueSystemEventMock.mockClear();
     const { ctx, getViewHandler } = createContext();
@@ -785,7 +972,8 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U444" },
         view: {
           id: "V400",
-          callback_id: "winclaw:routing_form",
+          callback_id: "openclaw:routing_form",
+          private_metadata: JSON.stringify({ userId: "U444" }),
           state: {
             values: {
               env_block: {
@@ -860,13 +1048,13 @@ describe("registerSlackInteractionEvents", () => {
               email_block: {
                 email_input: {
                   type: "email_text_input",
-                  value: "team@winclaw.ai",
+                  value: "team@openclaw.ai",
                 },
               },
               url_block: {
                 url_input: {
                   type: "url_text_input",
-                  value: "https://docs.winclaw.ai",
+                  value: "https://docs.openclaw.ai",
                 },
               },
               richtext_block: {
@@ -957,12 +1145,12 @@ describe("registerSlackInteractionEvents", () => {
         expect.objectContaining({
           actionId: "email_input",
           inputKind: "email",
-          inputEmail: "team@winclaw.ai",
+          inputEmail: "team@openclaw.ai",
         }),
         expect.objectContaining({
           actionId: "url_input",
           inputKind: "url",
-          inputUrl: "https://docs.winclaw.ai/",
+          inputUrl: "https://docs.openclaw.ai/",
         }),
         expect.objectContaining({
           actionId: "richtext_input",
@@ -1000,7 +1188,8 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U555" },
         view: {
           id: "V555",
-          callback_id: "winclaw:long_richtext",
+          callback_id: "openclaw:long_richtext",
+          private_metadata: JSON.stringify({ userId: "U555" }),
           state: {
             values: {
               richtext_block: {
@@ -1049,12 +1238,15 @@ describe("registerSlackInteractionEvents", () => {
         is_cleared: true,
         view: {
           id: "V900",
-          callback_id: "winclaw:deploy_form",
+          callback_id: "openclaw:deploy_form",
           root_view_id: "VROOT900",
           previous_view_id: "VPREV900",
           external_id: "deploy-ext-900",
           hash: "view-hash-900",
-          private_metadata: JSON.stringify({ sessionKey: "agent:main:slack:channel:C99" }),
+          private_metadata: JSON.stringify({
+            sessionKey: "agent:main:slack:channel:C99",
+            userId: "U900",
+          }),
           state: {
             values: {
               env_block: {
@@ -1096,12 +1288,15 @@ describe("registerSlackInteractionEvents", () => {
     };
     expect(payload).toMatchObject({
       interactionType: "view_closed",
-      actionId: "view:winclaw:deploy_form",
-      callbackId: "winclaw:deploy_form",
+      actionId: "view:openclaw:deploy_form",
+      callbackId: "openclaw:deploy_form",
       viewId: "V900",
       userId: "U900",
       isCleared: true,
-      privateMetadata: JSON.stringify({ sessionKey: "agent:main:slack:channel:C99" }),
+      privateMetadata: JSON.stringify({
+        sessionKey: "agent:main:slack:channel:C99",
+        userId: "U900",
+      }),
       rootViewId: "VROOT900",
       previousViewId: "VPREV900",
       externalId: "deploy-ext-900",
@@ -1130,7 +1325,8 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U901" },
         view: {
           id: "V901",
-          callback_id: "winclaw:deploy_form",
+          callback_id: "openclaw:deploy_form",
+          private_metadata: JSON.stringify({ userId: "U901" }),
         },
       },
     });

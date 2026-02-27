@@ -1,15 +1,15 @@
 import Foundation
 
 enum CommandResolver {
-    private static let projectRootDefaultsKey = "winclaw.gatewayProjectRootPath"
-    private static let helperName = "winclaw"
+    private static let projectRootDefaultsKey = "openclaw.gatewayProjectRootPath"
+    private static let helperName = "openclaw"
 
     static func gatewayEntrypoint(in root: URL) -> String? {
         let distEntry = root.appendingPathComponent("dist/index.js").path
         if FileManager().isReadableFile(atPath: distEntry) { return distEntry }
-        let winclawEntry = root.appendingPathComponent("winclaw.mjs").path
-        if FileManager().isReadableFile(atPath: winclawEntry) { return winclawEntry }
-        let binEntry = root.appendingPathComponent("bin/winclaw.js").path
+        let openclawEntry = root.appendingPathComponent("openclaw.mjs").path
+        if FileManager().isReadableFile(atPath: openclawEntry) { return openclawEntry }
+        let binEntry = root.appendingPathComponent("bin/openclaw.js").path
         if FileManager().isReadableFile(atPath: binEntry) { return binEntry }
         return nil
     }
@@ -38,9 +38,9 @@ enum CommandResolver {
 
     static func errorCommand(with message: String) -> [String] {
         let script = """
-        cat <<'__WINCLAW_ERR__' >&2
+        cat <<'__OPENCLAW_ERR__' >&2
         \(message)
-        __WINCLAW_ERR__
+        __OPENCLAW_ERR__
         exit 1
         """
         return ["/bin/sh", "-c", script]
@@ -54,7 +54,7 @@ enum CommandResolver {
             return url
         }
         let fallback = FileManager().homeDirectoryForCurrentUser
-            .appendingPathComponent("Projects/winclaw")
+            .appendingPathComponent("Projects/openclaw")
         if FileManager().fileExists(atPath: fallback.path) {
             return fallback
         }
@@ -89,19 +89,19 @@ enum CommandResolver {
         // Dev-only convenience. Avoid project-local PATH hijacking in release builds.
         extras.insert(projectRoot.appendingPathComponent("node_modules/.bin").path, at: 0)
         #endif
-        let winclawPaths = self.winclawManagedPaths(home: home)
-        if !winclawPaths.isEmpty {
-            extras.insert(contentsOf: winclawPaths, at: 1)
+        let openclawPaths = self.openclawManagedPaths(home: home)
+        if !openclawPaths.isEmpty {
+            extras.insert(contentsOf: openclawPaths, at: 1)
         }
-        extras.insert(contentsOf: self.nodeManagerBinPaths(home: home), at: 1 + winclawPaths.count)
+        extras.insert(contentsOf: self.nodeManagerBinPaths(home: home), at: 1 + openclawPaths.count)
         var seen = Set<String>()
         // Preserve order while stripping duplicates so PATH lookups remain deterministic.
         return (extras + current).filter { seen.insert($0).inserted }
     }
 
-    private static func winclawManagedPaths(home: URL) -> [String] {
+    private static func openclawManagedPaths(home: URL) -> [String] {
         let bases = [
-            home.appendingPathComponent(".winclaw"),
+            home.appendingPathComponent(".openclaw"),
         ]
         var paths: [String] = []
         for base in bases {
@@ -193,11 +193,11 @@ enum CommandResolver {
         return nil
     }
 
-    static func winclawExecutable(searchPaths: [String]? = nil) -> String? {
+    static func openclawExecutable(searchPaths: [String]? = nil) -> String? {
         self.findExecutable(named: self.helperName, searchPaths: searchPaths)
     }
 
-    static func projectWinClawExecutable(projectRoot: URL? = nil) -> String? {
+    static func projectOpenClawExecutable(projectRoot: URL? = nil) -> String? {
         #if DEBUG
         let root = projectRoot ?? self.projectRoot()
         let candidate = root.appendingPathComponent("node_modules/.bin").appendingPathComponent(self.helperName).path
@@ -210,8 +210,8 @@ enum CommandResolver {
     static func nodeCliPath() -> String? {
         let root = self.projectRoot()
         let candidates = [
-            root.appendingPathComponent("winclaw.mjs").path,
-            root.appendingPathComponent("bin/winclaw.js").path,
+            root.appendingPathComponent("openclaw.mjs").path,
+            root.appendingPathComponent("bin/openclaw.js").path,
         ]
         for candidate in candidates where FileManager().isReadableFile(atPath: candidate) {
             return candidate
@@ -219,8 +219,8 @@ enum CommandResolver {
         return nil
     }
 
-    static func hasAnyWinClawInvoker(searchPaths: [String]? = nil) -> Bool {
-        if self.winclawExecutable(searchPaths: searchPaths) != nil { return true }
+    static func hasAnyOpenClawInvoker(searchPaths: [String]? = nil) -> Bool {
+        if self.openclawExecutable(searchPaths: searchPaths) != nil { return true }
         if self.findExecutable(named: "pnpm", searchPaths: searchPaths) != nil { return true }
         if self.findExecutable(named: "node", searchPaths: searchPaths) != nil,
            self.nodeCliPath() != nil
@@ -230,7 +230,7 @@ enum CommandResolver {
         return false
     }
 
-    static func winclawNodeCommand(
+    static func openclawNodeCommand(
         subcommand: String,
         extraArgs: [String] = [],
         defaults: UserDefaults = .standard,
@@ -246,15 +246,17 @@ enum CommandResolver {
             return ssh
         }
 
-        let runtimeResult = self.runtimeResolution(searchPaths: searchPaths)
+        let root = self.projectRoot()
+        if let openclawPath = self.projectOpenClawExecutable(projectRoot: root) {
+            return [openclawPath, subcommand] + extraArgs
+        }
+        if let openclawPath = self.openclawExecutable(searchPaths: searchPaths) {
+            return [openclawPath, subcommand] + extraArgs
+        }
 
+        let runtimeResult = self.runtimeResolution(searchPaths: searchPaths)
         switch runtimeResult {
         case let .success(runtime):
-            let root = self.projectRoot()
-            if let winclawPath = self.projectWinClawExecutable(projectRoot: root) {
-                return [winclawPath, subcommand] + extraArgs
-            }
-
             if let entry = self.gatewayEntrypoint(in: root) {
                 return self.makeRuntimeCommand(
                     runtime: runtime,
@@ -262,32 +264,34 @@ enum CommandResolver {
                     subcommand: subcommand,
                     extraArgs: extraArgs)
             }
-            if let pnpm = self.findExecutable(named: "pnpm", searchPaths: searchPaths) {
-                // Use --silent to avoid pnpm lifecycle banners that would corrupt JSON outputs.
-                return [pnpm, "--silent", "winclaw", subcommand] + extraArgs
-            }
-            if let winclawPath = self.winclawExecutable(searchPaths: searchPaths) {
-                return [winclawPath, subcommand] + extraArgs
-            }
+        case .failure:
+            break
+        }
 
+        if let pnpm = self.findExecutable(named: "pnpm", searchPaths: searchPaths) {
+            // Use --silent to avoid pnpm lifecycle banners that would corrupt JSON outputs.
+            return [pnpm, "--silent", "openclaw", subcommand] + extraArgs
+        }
+
+        switch runtimeResult {
+        case .success:
             let missingEntry = """
-            winclaw entrypoint missing (looked for dist/index.js or winclaw.mjs); run pnpm build.
+            openclaw entrypoint missing (looked for dist/index.js or openclaw.mjs); run pnpm build.
             """
             return self.errorCommand(with: missingEntry)
-
         case let .failure(error):
             return self.runtimeErrorCommand(error)
         }
     }
 
-    static func winclawCommand(
+    static func openclawCommand(
         subcommand: String,
         extraArgs: [String] = [],
         defaults: UserDefaults = .standard,
         configRoot: [String: Any]? = nil,
         searchPaths: [String]? = nil) -> [String]
     {
-        self.winclawNodeCommand(
+        self.openclawNodeCommand(
             subcommand: subcommand,
             extraArgs: extraArgs,
             defaults: defaults,
@@ -301,7 +305,7 @@ enum CommandResolver {
         guard !settings.target.isEmpty else { return nil }
         guard let parsed = self.parseSSHTarget(settings.target) else { return nil }
 
-        // Run the real winclaw CLI on the remote host.
+        // Run the real openclaw CLI on the remote host.
         let exportedPath = [
             "/opt/homebrew/bin",
             "/usr/local/bin",
@@ -318,7 +322,7 @@ enum CommandResolver {
 
         let projectSection = if userPRJ.isEmpty {
             """
-            DEFAULT_PRJ="$HOME/Projects/winclaw"
+            DEFAULT_PRJ="$HOME/Projects/openclaw"
             if [ -d "$DEFAULT_PRJ" ]; then
               PRJ="$DEFAULT_PRJ"
               cd "$PRJ" || { echo "Project root not found: $PRJ"; exit 127; }
@@ -357,9 +361,9 @@ enum CommandResolver {
         CLI="";
         \(cliSection)
         \(projectSection)
-        if command -v winclaw >/dev/null 2>&1; then
-          CLI="$(command -v winclaw)"
-          winclaw \(quotedArgs);
+        if command -v openclaw >/dev/null 2>&1; then
+          CLI="$(command -v openclaw)"
+          openclaw \(quotedArgs);
         elif [ -n "${PRJ:-}" ] && [ -f "$PRJ/dist/index.js" ]; then
           if command -v node >/dev/null 2>&1; then
             CLI="node $PRJ/dist/index.js"
@@ -367,25 +371,25 @@ enum CommandResolver {
           else
             echo "Node >=22 required on remote host"; exit 127;
           fi
-        elif [ -n "${PRJ:-}" ] && [ -f "$PRJ/winclaw.mjs" ]; then
+        elif [ -n "${PRJ:-}" ] && [ -f "$PRJ/openclaw.mjs" ]; then
           if command -v node >/dev/null 2>&1; then
-            CLI="node $PRJ/winclaw.mjs"
-            node "$PRJ/winclaw.mjs" \(quotedArgs);
+            CLI="node $PRJ/openclaw.mjs"
+            node "$PRJ/openclaw.mjs" \(quotedArgs);
           else
             echo "Node >=22 required on remote host"; exit 127;
           fi
-        elif [ -n "${PRJ:-}" ] && [ -f "$PRJ/bin/winclaw.js" ]; then
+        elif [ -n "${PRJ:-}" ] && [ -f "$PRJ/bin/openclaw.js" ]; then
           if command -v node >/dev/null 2>&1; then
-            CLI="node $PRJ/bin/winclaw.js"
-            node "$PRJ/bin/winclaw.js" \(quotedArgs);
+            CLI="node $PRJ/bin/openclaw.js"
+            node "$PRJ/bin/openclaw.js" \(quotedArgs);
           else
             echo "Node >=22 required on remote host"; exit 127;
           fi
         elif command -v pnpm >/dev/null 2>&1; then
-          CLI="pnpm --silent winclaw"
-          pnpm --silent winclaw \(quotedArgs);
+          CLI="pnpm --silent openclaw"
+          pnpm --silent openclaw \(quotedArgs);
         else
-          echo "winclaw CLI missing on remote host"; exit 127;
+          echo "openclaw CLI missing on remote host"; exit 127;
         fi
         """
         let options: [String] = [
@@ -413,7 +417,7 @@ enum CommandResolver {
         defaults: UserDefaults = .standard,
         configRoot: [String: Any]? = nil) -> RemoteSettings
     {
-        let root = configRoot ?? WinClawConfigFile.loadDict()
+        let root = configRoot ?? OpenClawConfigFile.loadDict()
         let mode = ConnectionModeResolver.resolve(root: root, defaults: defaults).mode
         let target = defaults.string(forKey: remoteTargetKey) ?? ""
         let identity = defaults.string(forKey: remoteIdentityKey) ?? ""

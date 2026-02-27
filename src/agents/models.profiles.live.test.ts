@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
-import { resolveWinClawAgentDir } from "./agent-paths.js";
+import { resolveOpenClawAgentDir } from "./agent-paths.js";
 import {
   collectAnthropicApiKeys,
   isAnthropicBillingError,
@@ -11,13 +11,13 @@ import {
 } from "./live-auth-keys.js";
 import { isModernModelRef } from "./live-model-filter.js";
 import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
-import { ensureWinClawModelsJson } from "./models-config.js";
+import { ensureOpenClawModelsJson } from "./models-config.js";
 import { isRateLimitErrorMessage } from "./pi-embedded-helpers/errors.js";
 import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 
-const LIVE = isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.WINCLAW_LIVE_TEST);
-const DIRECT_ENABLED = Boolean(process.env.WINCLAW_LIVE_MODELS?.trim());
-const REQUIRE_PROFILE_KEYS = isTruthyEnvValue(process.env.WINCLAW_LIVE_REQUIRE_PROFILE_KEYS);
+const LIVE = isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.OPENCLAW_LIVE_TEST);
+const DIRECT_ENABLED = Boolean(process.env.OPENCLAW_LIVE_MODELS?.trim());
+const REQUIRE_PROFILE_KEYS = isTruthyEnvValue(process.env.OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS);
 
 const describeLive = LIVE ? describe : describe.skip;
 
@@ -43,6 +43,23 @@ function parseModelFilter(raw?: string): Set<string> | null {
 
 function logProgress(message: string): void {
   console.log(`[live] ${message}`);
+}
+
+function formatFailurePreview(
+  failures: Array<{ model: string; error: string }>,
+  maxItems: number,
+): string {
+  const limit = Math.max(1, maxItems);
+  const lines = failures.slice(0, limit).map((failure, index) => {
+    const normalized = failure.error.replace(/\s+/g, " ").trim();
+    const clipped = normalized.length > 320 ? `${normalized.slice(0, 317)}...` : normalized;
+    return `${index + 1}. ${failure.model}: ${clipped}`;
+  });
+  const remaining = failures.length - limit;
+  if (remaining > 0) {
+    lines.push(`... and ${remaining} more`);
+  }
+  return lines.join("\n");
 }
 
 function isGoogleModelNotFoundError(err: unknown): boolean {
@@ -91,6 +108,20 @@ function isInstructionsRequiredError(raw: string): boolean {
   return /instructions are required/i.test(raw);
 }
 
+function isModelTimeoutError(raw: string): boolean {
+  return /model call timed out after \d+ms/i.test(raw);
+}
+
+function isProviderUnavailableErrorMessage(raw: string): boolean {
+  const msg = raw.toLowerCase();
+  return (
+    msg.includes("no allowed providers are available") ||
+    msg.includes("provider unavailable") ||
+    msg.includes("upstream provider unavailable") ||
+    msg.includes("upstream error from google")
+  );
+}
+
 function toInt(value: string | undefined, fallback: number): number {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -98,6 +129,49 @@ function toInt(value: string | undefined, fallback: number): number {
   }
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function capByProviderSpread<T>(
+  items: T[],
+  maxItems: number,
+  providerOf: (item: T) => string,
+): T[] {
+  if (maxItems <= 0 || items.length <= maxItems) {
+    return items;
+  }
+  const providerOrder: string[] = [];
+  const grouped = new Map<string, T[]>();
+  for (const item of items) {
+    const provider = providerOf(item);
+    const bucket = grouped.get(provider);
+    if (bucket) {
+      bucket.push(item);
+      continue;
+    }
+    providerOrder.push(provider);
+    grouped.set(provider, [item]);
+  }
+
+  const selected: T[] = [];
+  while (selected.length < maxItems && grouped.size > 0) {
+    for (const provider of providerOrder) {
+      const bucket = grouped.get(provider);
+      if (!bucket || bucket.length === 0) {
+        continue;
+      }
+      const item = bucket.shift();
+      if (item) {
+        selected.push(item);
+      }
+      if (bucket.length === 0) {
+        grouped.delete(provider);
+      }
+      if (selected.length >= maxItems) {
+        break;
+      }
+    }
+  }
+  return selected;
 }
 
 function resolveTestReasoning(
@@ -122,16 +196,32 @@ async function completeSimpleWithTimeout<TApi extends Api>(
   options: Parameters<typeof completeSimple<TApi>>[2],
   timeoutMs: number,
 ) {
+  const maxTimeoutMs = Math.max(1, timeoutMs);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.max(1, timeoutMs));
-  timer.unref?.();
+  const abortTimer = setTimeout(() => {
+    controller.abort();
+  }, maxTimeoutMs);
+  abortTimer.unref?.();
+  let hardTimer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    hardTimer = setTimeout(() => {
+      reject(new Error(`model call timed out after ${maxTimeoutMs}ms`));
+    }, maxTimeoutMs);
+    hardTimer.unref?.();
+  });
   try {
-    return await completeSimple(model, context, {
-      ...options,
-      signal: controller.signal,
-    });
+    return await Promise.race([
+      completeSimple(model, context, {
+        ...options,
+        signal: controller.signal,
+      }),
+      timeout,
+    ]);
   } finally {
-    clearTimeout(timer);
+    clearTimeout(abortTimer);
+    if (hardTimer) {
+      clearTimeout(hardTimer);
+    }
   }
 }
 
@@ -180,10 +270,10 @@ describeLive("live models (profile keys)", () => {
     "completes across selected models",
     async () => {
       const cfg = loadConfig();
-      await ensureWinClawModelsJson(cfg);
+      await ensureOpenClawModelsJson(cfg);
       if (!DIRECT_ENABLED) {
         logProgress(
-          "[live-models] skipping (set WINCLAW_LIVE_MODELS=modern|all|<list>; all=modern)",
+          "[live-models] skipping (set OPENCLAW_LIVE_MODELS=modern|all|<list>; all=modern)",
         );
         return;
       }
@@ -193,18 +283,19 @@ describeLive("live models (profile keys)", () => {
         logProgress(`[live-models] anthropic keys loaded: ${anthropicKeys.length}`);
       }
 
-      const agentDir = resolveWinClawAgentDir();
+      const agentDir = resolveOpenClawAgentDir();
       const authStorage = discoverAuthStorage(agentDir);
       const modelRegistry = discoverModels(authStorage, agentDir);
       const models = modelRegistry.getAll();
 
-      const rawModels = process.env.WINCLAW_LIVE_MODELS?.trim();
+      const rawModels = process.env.OPENCLAW_LIVE_MODELS?.trim();
       const useModern = rawModels === "modern" || rawModels === "all";
       const useExplicit = Boolean(rawModels) && !useModern;
       const filter = useExplicit ? parseModelFilter(rawModels) : null;
       const allowNotFoundSkip = useModern;
-      const providers = parseProviderFilter(process.env.WINCLAW_LIVE_PROVIDERS);
-      const perModelTimeoutMs = toInt(process.env.WINCLAW_LIVE_MODEL_TIMEOUT_MS, 30_000);
+      const providers = parseProviderFilter(process.env.OPENCLAW_LIVE_PROVIDERS);
+      const perModelTimeoutMs = toInt(process.env.OPENCLAW_LIVE_MODEL_TIMEOUT_MS, 30_000);
+      const maxModels = toInt(process.env.OPENCLAW_LIVE_MAX_MODELS, 0);
 
       const failures: Array<{ model: string; error: string }> = [];
       const skipped: Array<{ model: string; reason: string }> = [];
@@ -246,11 +337,21 @@ describeLive("live models (profile keys)", () => {
         return;
       }
 
+      const selectedCandidates = capByProviderSpread(
+        candidates,
+        maxModels > 0 ? maxModels : candidates.length,
+        (entry) => entry.model.provider,
+      );
       logProgress(`[live-models] selection=${useExplicit ? "explicit" : "modern"}`);
-      logProgress(`[live-models] running ${candidates.length} models`);
-      const total = candidates.length;
+      if (selectedCandidates.length < candidates.length) {
+        logProgress(
+          `[live-models] capped to ${selectedCandidates.length}/${candidates.length} via OPENCLAW_LIVE_MAX_MODELS=${maxModels}`,
+        );
+      }
+      logProgress(`[live-models] running ${selectedCandidates.length} models`);
+      const total = selectedCandidates.length;
 
-      for (const [index, entry] of candidates.entries()) {
+      for (const [index, entry] of selectedCandidates.entries()) {
         const { model, apiKeyInfo } = entry;
         const id = `${model.provider}/${model.id}`;
         const progressLabel = `[live-models] ${index + 1}/${total} ${id}`;
@@ -395,7 +496,10 @@ describeLive("live models (profile keys)", () => {
               throw new Error(msg || "model returned error with no message");
             }
 
-            if (ok.text.length === 0 && model.provider === "google") {
+            if (
+              ok.text.length === 0 &&
+              (model.provider === "google" || model.provider === "google-gemini-cli")
+            ) {
               skipped.push({
                 model: id,
                 reason: "no text returned (likely unavailable model id)",
@@ -513,6 +617,16 @@ describeLive("live models (profile keys)", () => {
               logProgress(`${progressLabel}: skip (instructions required)`);
               break;
             }
+            if (allowNotFoundSkip && isModelTimeoutError(message)) {
+              skipped.push({ model: id, reason: message });
+              logProgress(`${progressLabel}: skip (timeout)`);
+              break;
+            }
+            if (allowNotFoundSkip && isProviderUnavailableErrorMessage(message)) {
+              skipped.push({ model: id, reason: message });
+              logProgress(`${progressLabel}: skip (provider unavailable)`);
+              break;
+            }
             logProgress(`${progressLabel}: failed`);
             failures.push({ model: id, error: message });
             break;
@@ -521,11 +635,10 @@ describeLive("live models (profile keys)", () => {
       }
 
       if (failures.length > 0) {
-        const preview = failures
-          .slice(0, 10)
-          .map((f) => `- ${f.model}: ${f.error}`)
-          .join("\n");
-        throw new Error(`live model failures (${failures.length}):\n${preview}`);
+        const preview = formatFailurePreview(failures, 20);
+        throw new Error(
+          `live model failures (${failures.length}, showing ${Math.min(failures.length, 20)}):\n${preview}`,
+        );
       }
 
       void skipped;
