@@ -341,95 +341,433 @@ The daily auto-update cron job is registered automatically on first run — no m
 
 ## Featured Plugins
 
-WinClaw v2026.2.28 ships with **18 pre-built plugins** spanning 15 professional domains. Each plugin bundles curated skills, slash commands, and MCP server integrations — configured entirely through natural language in the Chat tab.
+WinClaw ships with **18 pre-built plugins** covering 15 professional domains — **88 slash commands**, **90+ AI skills**, and **40+ MCP integrations** ready to use. Enable any plugin with a single chat message or a one-line config change.
 
-### Plugin Overview
+### Quick Start
 
-| Plugin | Domain | Commands | Skills | Key MCP Integrations |
-|--------|--------|----------|--------|----------------------|
-| **bio-research** | Life Sciences R&D | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
-| **customer-support** | Support Ops | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
-| **data** | Data & Analytics | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
-| **design** | UX/UI Design | 6 | 6 | Figma, Linear, Notion |
-| **engineering** | Dev Workflow | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
-| **enterprise-search** | Cross-Tool Search | 2 | 3 | Slack, Notion, Guru, Atlassian |
-| **finance** | Accounting & FP&A | 5 | 6 | Snowflake, BigQuery |
-| **human-resources** | People Ops | 6 | 6 | Slack, Google Calendar, Notion |
-| **legal** | Contract & Compliance | 7 | 6 | Box, DocuSign, Atlassian |
-| **marketing** | Content & Campaigns | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
-| **operations** | Business Ops | 6 | 6 | ServiceNow, Asana, Atlassian |
-| **product-management** | Product Strategy | 7 | 6 | Linear, Amplitude, Pendo, Figma |
-| **productivity** | Task & Memory | 2 | 2 | Slack, Notion, Asana, Monday |
-| **sales** | Pipeline & Outreach | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
-| **partner-built/apollo** | Sales Automation | -- | 3 | Apollo |
-| **partner-built/brand-voice** | Brand Guardrails | 3 | 3 | Notion, Figma, Gong |
-| **partner-built/common-room** | GTM Intelligence | 2 | 6 | Common Room |
-| **partner-built/slack** | Slack Workflows | 5 | 2 | Slack |
-
-### How to Enable a Plugin
-
-Plugins are configured through natural language — just tell WinClaw what you need:
-
+**Option A — Natural language** (just type in Chat):
 ```
-You:   I want to use the data analytics plugin
-AI:    I'll enable the data plugin for you. It includes 6 commands
-       (analyze, build-dashboard, create-viz, explore-data, validate, write-query)
-       and connects to Snowflake, Databricks, and BigQuery.
-       Which data source would you like to connect first?
+You:   Enable the sales plugin
+AI:    Done! Sales plugin is active with 3 commands and 6 skills.
+       Try /sales:draft-outreach to research a prospect and draft outreach.
 ```
 
-Or configure manually in `winclaw.json`:
-
+**Option B — Config file** (`winclaw.json`):
 ```json
 {
   "plugins": {
     "entries": {
       "data": { "enabled": true },
       "sales": { "enabled": true },
-      "engineering": { "enabled": true }
+      "bio-research": { "enabled": true }
     }
   }
 }
 ```
 
-### Plugin Usage Examples
+### Plugin Catalog
 
-**Data Analysis:**
+#### Business Core
 
+<details>
+<summary><b>productivity</b> — Task management and persistent memory across sessions</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/start` | Initialize the productivity dashboard and sync tasks |
+| Command | `/update` | Refresh tasks and memory from current activity |
+| Skill | task-management | Track tasks via shared TASKS.md with status updates |
+| Skill | memory-management | Two-tier memory system for cross-session context |
+
+MCP: Slack, Notion, Asana, Linear, Monday, Atlassian, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>data</b> — SQL generation, data exploration, dashboards, and visualizations</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/analyze` | Answer data questions from quick lookups to full analysis |
+| Command | `/build-dashboard` | Build interactive HTML dashboards with charts and filters |
+| Command | `/create-viz` | Create publication-quality visualizations with Python |
+| Command | `/explore-data` | Profile a dataset — shape, distributions, anomalies |
+| Command | `/validate` | QA an analysis before sharing with stakeholders |
+| Command | `/write-query` | Write optimized SQL for your dialect with best practices |
+| Skill | sql-queries | Write correct, performant SQL across all major databases |
+| Skill | data-exploration | Profile and explore datasets for shape and quality |
+| Skill | data-visualization | Create effective charts with Python (matplotlib, plotly) |
+| Skill | interactive-dashboard-builder | Build self-contained interactive HTML dashboards |
+| Skill | statistical-analysis | Descriptive stats, hypothesis testing, regression |
+| Skill | data-validation | Validate methodology, accuracy, and completeness |
+| Skill | data-context-extractor | Generate company-specific data analysis context |
+
+MCP: Snowflake, Databricks, BigQuery, Hex, Amplitude, Atlassian
+</details>
+
+<details>
+<summary><b>finance</b> — Financial statements, variance analysis, reconciliation, and audit</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/income-statement` | Generate income statements with period comparisons |
+| Command | `/journal-entry` | Prepare journal entries with proper debits and credits |
+| Command | `/reconciliation` | Reconcile GL balances to subledger, bank, or third-party |
+| Command | `/sox-testing` | Generate SOX sample selections and testing workpapers |
+| Command | `/variance-analysis` | Decompose variances into drivers with narrative |
+| Skill | financial-statements | Income statements, balance sheets, cash flow reports |
+| Skill | variance-analysis | Break down variances by driver with explanation |
+| Skill | reconciliation | Match GL to subledger and bank records |
+| Skill | journal-entry-prep | Proper debit/credit entries with supporting docs |
+| Skill | audit-support | SOX 404 compliance testing and sample selection |
+| Skill | close-management | Month-end close task sequencing and tracking |
+
+MCP: Snowflake, Databricks, BigQuery, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>operations</b> — Process optimization, vendor management, and risk assessment</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/capacity-plan` | Forecast resource needs and allocation |
+| Command | `/change-request` | Draft and track change management requests |
+| Command | `/process-doc` | Document operational procedures step-by-step |
+| Command | `/runbook` | Create runbooks for repeatable operations |
+| Command | `/status-report` | Generate operational status reports |
+| Command | `/vendor-review` | Evaluate and compare vendor performance |
+| Skill | process-optimization | Identify bottlenecks and improvement opportunities |
+| Skill | vendor-management | Evaluate, compare, and manage vendor relationships |
+| Skill | risk-assessment | Assess operational risks with severity and mitigation |
+| Skill | resource-planning | Plan capacity and allocate resources |
+| Skill | change-management | Structure and track organizational changes |
+| Skill | compliance-tracking | Monitor compliance requirements and status |
+
+MCP: Slack, ServiceNow, Asana, Atlassian, Notion, Google Calendar, Gmail
+</details>
+
+#### Customer-Facing
+
+<details>
+<summary><b>sales</b> — Pipeline management, prospect research, and personalized outreach</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/call-summary` | Extract action items from call notes or transcripts |
+| Command | `/forecast` | Generate weighted sales forecasts (best/likely/worst) |
+| Command | `/pipeline-review` | Analyze pipeline health — prioritize and flag risks |
+| Skill | draft-outreach | Research a prospect then draft personalized messages |
+| Skill | account-research | Research a company and get actionable sales insights |
+| Skill | call-prep | Prepare for calls with attendee profiles and talking points |
+| Skill | competitive-intelligence | Research competitors and build battle cards |
+| Skill | create-an-asset | Generate tailored sales assets (decks, landing pages) |
+| Skill | daily-briefing | Start your day with prioritized sales briefing |
+
+MCP: HubSpot, Clay, ZoomInfo, Apollo, Slack, Notion, Outreach, Gmail
+</details>
+
+<details>
+<summary><b>customer-support</b> — Ticket triage, response drafting, escalation, and KB articles</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/draft-response` | Draft professional customer-facing responses |
+| Command | `/escalate` | Package an escalation for engineering or product |
+| Command | `/kb-article` | Draft a KB article from a resolved issue |
+| Command | `/research` | Multi-source research on a customer question |
+| Command | `/triage` | Categorize, prioritize, and route support tickets |
+| Skill | ticket-triage | Categorize issues by urgency and route to the right team |
+| Skill | response-drafting | Draft empathetic, professional customer replies |
+| Skill | escalation | Structure escalation packages for engineering |
+| Skill | customer-research | Search across docs, logs, and CRM for context |
+| Skill | knowledge-management | Turn resolved issues into self-service content |
+
+MCP: Slack, Intercom, HubSpot, Guru, Atlassian, Notion, Gmail
+</details>
+
+<details>
+<summary><b>marketing</b> — Campaign planning, content creation, SEO, and performance analytics</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/brand-review` | Review content against your brand voice and style guide |
+| Command | `/campaign-plan` | Generate a full campaign brief with channels and timeline |
+| Command | `/competitive-brief` | Research competitors and positioning analysis |
+| Command | `/draft-content` | Draft blog posts, social media, emails, newsletters |
+| Command | `/email-sequence` | Design multi-email nurture sequences |
+| Command | `/performance-report` | Build marketing performance reports with key metrics |
+| Command | `/seo-audit` | Run keyword research, on-page audit, and optimization |
+| Skill | campaign-planning | Plan campaigns with objectives, audience, and channels |
+| Skill | content-creation | Draft marketing content across all channels |
+| Skill | brand-voice | Enforce consistent brand voice and messaging |
+| Skill | competitive-analysis | Compare positioning, messaging, and strategy |
+| Skill | performance-analytics | Analyze metrics, trends, and ROI |
+
+MCP: Canva, HubSpot, Ahrefs, Klaviyo, Figma, Amplitude, Notion, Slack
+</details>
+
+#### Product & Engineering
+
+<details>
+<summary><b>product-management</b> — Feature specs, roadmaps, user research, and stakeholder updates</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/competitive-brief` | Create competitive analysis briefs |
+| Command | `/metrics-review` | Review and analyze product metrics with trends |
+| Command | `/roadmap-update` | Update or reprioritize your product roadmap |
+| Command | `/sprint-planning` | Plan and structure sprint work |
+| Command | `/stakeholder-update` | Generate updates tailored to audience |
+| Command | `/synthesize-research` | Synthesize research from interviews and surveys |
+| Command | `/write-spec` | Write a feature spec or PRD from a problem statement |
+| Skill | feature-spec | Write structured PRDs with acceptance criteria |
+| Skill | roadmap-management | Prioritize roadmaps using RICE/MoSCoW frameworks |
+| Skill | user-research-synthesis | Synthesize qualitative and quantitative research |
+| Skill | competitive-analysis | Feature comparison matrices and positioning |
+| Skill | metrics-tracking | Define, track, and analyze product metrics |
+| Skill | stakeholder-comms | Tailor updates by audience (exec, eng, sales) |
+
+MCP: Linear, Amplitude, Pendo, Figma, Slack, Atlassian, Notion, Intercom
+</details>
+
+<details>
+<summary><b>engineering</b> — Code review, system design, incident response, and documentation</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/architecture` | Design system architecture with trade-off analysis |
+| Command | `/debug` | Systematic debugging with root cause analysis |
+| Command | `/deploy-checklist` | Generate pre-deployment checklists |
+| Command | `/incident` | Structure incident response and post-mortems |
+| Command | `/review` | Code review with security and performance checks |
+| Command | `/standup` | Generate standup summaries from recent activity |
+| Skill | system-design | Design scalable systems with architecture diagrams |
+| Skill | code-review | Thorough code review for correctness and security |
+| Skill | incident-response | Structured incident response and blameless post-mortems |
+| Skill | documentation | Generate technical documentation from code |
+| Skill | tech-debt | Identify and prioritize technical debt |
+| Skill | testing-strategy | Design comprehensive testing strategies |
+
+MCP: GitHub, PagerDuty, Datadog, Linear, Slack, Atlassian, Notion
+</details>
+
+<details>
+<summary><b>design</b> — Accessibility audits, UX writing, design critique, and dev handoff</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/accessibility` | Run WCAG accessibility audits |
+| Command | `/critique` | Get structured design feedback |
+| Command | `/design-system` | Manage and document design system components |
+| Command | `/handoff` | Generate pixel-perfect dev handoff specs |
+| Command | `/research-synthesis` | Synthesize UX research findings |
+| Command | `/ux-copy` | Write and review microcopy and UI text |
+| Skill | accessibility-review | WCAG compliance audits with fix recommendations |
+| Skill | design-critique | Structured critique using design principles |
+| Skill | design-handoff | Dev-ready specs with tokens, spacing, and states |
+| Skill | design-system-management | Document and maintain component libraries |
+| Skill | user-research | Synthesize user research into actionable insights |
+| Skill | ux-writing | Write clear, consistent UI copy |
+
+MCP: Figma, Linear, Slack, Asana, Atlassian, Notion, Intercom
+</details>
+
+#### Specialized
+
+<details>
+<summary><b>legal</b> — Contract review, NDA triage, compliance checks, and legal briefs</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/brief` | Generate contextual legal briefings |
+| Command | `/compliance-check` | Check GDPR, CCPA, and regulatory compliance |
+| Command | `/respond` | Generate templated legal responses |
+| Command | `/review-contract` | Review contracts against negotiation playbook |
+| Command | `/signature-request` | Prepare signature request packages |
+| Command | `/triage-nda` | Classify NDAs as GREEN / YELLOW / RED |
+| Command | `/vendor-check` | Check status of existing vendor agreements |
+| Skill | contract-review | Review contracts against your organization's standards |
+| Skill | nda-triage | Screen NDAs — standard (GREEN) or needs review (RED) |
+| Skill | compliance | Navigate GDPR, CCPA, and privacy regulations |
+| Skill | legal-risk-assessment | Assess risk severity with mitigation recommendations |
+| Skill | meeting-briefing | Prepare briefings for legal meetings |
+| Skill | canned-responses | Generate templated responses for common inquiries |
+
+MCP: Box, DocuSign, Egnyte, Atlassian, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>human-resources</b> — Recruiting, compensation analysis, onboarding, and performance reviews</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/comp-analysis` | Benchmark compensation against market data |
+| Command | `/draft-offer` | Draft offer letters with compliant terms |
+| Command | `/onboarding` | Create structured onboarding plans |
+| Command | `/people-report` | Generate people analytics reports |
+| Command | `/performance-review` | Structure performance review discussions |
+| Command | `/policy-lookup` | Look up company policies and answer HR questions |
+| Skill | interview-prep | Structure interview plans with scorecards |
+| Skill | compensation-benchmarking | Benchmark salaries against market data |
+| Skill | recruiting-pipeline | Track and optimize recruiting pipeline |
+| Skill | org-planning | Plan organizational structure and headcount |
+| Skill | people-analytics | Analyze retention, engagement, and workforce metrics |
+| Skill | employee-handbook | Draft and maintain employee handbook policies |
+
+MCP: Slack, Google Calendar, Gmail, Notion, Atlassian
+</details>
+
+<details>
+<summary><b>enterprise-search</b> — Search across all company tools in one query</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/digest` | Generate daily/weekly digest of activity across tools |
+| Command | `/search` | Search across all connected sources in one query |
+| Skill | search-strategy | Decompose complex queries into multi-source searches |
+| Skill | knowledge-synthesis | Combine search results into coherent summaries |
+| Skill | source-management | Manage and configure connected MCP data sources |
+
+MCP: Slack, Notion, Guru, Atlassian, Asana, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>bio-research</b> — Literature search, clinical trials, genomics, and lab data analysis</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/start` | Set up bio-research environment and explore available tools |
+| Skill | scientific-problem-selection | Help scientists select and prioritize research problems |
+| Skill | single-cell-rna-qc | QC for single-cell RNA-seq data using scanpy |
+| Skill | scvi-tools | Deep learning for single-cell analysis with scvi-tools |
+| Skill | nextflow-development | Run nf-core bioinformatics pipelines (rnaseq, sarek) |
+| Skill | instrument-data-to-allotrope | Convert lab instrument output files to Allotrope format |
+
+MCP: PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov, Open Targets, Benchling, Synapse
+</details>
+
+#### Partner-Built
+
+<details>
+<summary><b>apollo</b> — Lead enrichment, prospecting, and sequence loading via Apollo API</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Skill | prospect | Describe your ICP in plain English, get ranked leads |
+| Skill | enrich-lead | Enrich any contact from name, email, or LinkedIn URL |
+| Skill | sequence-load | Find, enrich, and load contacts into a sequence in one shot |
+
+MCP: Apollo
+</details>
+
+<details>
+<summary><b>brand-voice</b> — Auto-generate and enforce brand guidelines from existing materials</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/discover-brand` | Discover brand signals from docs, calls, and chats |
+| Command | `/enforce-voice` | Apply brand guidelines to AI-generated content |
+| Command | `/generate-guidelines` | Generate brand voice guidelines from existing materials |
+| Skill | discover-brand | Search across Notion, Drive, Gong, Slack for brand signals |
+| Skill | guideline-generation | Distill brand materials into enforceable guidelines |
+| Skill | brand-voice-enforcement | Apply guidelines to all AI-generated content |
+
+MCP: Notion, Figma, Gong, Atlassian, Box
+</details>
+
+<details>
+<summary><b>common-room</b> — GTM intelligence from product usage, engagement, and intent signals</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/generate-account-plan` | Create strategic account plans from signal data |
+| Command | `/weekly-brief` | Generate weekly briefings for upcoming calls |
+| Skill | account-research | Research accounts with real engagement data |
+| Skill | contact-research | Build contact profiles from multiple signals |
+| Skill | call-prep | Prep for calls with attendee profiles and talking points |
+| Skill | prospect | Build targeted prospect lists from signal data |
+| Skill | compose-outreach | Draft personalized outreach across email and LinkedIn |
+| Skill | weekly-prep-brief | Weekly briefings for every upcoming call |
+
+MCP: Common Room
+</details>
+
+<details>
+<summary><b>slack</b> — Channel digests, standup summaries, and message drafting via Slack API</summary>
+
+| Type | Name | What it does |
+|------|------|-------------|
+| Command | `/channel-digest` | Summarize channel activity over a time period |
+| Command | `/draft-announcement` | Draft team announcements for Slack |
+| Command | `/find-discussions` | Find relevant discussions across channels |
+| Command | `/standup` | Generate standup summaries from Slack activity |
+| Command | `/summarize-channel` | Create a concise channel summary |
+| Skill | slack-messaging | Send and manage Slack messages and threads |
+| Skill | slack-search | Search across Slack channels and conversations |
+
+MCP: Slack
+</details>
+
+### Usage Examples
+
+**Write optimized SQL** (data plugin):
 ```
-You:   Analyze our Q4 revenue data from Snowflake
-AI:    Running /data:analyze... Connected to Snowflake.
-       Q4 Revenue: $2.3M (+18% QoQ). Top segment: Enterprise (62%).
-       Want me to build a dashboard or create a visualization?
+You:   Write a query to find our top 10 customers by revenue this quarter
+AI:    /data:write-query — Here's an optimized query for your Snowflake warehouse:
+       SELECT customer_id, SUM(amount) as total_revenue
+       FROM orders WHERE order_date >= DATE_TRUNC('quarter', CURRENT_DATE)
+       GROUP BY customer_id ORDER BY total_revenue DESC LIMIT 10;
+       Added index hints and partition pruning for performance.
 ```
 
-**Sales Pipeline:**
-
-```
-You:   Research Acme Corp and draft a personalized outreach email
-AI:    Running /sales:draft-outreach... Found Acme Corp on ZoomInfo:
-       Series B, 150 employees, using Salesforce. Key contact: Jane Doe (VP Sales).
-       Here's a personalized email draft based on their recent product launch...
-```
-
-**Legal Contract Review:**
-
+**Triage an NDA** (legal plugin):
 ```
 You:   Review this NDA from our new vendor
-AI:    Running /legal:triage-nda... Classification: GREEN (standard).
-       Key terms: 2-year duration, mutual obligations, standard carve-outs.
-       One flag: non-compete clause in Section 7 is broader than typical.
-       Recommend negotiating to limit scope to direct competitors only.
+AI:    /legal:triage-nda — Classification: GREEN (standard terms).
+       Duration: 2 years, mutual obligations, standard carve-outs.
+       Flag: Section 7 non-compete is broader than typical.
+       Recommendation: Negotiate to limit scope to direct competitors.
 ```
 
-**Bio-Research:**
-
+**Search clinical trials** (bio-research plugin):
 ```
-You:   Find recent clinical trials for pembrolizumab in lung cancer
-AI:    Running /bio-research:start... Found 47 recruiting trials.
-       Top 3 Phase III trials: NCT04567890 (combo with chemo, n=800),
-       NCT04891234 (adjuvant setting, n=1200)...
-       Want me to analyze endpoints or find related PubMed articles?
+You:   Find pembrolizumab lung cancer trials
+AI:    /bio-research:start — Searching PubMed + ClinicalTrials.gov...
+       Found 47 recruiting Phase III trials. Top results:
+       | NCT ID | Design | Enrollment | Status |
+       | NCT04567890 | Combo + chemo | n=800 | Recruiting |
+       | NCT04891234 | Adjuvant | n=1200 | Recruiting |
+       Want me to analyze endpoints or pull related PubMed articles?
+```
+
+**Find sales prospects** (apollo plugin):
+```
+You:   Find VP Engineering contacts at Series B SaaS companies in the Bay Area
+AI:    Searching Apollo... Found 12 matching contacts, ranked by fit:
+       | Name | Title | Company | Employees | Funding |
+       | Jane Smith | VP Eng | Acme AI | 150 | Series B |
+       | ...
+       Want me to enrich these contacts or load them into a sequence?
+```
+
+**Plan a campaign** (marketing plugin):
+```
+You:   Plan a product launch campaign for our new API feature
+AI:    /marketing:campaign-plan — Multi-channel campaign brief:
+       Objective: Drive 500 API signups in 30 days
+       Channels: Email sequence (3-touch), blog post, social, webinar
+       Timeline: Week 1 teaser → Week 2 launch → Week 3-4 nurture
+       KPIs: Signups, activation rate, docs page views
+```
+
+**Assess operational risk** (operations plugin):
+```
+You:   Assess the risk of migrating our payment system to the new provider
+AI:    /operations:risk-assessment — Risk matrix:
+       | Risk | Severity | Likelihood | Mitigation |
+       | Data loss during migration | High | Low | Parallel-run 30 days |
+       | API downtime | Medium | Medium | Feature flags + rollback |
+       | Compliance gaps | High | Low | Pre-migration audit |
+       Overall: MEDIUM — recommend phased rollout with parallel run.
 ```
 
 ---

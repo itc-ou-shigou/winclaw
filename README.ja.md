@@ -325,95 +325,433 @@ $env:TEST_USER_PASSWORD = "YourTestPassword123"
 
 ## 組み込みプラグイン
 
-WinClaw v2026.2.28 には **18 個のビルトインプラグイン** が搭載されており、15 の専門分野をカバーしています。各プラグインには厳選されたスキル、スラッシュコマンド、MCP サーバー連携が含まれ、チャットタブでの自然言語で設定できます。
+WinClaw には **18 個のビルトインプラグイン** が搭載されており、15 の専門分野をカバーしています — **88 個のスラッシュコマンド**、**90 以上の AI スキル**、**40 以上の MCP 連携** がすぐに使えます。チャットで一言伝えるか、設定ファイルを 1 行変更するだけで有効化できます。
 
-### プラグイン一覧
+### クイックスタート
 
-| プラグイン | 分野 | コマンド | スキル | 主要 MCP 連携 |
-|-----------|------|---------|--------|---------------|
-| **bio-research** | ライフサイエンス R&D | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
-| **customer-support** | カスタマーサポート | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
-| **data** | データ分析 | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
-| **design** | UX/UI デザイン | 6 | 6 | Figma, Linear, Notion |
-| **engineering** | 開発ワークフロー | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
-| **enterprise-search** | クロスツール検索 | 2 | 3 | Slack, Notion, Guru, Atlassian |
-| **finance** | 財務・会計 | 5 | 6 | Snowflake, BigQuery |
-| **human-resources** | 人事 | 6 | 6 | Slack, Google Calendar, Notion |
-| **legal** | 契約・コンプライアンス | 7 | 6 | Box, DocuSign, Atlassian |
-| **marketing** | コンテンツ・マーケティング | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
-| **operations** | 事業運営 | 6 | 6 | ServiceNow, Asana, Atlassian |
-| **product-management** | プロダクト戦略 | 7 | 6 | Linear, Amplitude, Pendo, Figma |
-| **productivity** | タスク・メモリ | 2 | 2 | Slack, Notion, Asana, Monday |
-| **sales** | セールスパイプライン | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
-| **partner-built/apollo** | 営業自動化 | -- | 3 | Apollo |
-| **partner-built/brand-voice** | ブランドガードレール | 3 | 3 | Notion, Figma, Gong |
-| **partner-built/common-room** | GTM インテリジェンス | 2 | 6 | Common Room |
-| **partner-built/slack** | Slack ワークフロー | 5 | 2 | Slack |
-
-### プラグインの有効化
-
-自然言語で設定できます — WinClaw に必要なことを伝えるだけです：
-
+**方法 A — 自然言語**（チャットで入力するだけ）：
 ```
-あなた：  データ分析プラグインを使いたい
-AI：      data プラグインを有効にします。6 つのコマンド
-          （analyze、build-dashboard、create-viz、explore-data、validate、write-query）
-          が含まれ、Snowflake、Databricks、BigQuery に接続できます。
-          最初にどのデータソースを接続しますか？
+あなた：  sales プラグインを有効にして
+AI：      有効化しました！3 つのコマンドと 6 つのスキルが使えます。
+          /sales:draft-outreach で見込み客の調査とアウトリーチ文面の作成ができます。
 ```
 
-`winclaw.json` で手動設定することもできます：
-
+**方法 B — 設定ファイル**（`winclaw.json`）：
 ```json
 {
   "plugins": {
     "entries": {
       "data": { "enabled": true },
       "sales": { "enabled": true },
-      "engineering": { "enabled": true }
+      "bio-research": { "enabled": true }
     }
   }
 }
 ```
 
+### プラグインカタログ
+
+#### ビジネス基盤
+
+<details>
+<summary><b>productivity</b> — タスク管理とセッション横断の記憶保持</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/start` | 生産性ダッシュボードの初期化とタスク同期 |
+| コマンド | `/update` | 現在のアクティビティからタスクとメモリを更新 |
+| スキル | task-management | TASKS.md を使ったタスク追跡とステータス更新 |
+| スキル | memory-management | セッション横断の 2 層メモリシステム |
+
+MCP: Slack, Notion, Asana, Linear, Monday, Atlassian, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>data</b> — SQL 生成、データ探索、ダッシュボード、可視化</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/analyze` | クイック検索から詳細分析までデータ質問に回答 |
+| コマンド | `/build-dashboard` | インタラクティブな HTML ダッシュボードを構築 |
+| コマンド | `/create-viz` | Python で出版品質のビジュアライゼーションを作成 |
+| コマンド | `/explore-data` | データセットのプロファイリング — 分布・異常値 |
+| コマンド | `/validate` | 共有前の分析を QA チェック |
+| コマンド | `/write-query` | 最適化された SQL をベストプラクティスで生成 |
+| スキル | sql-queries | 主要データベース全対応の正確・高速な SQL |
+| スキル | data-exploration | データセットの形状と品質を探索 |
+| スキル | data-visualization | Python（matplotlib, plotly）で効果的なチャート作成 |
+| スキル | interactive-dashboard-builder | 自己完結型の対話型 HTML ダッシュボード構築 |
+| スキル | statistical-analysis | 記述統計、仮説検定、回帰分析 |
+| スキル | data-validation | 方法論・正確性・完全性の検証 |
+| スキル | data-context-extractor | 企業固有のデータ分析コンテキスト生成 |
+
+MCP: Snowflake, Databricks, BigQuery, Hex, Amplitude, Atlassian
+</details>
+
+<details>
+<summary><b>finance</b> — 財務諸表、差異分析、勘定照合、監査対応</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/income-statement` | 期間比較付き損益計算書の生成 |
+| コマンド | `/journal-entry` | 借方・貸方が適切な仕訳伝票の作成 |
+| コマンド | `/reconciliation` | GL と補助元帳・銀行口座の照合 |
+| コマンド | `/sox-testing` | SOX サンプル選定・テストワークペーパー生成 |
+| コマンド | `/variance-analysis` | ドライバー別の差異分解とナラティブ |
+| スキル | financial-statements | 損益計算書、貸借対照表、キャッシュフロー |
+| スキル | variance-analysis | ドライバー別の差異分解と説明 |
+| スキル | reconciliation | GL と補助元帳・銀行記録の照合 |
+| スキル | journal-entry-prep | 証憑付き適正な仕訳伝票作成 |
+| スキル | audit-support | SOX 404 準拠テストとサンプル選定 |
+| スキル | close-management | 月次決算タスクの順序管理と追跡 |
+
+MCP: Snowflake, Databricks, BigQuery, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>operations</b> — プロセス最適化、ベンダー管理、リスク評価</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/capacity-plan` | リソース需要の予測と配分 |
+| コマンド | `/change-request` | 変更管理リクエストの起案・追跡 |
+| コマンド | `/process-doc` | 業務手順のステップ別ドキュメント化 |
+| コマンド | `/runbook` | 繰り返し作業用のランブック作成 |
+| コマンド | `/status-report` | 業務ステータスレポートの生成 |
+| コマンド | `/vendor-review` | ベンダーパフォーマンスの評価・比較 |
+| スキル | process-optimization | ボトルネック特定と改善提案 |
+| スキル | vendor-management | ベンダーの評価・比較・管理 |
+| スキル | risk-assessment | 重大度と緩和策付きのリスク評価 |
+| スキル | resource-planning | キャパシティ計画とリソース配分 |
+| スキル | change-management | 組織変更の構造化と追跡 |
+| スキル | compliance-tracking | コンプライアンス要件の監視 |
+
+MCP: Slack, ServiceNow, Asana, Atlassian, Notion, Google Calendar, Gmail
+</details>
+
+#### 顧客対応
+
+<details>
+<summary><b>sales</b> — パイプライン管理、見込み客調査、パーソナライズドアウトリーチ</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/call-summary` | 通話メモやトランスクリプトからアクション抽出 |
+| コマンド | `/forecast` | 加重売上予測（最良/予想/最悪） |
+| コマンド | `/pipeline-review` | パイプライン健全性分析 — 優先順位とリスク |
+| スキル | draft-outreach | 見込み客を調査してパーソナライズメッセージ作成 |
+| スキル | account-research | 企業調査とアクショナブルな営業インサイト |
+| スキル | call-prep | 参加者プロフィールとトークポイントで通話準備 |
+| スキル | competitive-intelligence | 競合調査とバトルカード作成 |
+| スキル | create-an-asset | テーラードな営業資料（デッキ、LP）生成 |
+| スキル | daily-briefing | 優先度付き営業ブリーフィングで1日をスタート |
+
+MCP: HubSpot, Clay, ZoomInfo, Apollo, Slack, Notion, Outreach, Gmail
+</details>
+
+<details>
+<summary><b>customer-support</b> — チケットトリアージ、回答作成、エスカレーション、KB 記事</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/draft-response` | プロフェッショナルな顧客向け回答の下書き |
+| コマンド | `/escalate` | エンジニアリングやプロダクトへのエスカレーション |
+| コマンド | `/kb-article` | 解決済み問題から KB 記事を作成 |
+| コマンド | `/research` | 顧客質問のマルチソースリサーチ |
+| コマンド | `/triage` | サポートチケットの分類・優先順位付け・ルーティング |
+| スキル | ticket-triage | 緊急度別にチケットを分類し適切なチームへルーティング |
+| スキル | response-drafting | 共感的でプロフェッショナルな顧客返信の作成 |
+| スキル | escalation | エンジニアリング向けエスカレーションパッケージ構築 |
+| スキル | customer-research | ドキュメント・ログ・CRM 横断でコンテキスト調査 |
+| スキル | knowledge-management | 解決済み問題をセルフサービスコンテンツに変換 |
+
+MCP: Slack, Intercom, HubSpot, Guru, Atlassian, Notion, Gmail
+</details>
+
+<details>
+<summary><b>marketing</b> — キャンペーン企画、コンテンツ制作、SEO、パフォーマンス分析</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/brand-review` | ブランドボイスとスタイルガイドに対するコンテンツレビュー |
+| コマンド | `/campaign-plan` | チャネルとタイムライン付きキャンペーンブリーフ生成 |
+| コマンド | `/competitive-brief` | 競合調査とポジショニング分析 |
+| コマンド | `/draft-content` | ブログ、SNS、メール、ニュースレターの下書き |
+| コマンド | `/email-sequence` | マルチメールのナーチャーシーケンス設計 |
+| コマンド | `/performance-report` | 主要指標付きマーケティングパフォーマンスレポート |
+| コマンド | `/seo-audit` | キーワードリサーチ・オンページ監査・最適化 |
+| スキル | campaign-planning | 目的・対象・チャネル付きキャンペーン計画 |
+| スキル | content-creation | 全チャネル向けマーケティングコンテンツ制作 |
+| スキル | brand-voice | 一貫したブランドボイスとメッセージの適用 |
+| スキル | competitive-analysis | ポジショニング・メッセージ・戦略の比較 |
+| スキル | performance-analytics | 指標・トレンド・ROI の分析 |
+
+MCP: Canva, HubSpot, Ahrefs, Klaviyo, Figma, Amplitude, Notion, Slack
+</details>
+
+#### プロダクト & 開発
+
+<details>
+<summary><b>product-management</b> — 機能仕様、ロードマップ、ユーザーリサーチ、ステークホルダー報告</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/competitive-brief` | 競合分析ブリーフの作成 |
+| コマンド | `/metrics-review` | トレンド付きプロダクト指標のレビュー |
+| コマンド | `/roadmap-update` | ロードマップの更新・再優先順位付け |
+| コマンド | `/sprint-planning` | スプリント作業の計画と構造化 |
+| コマンド | `/stakeholder-update` | 対象に合わせたステークホルダーアップデート |
+| コマンド | `/synthesize-research` | インタビュー・アンケートからリサーチ統合 |
+| コマンド | `/write-spec` | 問題文から機能仕様書・PRD を作成 |
+| スキル | feature-spec | 受入基準付き構造化 PRD の作成 |
+| スキル | roadmap-management | RICE/MoSCoW フレームワークで優先順位付け |
+| スキル | user-research-synthesis | 定性・定量リサーチの統合 |
+| スキル | competitive-analysis | 機能比較マトリクスとポジショニング |
+| スキル | metrics-tracking | プロダクト指標の定義・追跡・分析 |
+| スキル | stakeholder-comms | 対象別アップデート（経営・開発・営業） |
+
+MCP: Linear, Amplitude, Pendo, Figma, Slack, Atlassian, Notion, Intercom
+</details>
+
+<details>
+<summary><b>engineering</b> — コードレビュー、システム設計、インシデント対応、ドキュメント</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/architecture` | トレードオフ分析付きシステムアーキテクチャ設計 |
+| コマンド | `/debug` | 根本原因分析による体系的デバッグ |
+| コマンド | `/deploy-checklist` | デプロイ前チェックリストの生成 |
+| コマンド | `/incident` | インシデント対応とポストモーテムの構造化 |
+| コマンド | `/review` | セキュリティ・パフォーマンスチェック付きコードレビュー |
+| コマンド | `/standup` | 直近のアクティビティからスタンドアップサマリー生成 |
+| スキル | system-design | アーキテクチャ図付きスケーラブルシステム設計 |
+| スキル | code-review | 正確性とセキュリティの徹底コードレビュー |
+| スキル | incident-response | 構造化インシデント対応とブレイムレスポストモーテム |
+| スキル | documentation | コードからの技術ドキュメント自動生成 |
+| スキル | tech-debt | 技術的負債の特定と優先順位付け |
+| スキル | testing-strategy | 包括的テスト戦略の設計 |
+
+MCP: GitHub, PagerDuty, Datadog, Linear, Slack, Atlassian, Notion
+</details>
+
+<details>
+<summary><b>design</b> — アクセシビリティ監査、UX ライティング、デザインクリティーク、開発ハンドオフ</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/accessibility` | WCAG アクセシビリティ監査の実行 |
+| コマンド | `/critique` | 構造化されたデザインフィードバック |
+| コマンド | `/design-system` | デザインシステムコンポーネントの管理・文書化 |
+| コマンド | `/handoff` | ピクセルパーフェクトな開発ハンドオフ仕様書の生成 |
+| コマンド | `/research-synthesis` | UX リサーチ結果の統合 |
+| コマンド | `/ux-copy` | マイクロコピーと UI テキストの作成・レビュー |
+| スキル | accessibility-review | WCAG 準拠監査と修正提案 |
+| スキル | design-critique | デザイン原則に基づく構造化クリティーク |
+| スキル | design-handoff | トークン・スペーシング・ステート付き開発向け仕様書 |
+| スキル | design-system-management | コンポーネントライブラリの文書化・保守 |
+| スキル | user-research | ユーザーリサーチをアクショナブルなインサイトに統合 |
+| スキル | ux-writing | 明確で一貫性のある UI コピーの作成 |
+
+MCP: Figma, Linear, Slack, Asana, Atlassian, Notion, Intercom
+</details>
+
+#### 専門分野
+
+<details>
+<summary><b>legal</b> — 契約レビュー、NDA トリアージ、コンプライアンスチェック、法務ブリーフ</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/brief` | コンテキスト付き法務ブリーフィングの生成 |
+| コマンド | `/compliance-check` | GDPR、CCPA、規制コンプライアンスチェック |
+| コマンド | `/respond` | テンプレート化された法務回答の生成 |
+| コマンド | `/review-contract` | 交渉プレイブックに基づく契約レビュー |
+| コマンド | `/signature-request` | 署名リクエストパッケージの準備 |
+| コマンド | `/triage-nda` | NDA を GREEN / YELLOW / RED に分類 |
+| コマンド | `/vendor-check` | 既存ベンダー契約のステータス確認 |
+| スキル | contract-review | 自社基準に基づく契約レビュー |
+| スキル | nda-triage | NDA スクリーニング — 標準（GREEN）or 要レビュー（RED） |
+| スキル | compliance | GDPR、CCPA、プライバシー規制のナビゲーション |
+| スキル | legal-risk-assessment | 緩和策付きリスク重大度評価 |
+| スキル | meeting-briefing | 法務ミーティング用ブリーフィング準備 |
+| スキル | canned-responses | よくある問い合わせへのテンプレート回答生成 |
+
+MCP: Box, DocuSign, Egnyte, Atlassian, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>human-resources</b> — 採用、報酬分析、オンボーディング、パフォーマンスレビュー</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/comp-analysis` | 市場データに基づく報酬ベンチマーク |
+| コマンド | `/draft-offer` | コンプライアンス準拠のオファーレター作成 |
+| コマンド | `/onboarding` | 構造化されたオンボーディングプランの作成 |
+| コマンド | `/people-report` | ピープルアナリティクスレポートの生成 |
+| コマンド | `/performance-review` | パフォーマンスレビューの構造化 |
+| コマンド | `/policy-lookup` | 社内ポリシー検索と HR 質問への回答 |
+| スキル | interview-prep | スコアカード付き面接計画の構造化 |
+| スキル | compensation-benchmarking | 市場データに基づく給与ベンチマーク |
+| スキル | recruiting-pipeline | 採用パイプラインの追跡と最適化 |
+| スキル | org-planning | 組織構造とヘッドカウントの計画 |
+| スキル | people-analytics | 定着率・エンゲージメント・人員指標の分析 |
+| スキル | employee-handbook | 従業員ハンドブックポリシーの起案・保守 |
+
+MCP: Slack, Google Calendar, Gmail, Notion, Atlassian
+</details>
+
+<details>
+<summary><b>enterprise-search</b> — 全社ツールを一括検索</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/digest` | ツール横断のアクティビティ日次/週次ダイジェスト |
+| コマンド | `/search` | 接続された全ソースを一括検索 |
+| スキル | search-strategy | 複雑なクエリをマルチソース検索に分解 |
+| スキル | knowledge-synthesis | 検索結果を統合してサマリーを生成 |
+| スキル | source-management | 接続 MCP データソースの管理・設定 |
+
+MCP: Slack, Notion, Guru, Atlassian, Asana, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>bio-research</b> — 文献検索、臨床試験、ゲノミクス、ラボデータ分析</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/start` | バイオリサーチ環境のセットアップと利用可能ツールの確認 |
+| スキル | scientific-problem-selection | 研究課題の選定と優先順位付けを支援 |
+| スキル | single-cell-rna-qc | scanpy によるシングルセル RNA-seq データの QC |
+| スキル | scvi-tools | scvi-tools によるシングルセル解析のディープラーニング |
+| スキル | nextflow-development | nf-core バイオインフォパイプライン（rnaseq, sarek）実行 |
+| スキル | instrument-data-to-allotrope | ラボ機器出力を Allotrope 形式に変換 |
+
+MCP: PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov, Open Targets, Benchling, Synapse
+</details>
+
+#### パートナー連携
+
+<details>
+<summary><b>apollo</b> — Apollo API によるリードエンリッチメント、プロスペクティング、シーケンスロード</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| スキル | prospect | ICP を自然言語で記述 → ランク付きリードを取得 |
+| スキル | enrich-lead | 名前・メール・LinkedIn URL からコンタクトをエンリッチ |
+| スキル | sequence-load | コンタクトの検索・エンリッチ・シーケンスへの登録を一括実行 |
+
+MCP: Apollo
+</details>
+
+<details>
+<summary><b>brand-voice</b> — 既存素材からブランドガイドラインを自動生成・適用</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/discover-brand` | ドキュメント・通話・チャットからブランドシグナルを発見 |
+| コマンド | `/enforce-voice` | AI 生成コンテンツにブランドガイドラインを適用 |
+| コマンド | `/generate-guidelines` | 既存素材からブランドボイスガイドラインを生成 |
+| スキル | discover-brand | Notion, Drive, Gong, Slack 横断でブランドシグナル検索 |
+| スキル | guideline-generation | ブランド素材を実行可能なガイドラインに凝縮 |
+| スキル | brand-voice-enforcement | 全 AI 生成コンテンツにガイドラインを適用 |
+
+MCP: Notion, Figma, Gong, Atlassian, Box
+</details>
+
+<details>
+<summary><b>common-room</b> — プロダクト利用・エンゲージメント・インテントシグナルからの GTM インテリジェンス</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/generate-account-plan` | シグナルデータから戦略的アカウントプランを作成 |
+| コマンド | `/weekly-brief` | 今後の通話に向けた週次ブリーフィング生成 |
+| スキル | account-research | リアルなエンゲージメントデータでアカウント調査 |
+| スキル | contact-research | 複数シグナルからコンタクトプロフィールを構築 |
+| スキル | call-prep | 参加者プロフィールとトークポイントで通話準備 |
+| スキル | prospect | シグナルデータからターゲット見込みリスト構築 |
+| スキル | compose-outreach | メールと LinkedIn でパーソナライズドアウトリーチ作成 |
+| スキル | weekly-prep-brief | 今後の全通話に向けた週次ブリーフィング |
+
+MCP: Common Room
+</details>
+
+<details>
+<summary><b>slack</b> — Slack API によるチャネルダイジェスト、スタンドアップ、メッセージ作成</summary>
+
+| 種別 | 名前 | 機能 |
+|------|------|------|
+| コマンド | `/channel-digest` | 指定期間のチャネルアクティビティをサマリー |
+| コマンド | `/draft-announcement` | チームアナウンスメントの下書き |
+| コマンド | `/find-discussions` | チャネル横断で関連ディスカッションを検索 |
+| コマンド | `/standup` | Slack アクティビティからスタンドアップサマリー生成 |
+| コマンド | `/summarize-channel` | チャネルの要約を作成 |
+| スキル | slack-messaging | Slack メッセージとスレッドの送信・管理 |
+| スキル | slack-search | Slack チャネルと会話を横断検索 |
+
+MCP: Slack
+</details>
+
 ### プラグイン使用例
 
-**データ分析：**
-
+**最適化 SQL の生成**（data プラグイン）：
 ```
-あなた：  Snowflake の Q4 売上データを分析して
-AI：      /data:analyze を実行中... Snowflake に接続しました。
-          Q4 売上: 230 万ドル（前期比 +18%）。トップセグメント: エンタープライズ（62%）。
-          ダッシュボードの作成またはビジュアライゼーションの生成を行いますか？
-```
-
-**セールスパイプライン：**
-
-```
-あなた：  Acme Corp を調査してパーソナライズされたアウトリーチメールを作成して
-AI：      /sales:draft-outreach を実行中... ZoomInfo で Acme Corp を発見：
-          シリーズ B、150 名、Salesforce を使用中。キーコンタクト: Jane Doe（VP Sales）。
-          最近の製品ローンチに基づいたパーソナライズメールを作成しました...
+あなた：  今四半期の売上トップ 10 顧客を抽出するクエリを書いて
+AI：      /data:write-query — Snowflake 向けに最適化したクエリです：
+          SELECT customer_id, SUM(amount) as total_revenue
+          FROM orders WHERE order_date >= DATE_TRUNC('quarter', CURRENT_DATE)
+          GROUP BY customer_id ORDER BY total_revenue DESC LIMIT 10;
+          インデックスヒントとパーティションプルーニングを追加しました。
 ```
 
-**法務 契約レビュー：**
-
+**NDA のトリアージ**（legal プラグイン）：
 ```
 あなた：  新しいベンダーからの NDA をレビューして
-AI：      /legal:triage-nda を実行中... 分類: GREEN（標準条項）。
-          主要条項: 2 年間、双方向義務、標準的な除外条項。
-          注意点: 第 7 条の競業避止条項が通常より広範。
-          直接的な競合他社に限定するよう交渉を推奨します。
+AI：      /legal:triage-nda — 分類: GREEN（標準条項）。
+          期間: 2 年、双方向義務、標準的な除外条項。
+          注意: 第 7 条の競業避止が通常より広範。
+          推奨: 直接的な競合他社に限定するよう交渉してください。
 ```
 
-**バイオリサーチ：**
-
+**臨床試験の検索**（bio-research プラグイン）：
 ```
 あなた：  ペムブロリズマブの肺がん臨床試験を検索して
-AI：      /bio-research:start を実行中... 47 件の募集中の試験を発見。
-          上位 3 件の Phase III 試験: NCT04567890（化学療法併用、n=800）、
-          NCT04891234（術後補助療法、n=1200）...
+AI：      /bio-research:start — PubMed + ClinicalTrials.gov を検索中...
+          47 件の募集中 Phase III 試験を発見。上位結果：
+          | NCT ID | デザイン | 登録 | ステータス |
+          | NCT04567890 | 化学療法併用 | n=800 | 募集中 |
+          | NCT04891234 | 術後補助 | n=1200 | 募集中 |
           エンドポイント分析または関連 PubMed 論文の検索を行いますか？
+```
+
+**営業リードの発掘**（apollo プラグイン）：
+```
+あなた：  ベイエリアの Series B SaaS 企業の VP Engineering を検索して
+AI：      Apollo を検索中... 12 件のマッチングコンタクトを発見（適合度順）：
+          | 名前 | 役職 | 企業 | 従業員数 | 資金調達 |
+          | Jane Smith | VP Eng | Acme AI | 150 | Series B |
+          | ...
+          エンリッチメントまたはシーケンスへのロードを実行しますか？
+```
+
+**キャンペーン企画**（marketing プラグイン）：
+```
+あなた：  新しい API 機能のプロダクトローンチキャンペーンを計画して
+AI：      /marketing:campaign-plan — マルチチャネルキャンペーンブリーフ：
+          目標: 30 日間で 500 件の API サインアップ
+          チャネル: メールシーケンス（3 回）、ブログ、SNS、ウェビナー
+          タイムライン: 第 1 週ティーザー → 第 2 週ローンチ → 第 3-4 週ナーチャー
+          KPI: サインアップ数、アクティベーション率、ドキュメントPV
+```
+
+**オペレーションリスク評価**（operations プラグイン）：
+```
+あなた：  決済システムの新プロバイダーへの移行リスクを評価して
+AI：      /operations:risk-assessment — リスクマトリクス：
+          | リスク | 重大度 | 可能性 | 緩和策 |
+          | 移行中のデータ損失 | 高 | 低 | 30 日間の並行運用 |
+          | API ダウンタイム | 中 | 中 | フィーチャーフラグ + ロールバック |
+          | コンプライアンスギャップ | 高 | 低 | 移行前監査 |
+          総合: MEDIUM — 並行運用付き段階的ロールアウトを推奨。
 ```
 
 ---

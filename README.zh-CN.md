@@ -319,94 +319,433 @@ $env:TEST_USER_PASSWORD = "YourTestPassword123"
 
 ## 内置插件
 
-WinClaw v2026.2.28 内置 **18 个预构建插件**，覆盖 15 个专业领域。每个插件包含精选技能、斜杠命令和 MCP 服务器集成 —— 完全通过聊天界面中的自然语言进行配置。
+WinClaw 内置 **18 个预构建插件**，覆盖 15 个专业领域 —— **88 个斜杠命令**、**90+ AI 技能**、**40+ MCP 集成**，开箱即用。在聊天中说一句话，或在配置文件中改一行，即可启用任意插件。
 
-### 插件概览
+### 快速开始
 
-| 插件 | 领域 | 命令数 | 技能数 | 主要 MCP 集成 |
-|------|------|--------|--------|---------------|
-| **bio-research** | 生命科学研发 | 1 | 5 | PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov |
-| **customer-support** | 客户支持 | 5 | 5 | Slack, Intercom, HubSpot, Atlassian |
-| **data** | 数据分析 | 6 | 7 | Snowflake, Databricks, BigQuery, Hex |
-| **design** | UX/UI 设计 | 6 | 6 | Figma, Linear, Notion |
-| **engineering** | 开发工作流 | 6 | 6 | GitHub, PagerDuty, Datadog, Linear |
-| **enterprise-search** | 跨工具搜索 | 2 | 3 | Slack, Notion, Guru, Atlassian |
-| **finance** | 财务与会计 | 5 | 6 | Snowflake, BigQuery |
-| **human-resources** | 人力资源 | 6 | 6 | Slack, Google Calendar, Notion |
-| **legal** | 合同与合规 | 7 | 6 | Box, DocuSign, Atlassian |
-| **marketing** | 内容与营销 | 7 | 5 | Canva, HubSpot, Ahrefs, Klaviyo |
-| **operations** | 运营管理 | 6 | 6 | ServiceNow, Asana, Atlassian |
-| **product-management** | 产品策略 | 7 | 6 | Linear, Amplitude, Pendo, Figma |
-| **productivity** | 任务与记忆 | 2 | 2 | Slack, Notion, Asana, Monday |
-| **sales** | 销售管道 | 3 | 6 | HubSpot, Clay, ZoomInfo, Apollo |
-| **partner-built/apollo** | 销售自动化 | -- | 3 | Apollo |
-| **partner-built/brand-voice** | 品牌护栏 | 3 | 3 | Notion, Figma, Gong |
-| **partner-built/common-room** | GTM 情报 | 2 | 6 | Common Room |
-| **partner-built/slack** | Slack 工作流 | 5 | 2 | Slack |
-
-### 如何启用插件
-
-通过自然语言配置 —— 直接告诉 WinClaw 你需要什么：
-
+**方式 A — 自然语言**（直接在聊天中输入）：
 ```
-你：   我想用数据分析插件
-AI：   我来为你启用 data 插件。它包含 6 个命令
-       （analyze、build-dashboard、create-viz、explore-data、validate、write-query）
-       并可连接 Snowflake、Databricks 和 BigQuery。
-       你想先连接哪个数据源？
+你：   启用 sales 插件
+AI：   已启用！Sales 插件包含 3 个命令和 6 个技能。
+       输入 /sales:draft-outreach 即可调研潜在客户并起草外联消息。
 ```
 
-也可在 `winclaw.json` 中手动配置：
-
+**方式 B — 配置文件**（`winclaw.json`）：
 ```json
 {
   "plugins": {
     "entries": {
       "data": { "enabled": true },
       "sales": { "enabled": true },
-      "engineering": { "enabled": true }
+      "bio-research": { "enabled": true }
     }
   }
 }
 ```
 
+### 插件目录
+
+#### 业务基础
+
+<details>
+<summary><b>productivity</b> — 任务管理与跨会话持久记忆</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/start` | 初始化生产力仪表盘并同步任务 |
+| 命令 | `/update` | 从当前活动刷新任务和记忆 |
+| 技能 | task-management | 通过 TASKS.md 跟踪任务和状态更新 |
+| 技能 | memory-management | 跨会话的双层记忆系统 |
+
+MCP: Slack, Notion, Asana, Linear, Monday, Atlassian, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>data</b> — SQL 生成、数据探索、仪表盘与可视化</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/analyze` | 回答数据问题，从快速查找到完整分析 |
+| 命令 | `/build-dashboard` | 构建带图表和筛选器的交互式 HTML 仪表盘 |
+| 命令 | `/create-viz` | 用 Python 创建出版级可视化图表 |
+| 命令 | `/explore-data` | 数据集画像 — 分布、异常值、质量 |
+| 命令 | `/validate` | 分享前的分析 QA 检查 |
+| 命令 | `/write-query` | 按最佳实践生成优化 SQL |
+| 技能 | sql-queries | 全主流数据库通用的正确高效 SQL |
+| 技能 | data-exploration | 探索数据集的形状与质量 |
+| 技能 | data-visualization | 用 Python（matplotlib, plotly）制作有效图表 |
+| 技能 | interactive-dashboard-builder | 构建自包含的交互式 HTML 仪表盘 |
+| 技能 | statistical-analysis | 描述统计、假设检验、回归分析 |
+| 技能 | data-validation | 验证方法论、准确性和完整性 |
+| 技能 | data-context-extractor | 生成企业特定的数据分析上下文 |
+
+MCP: Snowflake, Databricks, BigQuery, Hex, Amplitude, Atlassian
+</details>
+
+<details>
+<summary><b>finance</b> — 财务报表、差异分析、对账与审计</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/income-statement` | 生成带期间对比的利润表 |
+| 命令 | `/journal-entry` | 编制借贷正确的记账凭证 |
+| 命令 | `/reconciliation` | 总账与明细账、银行对账 |
+| 命令 | `/sox-testing` | 生成 SOX 抽样和测试底稿 |
+| 命令 | `/variance-analysis` | 按驱动因素分解差异并生成说明 |
+| 技能 | financial-statements | 利润表、资产负债表、现金流量表 |
+| 技能 | variance-analysis | 按驱动因素分解差异并解释 |
+| 技能 | reconciliation | 总账与明细账、银行记录的匹配 |
+| 技能 | journal-entry-prep | 附佐证的正确借贷凭证编制 |
+| 技能 | audit-support | SOX 404 合规测试与抽样选择 |
+| 技能 | close-management | 月结任务排序与跟踪 |
+
+MCP: Snowflake, Databricks, BigQuery, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>operations</b> — 流程优化、供应商管理与风险评估</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/capacity-plan` | 预测资源需求与分配 |
+| 命令 | `/change-request` | 起草和跟踪变更管理请求 |
+| 命令 | `/process-doc` | 逐步记录运营流程 |
+| 命令 | `/runbook` | 创建可重复操作的运行手册 |
+| 命令 | `/status-report` | 生成运营状态报告 |
+| 命令 | `/vendor-review` | 评估和比较供应商表现 |
+| 技能 | process-optimization | 识别瓶颈并提出改进方案 |
+| 技能 | vendor-management | 评估、比较和管理供应商关系 |
+| 技能 | risk-assessment | 带严重度和缓解措施的风险评估 |
+| 技能 | resource-planning | 容量规划与资源分配 |
+| 技能 | change-management | 组织变更的结构化和跟踪 |
+| 技能 | compliance-tracking | 监控合规要求和状态 |
+
+MCP: Slack, ServiceNow, Asana, Atlassian, Notion, Google Calendar, Gmail
+</details>
+
+#### 客户相关
+
+<details>
+<summary><b>sales</b> — 管道管理、潜客调研与个性化外联</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/call-summary` | 从通话笔记或录音提取行动项 |
+| 命令 | `/forecast` | 生成加权销售预测（最佳/预期/最差） |
+| 命令 | `/pipeline-review` | 分析管道健康度 — 优先排序与风险标记 |
+| 技能 | draft-outreach | 调研潜客后起草个性化消息 |
+| 技能 | account-research | 调研企业并获取可操作的销售洞察 |
+| 技能 | call-prep | 用参会者画像和谈话要点准备通话 |
+| 技能 | competitive-intelligence | 调研竞品并制作战斗卡 |
+| 技能 | create-an-asset | 生成定制销售资料（演示文稿、落地页） |
+| 技能 | daily-briefing | 以优先级排序的销售简报开启每一天 |
+
+MCP: HubSpot, Clay, ZoomInfo, Apollo, Slack, Notion, Outreach, Gmail
+</details>
+
+<details>
+<summary><b>customer-support</b> — 工单分拣、回复起草、升级与知识库文章</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/draft-response` | 起草专业的客户回复 |
+| 命令 | `/escalate` | 打包升级给工程或产品团队 |
+| 命令 | `/kb-article` | 从已解决问题创建知识库文章 |
+| 命令 | `/research` | 多源调研客户问题 |
+| 命令 | `/triage` | 分类、排优先级并路由支持工单 |
+| 技能 | ticket-triage | 按紧急度分类工单并路由到对应团队 |
+| 技能 | response-drafting | 起草有同理心的专业客户回复 |
+| 技能 | escalation | 构建面向工程的升级包 |
+| 技能 | customer-research | 跨文档、日志、CRM 搜索上下文 |
+| 技能 | knowledge-management | 将已解决问题转化为自助内容 |
+
+MCP: Slack, Intercom, HubSpot, Guru, Atlassian, Notion, Gmail
+</details>
+
+<details>
+<summary><b>marketing</b> — 活动策划、内容创作、SEO 与效果分析</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/brand-review` | 按品牌风格和调性审查内容 |
+| 命令 | `/campaign-plan` | 生成含渠道和时间线的完整活动策划 |
+| 命令 | `/competitive-brief` | 竞品调研和定位分析 |
+| 命令 | `/draft-content` | 起草博客、社交媒体、邮件、简报 |
+| 命令 | `/email-sequence` | 设计多邮件培育序列 |
+| 命令 | `/performance-report` | 构建含关键指标的营销效果报告 |
+| 命令 | `/seo-audit` | 关键词调研、页面审核与优化 |
+| 技能 | campaign-planning | 含目标、受众和渠道的活动策划 |
+| 技能 | content-creation | 全渠道营销内容创作 |
+| 技能 | brand-voice | 保持一致的品牌调性和信息传达 |
+| 技能 | competitive-analysis | 对比定位、信息传达和策略 |
+| 技能 | performance-analytics | 分析指标、趋势和 ROI |
+
+MCP: Canva, HubSpot, Ahrefs, Klaviyo, Figma, Amplitude, Notion, Slack
+</details>
+
+#### 产品与工程
+
+<details>
+<summary><b>product-management</b> — 功能规格、路线图、用户调研与利益相关者汇报</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/competitive-brief` | 创建竞品分析简报 |
+| 命令 | `/metrics-review` | 审查和分析带趋势的产品指标 |
+| 命令 | `/roadmap-update` | 更新或重新排列产品路线图优先级 |
+| 命令 | `/sprint-planning` | 规划和结构化冲刺工作 |
+| 命令 | `/stakeholder-update` | 按受众定制利益相关者更新 |
+| 命令 | `/synthesize-research` | 从访谈和调查中综合调研结果 |
+| 命令 | `/write-spec` | 从问题陈述编写功能规格或 PRD |
+| 技能 | feature-spec | 编写带验收标准的结构化 PRD |
+| 技能 | roadmap-management | 用 RICE/MoSCoW 框架排列优先级 |
+| 技能 | user-research-synthesis | 综合定性与定量调研 |
+| 技能 | competitive-analysis | 功能对比矩阵和定位分析 |
+| 技能 | metrics-tracking | 定义、跟踪和分析产品指标 |
+| 技能 | stakeholder-comms | 按受众定制汇报（高管、工程、销售） |
+
+MCP: Linear, Amplitude, Pendo, Figma, Slack, Atlassian, Notion, Intercom
+</details>
+
+<details>
+<summary><b>engineering</b> — 代码审查、系统设计、事件响应与文档</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/architecture` | 带权衡分析的系统架构设计 |
+| 命令 | `/debug` | 带根因分析的系统化调试 |
+| 命令 | `/deploy-checklist` | 生成部署前检查清单 |
+| 命令 | `/incident` | 结构化事件响应和复盘 |
+| 命令 | `/review` | 含安全和性能检查的代码审查 |
+| 命令 | `/standup` | 从近期活动生成站会摘要 |
+| 技能 | system-design | 带架构图的可扩展系统设计 |
+| 技能 | code-review | 正确性和安全性的深度代码审查 |
+| 技能 | incident-response | 结构化事件响应和无责复盘 |
+| 技能 | documentation | 从代码自动生成技术文档 |
+| 技能 | tech-debt | 识别和排列技术债优先级 |
+| 技能 | testing-strategy | 设计全面的测试策略 |
+
+MCP: GitHub, PagerDuty, Datadog, Linear, Slack, Atlassian, Notion
+</details>
+
+<details>
+<summary><b>design</b> — 无障碍审核、UX 文案、设计评审与开发交接</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/accessibility` | 运行 WCAG 无障碍审核 |
+| 命令 | `/critique` | 获取结构化的设计反馈 |
+| 命令 | `/design-system` | 管理和文档化设计系统组件 |
+| 命令 | `/handoff` | 生成像素级精确的开发交接规范 |
+| 命令 | `/research-synthesis` | 综合 UX 调研发现 |
+| 命令 | `/ux-copy` | 编写和审查微文案与界面文字 |
+| 技能 | accessibility-review | WCAG 合规审核并提供修复建议 |
+| 技能 | design-critique | 基于设计原则的结构化评审 |
+| 技能 | design-handoff | 含设计令牌、间距和状态的开发规范 |
+| 技能 | design-system-management | 文档化和维护组件库 |
+| 技能 | user-research | 将用户调研综合为可操作洞察 |
+| 技能 | ux-writing | 编写清晰一致的界面文案 |
+
+MCP: Figma, Linear, Slack, Asana, Atlassian, Notion, Intercom
+</details>
+
+#### 专业领域
+
+<details>
+<summary><b>legal</b> — 合同审查、NDA 分拣、合规检查与法务简报</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/brief` | 生成上下文关联的法务简报 |
+| 命令 | `/compliance-check` | 检查 GDPR、CCPA 与法规合规 |
+| 命令 | `/respond` | 生成模板化法务回复 |
+| 命令 | `/review-contract` | 按谈判剧本审查合同 |
+| 命令 | `/signature-request` | 准备签署请求包 |
+| 命令 | `/triage-nda` | 将 NDA 分类为 GREEN / YELLOW / RED |
+| 命令 | `/vendor-check` | 查看现有供应商协议状态 |
+| 技能 | contract-review | 按组织标准审查合同 |
+| 技能 | nda-triage | 筛查 NDA — 标准（GREEN）或需审查（RED） |
+| 技能 | compliance | 导航 GDPR、CCPA 和隐私法规 |
+| 技能 | legal-risk-assessment | 带缓解建议的风险严重度评估 |
+| 技能 | meeting-briefing | 为法务会议准备简报 |
+| 技能 | canned-responses | 为常见咨询生成模板回复 |
+
+MCP: Box, DocuSign, Egnyte, Atlassian, Slack, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>human-resources</b> — 招聘、薪酬分析、入职与绩效评估</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/comp-analysis` | 对标市场数据的薪酬分析 |
+| 命令 | `/draft-offer` | 起草合规的录用通知书 |
+| 命令 | `/onboarding` | 创建结构化入职计划 |
+| 命令 | `/people-report` | 生成人员分析报告 |
+| 命令 | `/performance-review` | 结构化绩效评估讨论 |
+| 命令 | `/policy-lookup` | 查询公司政策和回答 HR 问题 |
+| 技能 | interview-prep | 含评分卡的面试计划结构化 |
+| 技能 | compensation-benchmarking | 对标市场数据的薪酬基准分析 |
+| 技能 | recruiting-pipeline | 跟踪和优化招聘管道 |
+| 技能 | org-planning | 组织架构与编制规划 |
+| 技能 | people-analytics | 分析留存率、敬业度和人员指标 |
+| 技能 | employee-handbook | 起草和维护员工手册政策 |
+
+MCP: Slack, Google Calendar, Gmail, Notion, Atlassian
+</details>
+
+<details>
+<summary><b>enterprise-search</b> — 一个查询搜遍全公司工具</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/digest` | 生成跨工具活动的日报/周报摘要 |
+| 命令 | `/search` | 一次查询搜索全部已连接数据源 |
+| 技能 | search-strategy | 将复杂查询分解为多源搜索 |
+| 技能 | knowledge-synthesis | 综合搜索结果生成连贯摘要 |
+| 技能 | source-management | 管理和配置已连接的 MCP 数据源 |
+
+MCP: Slack, Notion, Guru, Atlassian, Asana, Google Calendar, Gmail
+</details>
+
+<details>
+<summary><b>bio-research</b> — 文献搜索、临床试验、基因组学与实验室数据分析</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/start` | 设置生物研究环境并探索可用工具 |
+| 技能 | scientific-problem-selection | 帮助科学家选择和确定研究问题优先级 |
+| 技能 | single-cell-rna-qc | 用 scanpy 做单细胞 RNA-seq 数据质控 |
+| 技能 | scvi-tools | 用 scvi-tools 进行单细胞分析的深度学习 |
+| 技能 | nextflow-development | 运行 nf-core 生信流程（rnaseq, sarek） |
+| 技能 | instrument-data-to-allotrope | 将实验室仪器输出文件转换为 Allotrope 格式 |
+
+MCP: PubMed, bioRxiv, ChEMBL, ClinicalTrials.gov, Open Targets, Benchling, Synapse
+</details>
+
+#### 合作伙伴
+
+<details>
+<summary><b>apollo</b> — 通过 Apollo API 进行线索增强、潜客发掘与序列加载</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 技能 | prospect | 用自然语言描述 ICP，获取排序后的线索列表 |
+| 技能 | enrich-lead | 通过姓名、邮箱或 LinkedIn URL 增强联系人信息 |
+| 技能 | sequence-load | 一站式完成联系人搜索、增强并加载到序列 |
+
+MCP: Apollo
+</details>
+
+<details>
+<summary><b>brand-voice</b> — 从现有素材自动生成和执行品牌指南</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/discover-brand` | 从文档、通话和聊天中发现品牌信号 |
+| 命令 | `/enforce-voice` | 对 AI 生成的内容应用品牌指南 |
+| 命令 | `/generate-guidelines` | 从现有素材生成品牌调性指南 |
+| 技能 | discover-brand | 跨 Notion、Drive、Gong、Slack 搜索品牌信号 |
+| 技能 | guideline-generation | 将品牌素材提炼为可执行的指南 |
+| 技能 | brand-voice-enforcement | 对所有 AI 生成内容应用指南 |
+
+MCP: Notion, Figma, Gong, Atlassian, Box
+</details>
+
+<details>
+<summary><b>common-room</b> — 基于产品使用、互动与意向信号的 GTM 情报</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/generate-account-plan` | 从信号数据创建战略客户计划 |
+| 命令 | `/weekly-brief` | 为即将到来的通话生成周度简报 |
+| 技能 | account-research | 用真实互动数据调研客户 |
+| 技能 | contact-research | 从多信号源构建联系人画像 |
+| 技能 | call-prep | 用参会者画像和谈话要点准备通话 |
+| 技能 | prospect | 从信号数据构建目标潜客列表 |
+| 技能 | compose-outreach | 跨邮件和 LinkedIn 起草个性化外联 |
+| 技能 | weekly-prep-brief | 为每个即将到来的通话准备周度简报 |
+
+MCP: Common Room
+</details>
+
+<details>
+<summary><b>slack</b> — 通过 Slack API 实现频道摘要、站会总结与消息起草</summary>
+
+| 类型 | 名称 | 功能说明 |
+|------|------|---------|
+| 命令 | `/channel-digest` | 总结指定时间段的频道活动 |
+| 命令 | `/draft-announcement` | 起草团队公告 |
+| 命令 | `/find-discussions` | 跨频道查找相关讨论 |
+| 命令 | `/standup` | 从 Slack 活动生成站会摘要 |
+| 命令 | `/summarize-channel` | 创建简洁的频道总结 |
+| 技能 | slack-messaging | 发送和管理 Slack 消息与线程 |
+| 技能 | slack-search | 跨 Slack 频道和对话搜索 |
+
+MCP: Slack
+</details>
+
 ### 插件使用示例
 
-**数据分析：**
-
+**生成优化 SQL**（data 插件）：
 ```
-你：   分析 Snowflake 里的 Q4 收入数据
-AI：   正在运行 /data:analyze... 已连接 Snowflake。
-       Q4 收入：230 万美元（环比 +18%）。头部细分：企业客户（62%）。
-       需要我创建仪表盘或生成可视化图表吗？
-```
-
-**销售管道：**
-
-```
-你：   调查 Acme 公司并起草个性化外联邮件
-AI：   正在运行 /sales:draft-outreach... 在 ZoomInfo 上找到 Acme Corp：
-       B 轮融资，150 人，使用 Salesforce。关键联系人：Jane Doe（销售 VP）。
-       这是一封基于他们近期产品发布的个性化邮件草稿...
+你：   写一个查询，找出本季度收入前 10 的客户
+AI：   /data:write-query — 这是为你的 Snowflake 仓库优化的查询：
+       SELECT customer_id, SUM(amount) as total_revenue
+       FROM orders WHERE order_date >= DATE_TRUNC('quarter', CURRENT_DATE)
+       GROUP BY customer_id ORDER BY total_revenue DESC LIMIT 10;
+       已添加索引提示和分区裁剪以提升性能。
 ```
 
-**法律合同审查：**
-
+**NDA 分拣**（legal 插件）：
 ```
 你：   审查供应商发来的这份保密协议
-AI：   正在运行 /legal:triage-nda... 分类：绿色（标准条款）。
-       关键条款：2 年期限、双向义务、标准例外条款。
-       注意：第 7 条竞业限制范围偏大，建议谈判缩小至直接竞争对手。
+AI：   /legal:triage-nda — 分类：GREEN（标准条款）。
+       期限：2 年，双向义务，标准例外条款。
+       注意：第 7 条竞业限制范围偏大。
+       建议：谈判缩小至直接竞争对手范围。
 ```
 
-**生物研究：**
-
+**搜索临床试验**（bio-research 插件）：
 ```
-你：   查找 pembrolizumab 治疗肺癌的最新临床试验
-AI：   正在运行 /bio-research:start... 找到 47 项正在招募的试验。
-       前 3 项 III 期试验：NCT04567890（联合化疗，n=800），
-       NCT04891234（辅助治疗，n=1200）...
+你：   查找 pembrolizumab 治疗肺癌的临床试验
+AI：   /bio-research:start — 搜索 PubMed + ClinicalTrials.gov 中...
+       找到 47 项正在招募的 III 期试验。排名靠前的结果：
+       | NCT ID | 设计 | 入组 | 状态 |
+       | NCT04567890 | 联合化疗 | n=800 | 招募中 |
+       | NCT04891234 | 辅助治疗 | n=1200 | 招募中 |
        需要分析终点指标或查找相关 PubMed 论文吗？
+```
+
+**发掘销售线索**（apollo 插件）：
+```
+你：   查找湾区 B 轮 SaaS 公司的 VP Engineering 联系人
+AI：   正在搜索 Apollo... 找到 12 个匹配联系人（按匹配度排序）：
+       | 姓名 | 职位 | 公司 | 员工数 | 融资轮次 |
+       | Jane Smith | VP Eng | Acme AI | 150 | B 轮 |
+       | ...
+       需要增强这些联系人信息或加载到序列吗？
+```
+
+**策划营销活动**（marketing 插件）：
+```
+你：   为我们的新 API 功能策划产品发布活动
+AI：   /marketing:campaign-plan — 多渠道活动策划简报：
+       目标：30 天内获取 500 个 API 注册
+       渠道：邮件序列（3 封）、博客、社交媒体、网络研讨会
+       时间线：第 1 周预告 → 第 2 周发布 → 第 3-4 周培育
+       KPI：注册数、激活率、文档页面浏览量
+```
+
+**评估运营风险**（operations 插件）：
+```
+你：   评估支付系统迁移到新服务商的风险
+AI：   /operations:risk-assessment — 风险矩阵：
+       | 风险 | 严重度 | 可能性 | 缓解措施 |
+       | 迁移中数据丢失 | 高 | 低 | 并行运行 30 天 |
+       | API 宕机 | 中 | 中 | 功能开关 + 回滚 |
+       | 合规缺口 | 高 | 低 | 迁移前审计 |
+       综合评估：中等 — 建议分阶段上线并并行运行。
 ```
 
 ---
