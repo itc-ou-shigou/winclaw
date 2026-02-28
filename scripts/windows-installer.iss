@@ -41,8 +41,10 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.i
 Name: "chinesetraditional"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
 
 [Files]
-; Electron desktop shell (Chromium + Node.js embedded)
-Source: "{#StagingDir}\desktop\*"; DestDir: "{app}\desktop"; Flags: ignoreversion recursesubdirs
+; Electron desktop shell (Chromium + Node.js embedded) — optional, may not be present
+Source: "{#StagingDir}\desktop\*"; DestDir: "{app}\desktop"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
+; WinClawUI desktop app (C# + WebView2) — preferred native UI
+Source: "{#StagingDir}\WinClawUI.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 ; WinClaw app
 Source: "{#StagingDir}\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs
 ; Launchers (winclaw.cmd uses ELECTRON_RUN_AS_NODE=1, winclaw-ui.cmd is browser fallback)
@@ -62,13 +64,16 @@ Source: "{#StagingDir}\scripts\launch-chrome-devtools-mcp.ps1"; DestDir: "{app}\
 Source: "{#StagingDir}\scripts\ensure-chrome-debug.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
-; Start Menu — Electron desktop app (preferred) or browser fallback
+; Start Menu — WinClawUI (preferred) > Electron > browser fallback
+Name: "{group}\WinClaw"; Filename: "{app}\WinClawUI.exe"; \
+  WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
+  Comment: "Open WinClaw"; Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
 Name: "{group}\WinClaw"; Filename: "{app}\desktop\winclaw.exe"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
-  Comment: "Open WinClaw"; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Comment: "Open WinClaw"; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{group}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
-  Comment: "Open WinClaw Control UI"; Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Comment: "Open WinClaw Control UI"; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{group}\WinClaw (Browser)"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
   Comment: "Open WinClaw in browser"; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
@@ -85,15 +90,19 @@ Name: "{group}\VNC Desktop - Stop"; Filename: "powershell.exe"; \
   Parameters: "-ExecutionPolicy Bypass -File ""{app}\vnc\stop-vnc-desktop.ps1"""; \
   WorkingDir: "{app}\vnc"; Comment: "Stop VNC desktop streaming"
 Name: "{group}\Uninstall WinClaw"; Filename: "{uninstallexe}"
-; Desktop shortcut — Electron desktop app (preferred) or browser fallback
+; Desktop shortcut — WinClawUI (preferred) > Electron > browser fallback
+Name: "{autodesktop}\WinClaw"; Filename: "{app}\WinClawUI.exe"; \
+  WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
+  Comment: "WinClaw - Personal AI Assistant"; Tasks: desktopicon; \
+  Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
 Name: "{autodesktop}\WinClaw"; Filename: "{app}\desktop\winclaw.exe"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
   Comment: "WinClaw - Personal AI Assistant"; Tasks: desktopicon; \
-  Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 Name: "{autodesktop}\WinClaw"; Filename: "{app}\winclaw-ui.cmd"; \
   WorkingDir: "{app}"; IconFilename: "{app}\assets\winclaw.ico"; \
   Comment: "WinClaw - Personal AI Assistant"; Tasks: desktopicon; \
-  Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"
@@ -108,14 +117,17 @@ Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; \
   ValueData: "{olddata};{app}"; Tasks: addtopath; Check: NeedsAddPath(ExpandConstant('{app}'))
 
 [Run]
-; Step 1: Launch WinClaw Electron desktop app after install (checked by default)
+; Step 1: Launch WinClaw desktop app after install (prefer WinClawUI > Electron > browser)
+Filename: "{app}\WinClawUI.exe"; \
+  Description: "Launch WinClaw"; \
+  Flags: postinstall nowait skipifsilent; Check: FileExists(ExpandConstant('{app}\WinClawUI.exe'))
 Filename: "{app}\desktop\winclaw.exe"; \
   Description: "Launch WinClaw"; \
-  Flags: postinstall nowait skipifsilent; Check: FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Flags: postinstall nowait skipifsilent; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 ; Step 1b (fallback): Open in browser if no desktop app
 Filename: "{app}\winclaw-ui.cmd"; \
   Description: "Open WinClaw in browser"; \
-  Flags: postinstall nowait skipifsilent; Check: not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
+  Flags: postinstall nowait skipifsilent; Check: not FileExists(ExpandConstant('{app}\WinClawUI.exe')) and not FileExists(ExpandConstant('{app}\desktop\winclaw.exe'))
 ; Step 2c: Run interactive onboarding wizard (visible console for user input)
 Filename: "{app}\winclaw.cmd"; Parameters: "onboard --flow quickstart"; \
   StatusMsg: "Starting WinClaw setup wizard..."; \
