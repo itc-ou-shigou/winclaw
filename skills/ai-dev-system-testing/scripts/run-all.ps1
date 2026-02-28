@@ -167,15 +167,19 @@ function Get-PassRateFromFile {
     try {
         $results = $rawJson | ConvertFrom-Json
 
-        # Support both snake_case and camelCase keys
+        # Support all known key variants (snake_case, camelCase, Phase 5B/5C variants)
         $passRate = $results.pass_rate
         if (-not $passRate) { $passRate = $results.passRate }
         if (-not $passRate) { $passRate = $results.adjusted_pass_rate }
         if (-not $passRate) { $passRate = $results.adjustedPassRate }
+        if (-not $passRate) { $passRate = $results.actual_pass_rate }
+        if (-not $passRate) { $passRate = $results.actualPassRate }
         # Check summary sub-object
         if (-not $passRate -and $results.summary) {
             $passRate = $results.summary.pass_rate
             if (-not $passRate) { $passRate = $results.summary.passRate }
+            if (-not $passRate) { $passRate = $results.summary.actual_pass_rate }
+            if (-not $passRate) { $passRate = $results.summary.actualPassRate }
         }
         # Handle percentage strings like "75.00%"
         if ($passRate -is [string]) { $passRate = [double]($passRate -replace '%', '') }
@@ -184,8 +188,16 @@ function Get-PassRateFromFile {
             $total = $results.totalTests
             if (-not $total) { $total = $results.total_tests }
             if (-not $total) { $total = $results.total }
+            if (-not $total) { $total = $results.total_pages_tested }
+            if (-not $total) { $total = $results.totalPagesTested }
+            if (-not $total) { $total = $results.total_endpoints }
+            if (-not $total) { $total = $results.totalEndpoints }
             $passed = $results.passed
             if (-not $passed) { $passed = $results.tests_passed }
+            if (-not $passed) { $passed = $results.total_pages_passed }
+            if (-not $passed) { $passed = $results.totalPagesPassed }
+            if (-not $passed) { $passed = $results.endpoints_passed }
+            if (-not $passed) { $passed = $results.endpointsPassed }
             if ($total -and $total -gt 0) {
                 $passRate = [math]::Round(($passed / $total) * 100, 1)
             }
@@ -194,11 +206,11 @@ function Get-PassRateFromFile {
         Write-Log "[WARN] JSON parse error in $FilePath - using regex fallback" -ForegroundColor Yellow
 
         # Regex fallback: extract pass_rate from raw text even if JSON is malformed
-        if ($rawJson -match '"(?:pass_rate|passRate|adjusted_pass_rate|adjustedPassRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
+        if ($rawJson -match '"(?:pass_rate|passRate|adjusted_pass_rate|adjustedPassRate|actual_pass_rate|actualPassRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
             $passRate = [double]$Matches[1]
         }
         # Try summary sub-object pattern
-        if (-not $passRate -and $rawJson -match '"summary"\s*:\s*\{[^}]*"(?:pass_rate|passRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
+        if (-not $passRate -and $rawJson -match '"summary"\s*:\s*\{[^}]*"(?:pass_rate|passRate|actual_pass_rate|actualPassRate)"\s*:\s*"?(\d+\.?\d*)%?"?') {
             $passRate = [double]$Matches[1]
         }
     }
@@ -748,13 +760,22 @@ Do NOT skip any analysis. Read actual files to determine structure.
 # ================================================================
 function Invoke-Phase3 {
     Write-Header "Phase 3: Code Review & Auto-Fix"
-    
+
     # Resume check
     if (Test-PhaseOutput "3" @("CODE_REVIEW_REPORT.md") -ResumeMode:$Resume) {
         return $true
     }
-    
-    $prompt = @"
+
+    # Phase 3 prompt template (external file, with inline fallback)
+    $skillDir = $PSScriptRoot | Split-Path -Parent  # ai-dev-system-testing/
+    $promptFile = Join-Path $skillDir "references\prompts\phase3-code-review.md"
+
+    if (Test-Path $promptFile) {
+        $prompt = "Please read and execute ALL instructions in the following file: $promptFile"
+        Write-Log "[INFO] Phase 3 using prompt template: $promptFile" -ForegroundColor Gray
+    } else {
+        # Fallback: inline prompt (legacy behavior)
+        $prompt = @"
 Perform comprehensive code review:
 
 1. Analyze all code files in the project
@@ -772,13 +793,21 @@ Perform comprehensive code review:
 
 Do NOT skip any files. Use actual code analysis tools.
 "@
-    
+        Write-Log "[WARN] Phase 3 prompt template not found at $promptFile, using inline fallback" -ForegroundColor Yellow
+    }
+
     $timeout = Get-Timeout
     $result = Invoke-ClaudeCommand $prompt -TimeoutSeconds ($timeout + 600)  # Extra time for review
-    
+
     # Verify output
     if (Test-Path (Join-Path $Workspace "CODE_REVIEW_REPORT.md")) {
         Write-PhaseCheck "3" "COMPLETE" "CODE_REVIEW_REPORT.md"
+        # Check for optional BUSINESS_LOGIC_TESTCASES.md (used by Phase 5A for scenario data)
+        if (Test-Path (Join-Path $Workspace "BUSINESS_LOGIC_TESTCASES.md")) {
+            Write-Log "[INFO] Phase 3 also generated BUSINESS_LOGIC_TESTCASES.md (will enhance Phase 5A test data)" -ForegroundColor Green
+        } else {
+            Write-Log "[INFO] BUSINESS_LOGIC_TESTCASES.md not generated (Phase 5A will use basic CRUD only)" -ForegroundColor Gray
+        }
         return $true
     } else {
         Write-PhaseCheck "3" "FAILED" "Missing CODE_REVIEW_REPORT.md"
@@ -826,6 +855,8 @@ CRITICAL RULES:
 5. Save auth credentials to: test-logs/phase5b_test_user.json
 6. Write summary to: test-logs/PHASE5A_SEEDING_REPORT.md
 7. Do NOT use browser automation — use Bash tool with curl/python3 only
+8. If BUSINESS_LOGIC_TESTCASES.md exists (from Phase 3), create multi-scenario test data with admin user, validation payloads, state machine records, and authorization scenarios
+9. If BUSINESS_LOGIC_TESTCASES.md does NOT exist, create only basic CRUD test data (standard behavior)
 
 You MUST generate test-logs/test_data_seed.json before finishing.
 "@

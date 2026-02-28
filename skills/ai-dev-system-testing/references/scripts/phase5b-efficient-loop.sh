@@ -133,27 +133,38 @@ get_pass_rate() {
         tmp_py=$(mktemp /tmp/rate_XXXXXX.py)
         cat > "$tmp_py" << 'PYEOF'
 import json, sys
+def to_num(v):
+    if v is None: return 0
+    if isinstance(v, (int, float)): return float(v)
+    if isinstance(v, str):
+        v = v.strip().rstrip('%')
+        try: return float(v)
+        except: return 0
+    return 0
 try:
     with open(sys.argv[1], encoding='utf-8') as f:
         data = json.load(f)
     rate = 0
-    rate = data.get('adjusted_pass_rate') or data.get('pass_rate') or 0
-    if not rate:
-        rate_str = data.get('passRate', data.get('adjustedPassRate', ''))
-        if isinstance(rate_str, str):
-            rate = float(rate_str.replace('%', '')) if rate_str else 0
-        else:
-            rate = float(rate_str) if rate_str else 0
+    # Try all known pass_rate key variants (Claude generates unpredictable names)
+    for key in ['pass_rate', 'passRate', 'adjusted_pass_rate', 'adjustedPassRate', 'actual_pass_rate', 'actualPassRate']:
+        if key in data and data[key]:
+            rate = to_num(data[key]); break
+    # Check summary sub-object
     if not rate and 'summary' in data:
         s = data['summary']
-        rate_str = s.get('passRate', s.get('pass_rate', s.get('adjusted_pass_rate', '')))
-        if isinstance(rate_str, str):
-            rate = float(rate_str.replace('%', '')) if rate_str else 0
-        else:
-            rate = float(rate_str) if rate_str else 0
+        for key in ['pass_rate', 'passRate', 'adjusted_pass_rate', 'adjustedPassRate', 'actual_pass_rate', 'actualPassRate']:
+            if key in s and s[key]:
+                rate = to_num(s[key]); break
+    # Fallback: calculate from passed/total (various key names)
     if not rate:
-        total = data.get('totalTests', data.get('total_tests', data.get('total', 0)))
-        passed = data.get('passed', data.get('tests_passed', 0))
+        total = 0
+        for key in ['totalTests', 'total_tests', 'total', 'total_pages_tested', 'totalPagesTested', 'total_endpoints', 'totalEndpoints']:
+            if key in data and data[key]:
+                total = int(data[key]); break
+        passed = 0
+        for key in ['passed', 'tests_passed', 'total_pages_passed', 'totalPagesPassed', 'pages_passed', 'endpoints_passed']:
+            if key in data and data[key]:
+                passed = int(data[key]); break
         if total > 0:
             rate = round(passed / total * 100, 1)
     print(rate)
@@ -199,6 +210,16 @@ $(cat "$seed_file")
 $(cat "$auth_file")
 === END AUTH ===
 "
+        fi
+        # Inject admin auth if available (for authorization scenario testing)
+        local admin_auth_file="$LOG_DIR/phase5a_admin_user.json"
+        if [ -f "$admin_auth_file" ]; then
+            test_data_context="${test_data_context}
+=== ADMIN AUTH CREDENTIALS (use for authorization scenario tests) ===
+$(cat "$admin_auth_file")
+=== END ADMIN AUTH ===
+"
+            log_msg "[INFO] Injected admin auth credentials into prompt"
         fi
         log_msg "[INFO] Injected Phase 5A test data into prompt"
     else
@@ -267,22 +288,70 @@ Step 1: Load test data from Phase 5A (provided above in the prompt).
 
 Step 2: Set Authorization in Swagger UI (Bearer token from test data).
 
-Step 3: Test ALL API endpoints by category.
+Step 3: Test ALL API endpoints — TWO-LAYER TESTING PROTOCOL
+
+=== LAYER 1: CRUD Testing (Standard) ===
+Test ALL API endpoints by category using real entity IDs from test data.
   - Use real entity IDs from the test data above.
   - 404 response = missing test data -> create the missing entity with
     javascript_tool, then retry the test. This is NOT an acceptable failure.
   - Bug found -> fix the code -> restart backend -> re-test.
 
+=== LAYER 2: SCENARIO-BASED TESTING (MANDATORY if scenarios exist) ===
+If the test data JSON contains a \"scenarios\" key, you MUST execute EVERY scenario.
+This is NOT optional. Each scenario is a REQUIRED test case.
+
+SCENARIO EXECUTION RULES:
+1. Parse the \"scenarios\" object from the injected test data above.
+2. Execute ALL entries in EACH category in order:
+
+   [validation] For each entry:
+     - Send the specified invalid payload to the target endpoint
+     - Verify response status matches expected_status (e.g., 422)
+     - Record PASS/FAIL with actual vs expected status
+
+   [state_transitions] For each entry:
+     - Use the specified record_id and attempt the state change
+     - For VALID transitions: verify expected_status 200 and new state
+     - For INVALID transitions: verify expected_status 400 and state unchanged
+
+   [authorization] For each entry:
+     - If auth_as=\"admin\", use ADMIN AUTH token from above
+     - If auth_as=\"user\", use regular AUTH token from above
+     - Send request to the specified endpoint
+     - Verify response matches expected_status (200 vs 403)
+
+   [business_constraints] For each entry:
+     - Set up the constraint condition if needed (e.g., stock=0 product)
+     - Send the request that should violate the constraint
+     - Verify the expected error status (e.g., 400)
+
+3. Include ALL scenario results in the results JSON under \"scenario_results\"
+
 Step 4: Generate results file: test-logs/phase5b_efficient_test_results.json
+  The results file MUST include:
+  - total_tests: CRUD count + scenario count
+  - passed: CRUD passed + scenario passed
+  - pass_rate: calculated from total_tests and passed
+  - crud_results: { total, passed, endpoints: [...] }
+  - scenario_results (if scenarios were executed): {
+      total, passed,
+      validation: { total, passed, details: [...] },
+      state_transitions: { total, passed, details: [...] },
+      authorization: { total, passed, details: [...] },
+      business_constraints: { total, passed, details: [...] }
+    }
+  IMPORTANT: pass_rate MUST include scenario test counts. Scenarios are NOT separate.
 
 KEY REQUIREMENTS:
 1. Use Claude In Chrome MCP for browser automation (the ONLY allowed method)
 2. Use entity IDs from Phase 5A test data (injected above). Never guess IDs.
-3. Test ALL API endpoints. Use real created IDs. Never use id=999.
-4. If test data is insufficient, create more via javascript_tool.
-5. Fix bugs immediately when found.
-6. Generate results file: test-logs/phase5b_efficient_test_results.json
-7. Target pass rate: ${TARGET_PASS_RATE}%
+3. Test ALL API endpoints (LAYER 1). Use real created IDs. Never use id=999.
+4. Execute ALL scenarios (LAYER 2) if \"scenarios\" key exists in test data.
+5. If test data is insufficient, create more via javascript_tool.
+6. Fix bugs immediately when found.
+7. Generate results file: test-logs/phase5b_efficient_test_results.json
+8. Target pass rate: ${TARGET_PASS_RATE}% (includes both CRUD and scenario tests)
 
 Report test results when done."
 

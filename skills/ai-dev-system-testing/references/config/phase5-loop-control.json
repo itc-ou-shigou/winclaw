@@ -22,7 +22,13 @@
     "fallback_to_api": true,
     "fallback_to_db_insert": true,
     "test_user_email": "phase5a_test@example.com",
-    "test_user_password": "Test@123456"
+    "test_user_password": "Test@123456",
+    "business_logic_testcases_file": "BUSINESS_LOGIC_TESTCASES.md",
+    "admin_test_user_email": "phase5a_admin@example.com",
+    "admin_test_user_password": "Test@123456",
+    "admin_auth_output_file": "test-logs/phase5a_admin_user.json",
+    "scenario_priority_tiers": ["basic_crud", "authorization", "validation", "state_machine", "business_constraints", "error_paths"],
+    "min_remaining_seconds_for_scenarios": 300
   },
 
   "phase5b_bugfix": {

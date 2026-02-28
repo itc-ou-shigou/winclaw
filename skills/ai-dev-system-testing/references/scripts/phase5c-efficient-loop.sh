@@ -123,27 +123,38 @@ get_pass_rate() {
         tmp_py=$(mktemp /tmp/rate_XXXXXX.py)
         cat > "$tmp_py" << 'PYEOF'
 import json, sys
+def to_num(v):
+    if v is None: return 0
+    if isinstance(v, (int, float)): return float(v)
+    if isinstance(v, str):
+        v = v.strip().rstrip('%')
+        try: return float(v)
+        except: return 0
+    return 0
 try:
     with open(sys.argv[1], encoding='utf-8') as f:
         data = json.load(f)
     rate = 0
-    rate = data.get('adjusted_pass_rate') or data.get('pass_rate') or 0
-    if not rate:
-        rate_str = data.get('passRate', data.get('adjustedPassRate', ''))
-        if isinstance(rate_str, str):
-            rate = float(rate_str.replace('%', '')) if rate_str else 0
-        else:
-            rate = float(rate_str) if rate_str else 0
+    # Try all known pass_rate key variants (Claude generates unpredictable names)
+    for key in ['pass_rate', 'passRate', 'adjusted_pass_rate', 'adjustedPassRate', 'actual_pass_rate', 'actualPassRate']:
+        if key in data and data[key]:
+            rate = to_num(data[key]); break
+    # Check summary sub-object
     if not rate and 'summary' in data:
         s = data['summary']
-        rate_str = s.get('passRate', s.get('pass_rate', s.get('adjusted_pass_rate', '')))
-        if isinstance(rate_str, str):
-            rate = float(rate_str.replace('%', '')) if rate_str else 0
-        else:
-            rate = float(rate_str) if rate_str else 0
+        for key in ['pass_rate', 'passRate', 'adjusted_pass_rate', 'adjustedPassRate', 'actual_pass_rate', 'actualPassRate']:
+            if key in s and s[key]:
+                rate = to_num(s[key]); break
+    # Fallback: calculate from passed/total (various key names)
     if not rate:
-        total = data.get('totalTests', data.get('total_tests', data.get('total', 0)))
-        passed = data.get('passed', data.get('tests_passed', 0))
+        total = 0
+        for key in ['totalTests', 'total_tests', 'total', 'total_pages_tested', 'totalPagesTested', 'total_pages']:
+            if key in data and data[key]:
+                total = int(data[key]); break
+        passed = 0
+        for key in ['passed', 'tests_passed', 'total_pages_passed', 'totalPagesPassed', 'pages_passed']:
+            if key in data and data[key]:
+                passed = int(data[key]); break
         if total > 0:
             rate = round(passed / total * 100, 1)
     print(rate)
@@ -189,6 +200,16 @@ $(cat "$seed_file")
 $(cat "$auth_file")
 === END AUTH ===
 "
+        fi
+        # Inject admin auth if available (for authorization scenario testing)
+        local admin_auth_file="$LOG_DIR/phase5a_admin_user.json"
+        if [ -f "$admin_auth_file" ]; then
+            test_data_context="${test_data_context}
+=== ADMIN AUTH CREDENTIALS (use for authorization scenario tests — login as admin) ===
+$(cat "$admin_auth_file")
+=== END ADMIN AUTH ===
+"
+            log_msg "[INFO] Injected admin auth credentials into prompt"
         fi
         log_msg "[INFO] Injected Phase 5A test data into prompt"
     else
@@ -246,23 +267,76 @@ Step 2: Load test data from Phase 5A (provided above in the prompt).
   - If test data is missing or insufficient, create what you need using
     javascript_tool or by filling forms in the UI, then record the new IDs.
 
-Step 3: Test all pages.
+Step 3: Test ALL pages — TWO-LAYER TESTING PROTOCOL
+
+=== LAYER 1: Page Testing (Standard) ===
   - Execute 4 CORE TESTS per page (Form/Link/Button/CSS).
   - Execute 6-GATE verification per page.
   - Fix bugs immediately when found.
 
+=== LAYER 2: UI SCENARIO TESTING (MANDATORY if scenarios exist) ===
+If the test data JSON contains a \"scenarios\" key, you MUST test these UI patterns.
+This is NOT optional. Each scenario maps to a UI verification test.
+
+UI SCENARIO EXECUTION RULES:
+1. Parse the \"scenarios\" object from the injected test data above.
+2. Execute UI tests for EACH applicable category:
+
+   [validation] For each entry:
+     - Navigate to the form for that entity
+     - Enter the invalid data specified in the payload
+     - Submit the form
+     - Verify: error message is displayed in the UI
+     - Verify: form is NOT submitted (no success redirect/toast)
+     - Take screenshot as evidence
+
+   [state_transitions] For each entry:
+     - Navigate to the entity detail/edit page using record_id
+     - Attempt the state change via UI button/dropdown
+     - For VALID transitions: verify UI reflects new state
+     - For INVALID transitions: verify error shown, state unchanged
+     - Take screenshot as evidence
+
+   [authorization] For each entry:
+     - Login as the specified role (admin: use ADMIN AUTH, user: use regular AUTH)
+     - Navigate to the restricted page/action
+     - If auth_as=\"admin\": verify action is accessible and succeeds
+     - If auth_as=\"user\": verify action is hidden/disabled/returns error
+     - Take screenshot as evidence
+
+   [business_constraints] For each entry:
+     - Navigate to the relevant page
+     - Attempt the constrained action via UI
+     - Verify error message matches expected business rule
+     - Take screenshot as evidence
+
+3. Include ALL scenario results in the results JSON under \"scenario_results\"
+
 Step 4: Generate results file: test-logs/phase5c_test_results.json
+  The results file MUST include:
+  - total_pages_tested: N
+  - total_pages_passed: N
+  - scenario_results (if scenarios were executed): {
+      total, passed,
+      validation: { total, passed, details: [...] },
+      state_transitions: { total, passed, details: [...] },
+      authorization: { total, passed, details: [...] },
+      business_constraints: { total, passed, details: [...] }
+    }
+  - pass_rate: calculated including both page tests and scenario tests
+  IMPORTANT: pass_rate MUST include scenario test counts. Scenarios are NOT separate.
 
 KEY REQUIREMENTS:
 1. Use Claude In Chrome MCP for browser automation (the ONLY allowed method).
 2. Login using Phase 5A auth credentials (injected above).
 3. Use entity IDs from test data. Never guess or hardcode IDs.
 4. If test data is insufficient for a specific test, create it via javascript_tool.
-5. Execute 4 CORE TESTS (Form/Link/Button/CSS) per page.
-6. Execute 6-GATE verification per page.
-7. Fix bugs immediately when found.
-8. Generate results file: test-logs/phase5c_test_results.json
-9. Target pass rate: ${TARGET_PASS_RATE}% (all pages must pass).
+5. Execute 4 CORE TESTS (Form/Link/Button/CSS) per page (LAYER 1).
+6. Execute 6-GATE verification per page (LAYER 1).
+7. Execute ALL scenarios (LAYER 2) if \"scenarios\" key exists in test data.
+8. Fix bugs immediately when found.
+9. Generate results file: test-logs/phase5c_test_results.json
+10. Target pass rate: ${TARGET_PASS_RATE}% (includes both page tests and scenario tests).
 
 Report test results and GATE verification status when done."
 
