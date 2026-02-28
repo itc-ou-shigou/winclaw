@@ -213,7 +213,7 @@ WinClaw 内置了两个强大的自动化技能，大幅提升你在 Windows PC 
 
 ### 🧪 AI Dev System Testing — Web 应用自动化测试
 
-AI 驱动的全自动 Web 应用测试：代码结构分析、代码审查并自动修复 BUG、API 端点测试、浏览器 UI 自动化测试 —— **无需编写任何测试脚本**，AI agent 全程自动完成。
+AI 驱动的全自动 Web 应用测试：代码结构分析、业务逻辑提取、代码审查并自动修复 BUG、优先级分层测试数据生成、双层测试协议（标准 CRUD + 场景化业务逻辑测试）—— **无需编写任何测试脚本**，AI agent 全程自动完成。
 
 **支持自动修复的语言：** Python、PHP、Go、JavaScript/Node.js、TypeScript/React 等解释型语言。
 
@@ -268,12 +268,36 @@ Set ANTHROPIC_MODEL=glm-5
 | 阶段 | 功能 | 输出文件 |
 |------|------|----------|
 | Phase 2 | 代码结构分析 | `CODE_ANALYSIS.md` |
-| Phase 3 | 代码审查 + 自动修复 BUG | `CODE_REVIEW_REPORT.md` |
-| Phase 5B | API 端点测试（迭代式） | `test-logs/phase5b_*.json` |
-| Phase 5C | 浏览器 UI 自动化测试 | `test-logs/phase5c_*.json` |
+| Phase 3 | 代码审查 + 自动修复 BUG + 业务逻辑提取（参考框架最佳实践） | `CODE_REVIEW_REPORT.md`、`BUSINESS_LOGIC_TESTCASES.md` |
+| Phase 5A | 测试数据生成（基于业务逻辑理解的优先级分层 P0–P5 场景） | `test-data/` |
+| Phase 5B | API 端点测试 — 覆盖全部 pattern 的双层协议（迭代式） | `test-logs/phase5b_*.json` |
+| Phase 5C | 浏览器 UI 自动化测试 — 覆盖全部 pattern 的双层协议 | `test-logs/phase5c_*.json` |
 | Phase 6 | 自动生成文档 | `docs/` |
 
-Phase 5B/5C 最多运行 15 次迭代，自动修复失败的测试用例，直到通过率达到 95%+（API）或 100%（UI）。
+#### 框架最佳实践（Phase 3 参考文档）
+
+Phase 3 会根据项目检测到的技术栈，动态加载框架专属的最佳实践文档。这些文档定义了反模式（Bug 风险型 vs. 仅风格型）、安全检查清单和性能指南，用于指导代码审查和自动修复决策。
+
+| 最佳实践文档 | 框架 | 主要领域 |
+|-------------|------|----------|
+| `python-fastapi.md` | Python 3.10+ / FastAPI + SQLAlchemy 2.0 | 三层架构、异步模式、Pydantic 验证、N+1 查询防护 |
+| `java-spring-boot.md` | Java 21+ / Spring Boot 3.x–4.x | 依赖注入、Spring Security、JPA 模式、测试策略 |
+| `php-laravel.md` | PHP 8.1+ / Laravel | Eloquent ORM、中间件、表单请求、验证规则 |
+| `go-zero.md` | Go 1.19+ / go-zero | gRPC 模式、struct 标签验证、服务层设计 |
+| `react-nextjs.md` | React 18+ / Next.js 13.5+ | Server vs Client 组件、状态管理、记忆化、不可变性 |
+
+#### 业务逻辑管线（Phase 3 → 5A → 5B/5C）
+
+Phase 3 参考上述最佳实践执行深度代码审查，然后从源代码中直接提取 **6 大类业务逻辑模式**：
+
+1. **验证规则** — Pydantic `Field()`、JPA `@NotNull/@Size`、Laravel `rules()`、go-zero struct 标签
+2. **状态机** — status/state 字段转换、枚举定义、if-chain/switch 逻辑
+3. **授权模式** — `@login_required`、`@PreAuthorize`、auth guard、基于角色的中间件
+4. **业务约束** — 库存检查、唯一约束、余额/配额限制、引用完整性
+5. **错误处理路径** — 异常处理器、自定义异常、HTTP 错误响应
+6. **条件业务逻辑** — 基于角色的功能、功能开关、分级定价、基于时间的规则
+
+这些模式输出为 `BUSINESS_LOGIC_TESTCASES.md`，Phase 5A 消费该文件生成**优先级分层（P0–P5）多场景测试数据**：管理员用户、无效验证载荷、各种状态的记录、约束触发数据、错误路径触发器等。Phase 5B/5C 执行**覆盖全部提取 pattern 的双层测试协议**：Layer 1（标准 CRUD/页面测试）+ Layer 2（针对 Phase 3 发现的每个 pattern 的必选场景测试）。每个阶段最多运行 15 次迭代，自动修复失败的测试用例，直到通过率达到 95%+（API）或 100%（UI）。
 
 #### 测试账号配置
 

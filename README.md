@@ -235,7 +235,7 @@ WinClaw ships with two powerful automation skills that supercharge your developm
 
 ### 🧪 AI Dev System Testing — Automated Web Application Testing
 
-Automatically test your web applications with AI-powered code analysis, API testing, and browser UI testing. The AI agent analyzes your codebase, performs code review with auto-fix, tests API endpoints, and validates UI flows — all without writing a single test script.
+Automatically test your web applications with AI-powered code analysis, business logic extraction, API testing, and browser UI testing. The AI agent analyzes your codebase, extracts business logic patterns, performs code review with auto-fix, seeds priority-tiered test data, and executes two-layer testing (standard CRUD + scenario-based business logic) — all without writing a single test script.
 
 **Supported Languages (Auto-Fix):** Python, PHP, Go, JavaScript/Node.js, TypeScript/React, and other interpreted languages.
 
@@ -291,12 +291,36 @@ Set ANTHROPIC_MODEL=glm-5
 | Phase | What It Does | Output |
 |-------|-------------|--------|
 | Phase 2 | Code structure analysis | `CODE_ANALYSIS.md` |
-| Phase 3 | Code review + auto-fix | `CODE_REVIEW_REPORT.md` |
-| Phase 5B | API endpoint testing (iterative) | `test-logs/phase5b_*.json` |
-| Phase 5C | Browser UI testing via Chrome | `test-logs/phase5c_*.json` |
+| Phase 3 | Code review + auto-fix + business logic extraction (with framework best practices) | `CODE_REVIEW_REPORT.md`, `BUSINESS_LOGIC_TESTCASES.md` |
+| Phase 5A | Test data seeding (priority-tiered P0–P5 scenarios based on business logic) | `test-data/` |
+| Phase 5B | API endpoint testing — two-layer protocol covering all patterns (iterative) | `test-logs/phase5b_*.json` |
+| Phase 5C | Browser UI testing — two-layer protocol covering all patterns via Chrome | `test-logs/phase5c_*.json` |
 | Phase 6 | Documentation generation | `docs/` |
 
-Phase 5B/5C run up to 15 iterations, automatically fixing failing tests until the pass rate reaches 95%+ (API) or 100% (UI).
+#### Framework Best Practices (Phase 3 Reference)
+
+Phase 3 dynamically loads framework-specific best practices documents based on your project's detected tech stack. These documents define anti-patterns (bug-risk vs. style-only), security checklists, and performance guidelines that guide both the code review and the auto-fix decisions.
+
+| Best Practices Document | Framework | Key Areas |
+|------------------------|-----------|-----------|
+| `python-fastapi.md` | Python 3.10+ / FastAPI + SQLAlchemy 2.0 | 3-tier architecture, async patterns, Pydantic validation, N+1 query prevention |
+| `java-spring-boot.md` | Java 21+ / Spring Boot 3.x–4.x | Dependency injection, Spring Security, JPA patterns, testing strategies |
+| `php-laravel.md` | PHP 8.1+ / Laravel | Eloquent ORM, middleware, form requests, validation rules |
+| `go-zero.md` | Go 1.19+ / go-zero | gRPC patterns, struct tag validation, service layer design |
+| `react-nextjs.md` | React 18+ / Next.js 13.5+ | Server vs Client components, state management, memoization, immutability |
+
+#### Business Logic Pipeline (Phase 3 → 5A → 5B/5C)
+
+Phase 3 performs a deep code review referencing the best practices above, then extracts **6 categories of business logic patterns** directly from your source code:
+
+1. **Validation Rules** — Pydantic `Field()`, JPA `@NotNull/@Size`, Laravel `rules()`, go-zero struct tags
+2. **State Machines** — status/state field transitions, enum definitions, if-chain/switch logic
+3. **Authorization Patterns** — `@login_required`, `@PreAuthorize`, auth guards, role-based middleware
+4. **Business Constraints** — stock checks, unique constraints, balance/quota limits, referential integrity
+5. **Error Handling Paths** — exception handlers, custom exceptions, HTTP error responses
+6. **Conditional Business Logic** — role-based features, feature flags, tier-based pricing, time-based rules
+
+These patterns are output as `BUSINESS_LOGIC_TESTCASES.md`, which Phase 5A consumes to generate **priority-tiered (P0–P5) multi-scenario test data**: admin users, invalid validation payloads, records in various states, constraint-triggering data, and error-path triggers. Phase 5B/5C then execute a **two-layer testing protocol** that covers **all extracted patterns**: Layer 1 (standard CRUD/page tests) + Layer 2 (mandatory scenario-based business logic tests for every pattern discovered in Phase 3). Each phase runs up to 15 iterations, automatically fixing failing tests until the pass rate reaches 95%+ (API) or 100% (UI).
 
 #### Test Account Configuration
 
