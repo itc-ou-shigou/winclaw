@@ -31,7 +31,7 @@ recommended.
 ### Method 1: EXE Installer (Recommended)
 
 Download **WinClawSetup-{version}.exe** from
-[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download) |
+[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.1.exe/download) |
 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases) and run it.
 The installer is also available locally in the [`releases/`](releases/) directory.
 
@@ -231,7 +231,7 @@ to verify your installation and diagnose issues.
 
 ## ⭐ Featured Skills
 
-WinClaw ships with two powerful automation skills that supercharge your development workflow on Windows.
+WinClaw ships with five powerful automation skills that supercharge your development workflow on Windows.
 
 ### 🧪 AI Dev System Testing — Automated Web Application Testing
 
@@ -361,6 +361,74 @@ Automatically discover and register free LLM API providers into WinClaw. The ski
 5. Switch between free models in the **WinClaw model selection dropdown**
 
 The daily auto-update cron job is registered automatically on first run — no manual setup needed.
+
+---
+
+### ☁️ Cloud Deploy Skills — One-Command Deployment to AWS, Azure & Alibaba Cloud
+
+WinClaw includes three cloud deployment skills that guide you from requirements gathering through infrastructure provisioning to code deployment — all through natural conversation in WinClaw Chat.
+
+| Skill | Cloud Provider | Trigger Phrases | Infrastructure-as-Code |
+|-------|---------------|-----------------|----------------------|
+| **aws-cloud-deploy** | Amazon Web Services | "deploy to aws", "AWS deploy" | CloudFormation (YAML) |
+| **azure-cloud-deploy** | Microsoft Azure | "deploy to azure", "Azure deploy" | ARM Templates (JSON) |
+| **aliyun-cloud-deploy** | Alibaba Cloud | "deploy to aliyun", "Alibaba Cloud deploy" | ROS Templates (JSON) |
+
+#### 6 Architecture Patterns
+
+Each skill supports 6 architecture patterns automatically selected based on your budget, traffic, and requirements:
+
+| Pattern | Budget | Traffic | AWS | Azure | Alibaba Cloud |
+|---------|--------|---------|-----|-------|--------------|
+| **Lite** | $10-40/mo | <500/day | EC2 + EIP | VM + Public IP | ECS + EIP |
+| **Standard** | $50-150/mo | 500-5K/day | EC2 + ALB + RDS | App Service + DB | ECS + SLB + RDS |
+| **HA** | $150-300/mo | 5K-50K/day | ASG + Multi-AZ RDS | App Gateway + HA DB | ESS + Multi-AZ RDS |
+| **Elastic** | $250-600/mo | 50K-500K/day | ASG + ElastiCache + CloudFront | VMSS + Redis + CDN | ESS + Redis + CDN |
+| **Serverless** | $0-100/mo | Variable | Lambda + API Gateway | Functions + API Mgmt | FC + API Gateway |
+| **Container** | $300+/mo | 50K-1M+/day | EKS + ECR | AKS + ACR | ACK + ACR |
+
+#### Workflow
+
+```
+Phase 1: Requirements    → Detect project type, ask budget/traffic/DB/security questions
+Phase 2: Plan & Approve  → Recommend architecture, show cost estimate, get user approval
+Phase 3A: Infrastructure → Generate & validate IaC template, deploy via CLI or Console
+Phase 3B: Code Deploy    → Generate deploy script, SCP/Docker/kubectl/CLI deployment
+Phase 3C: Verify         → Health checks, generate deployment report with next steps
+```
+
+#### Prerequisites — Cloud CLI Authentication
+
+**You must configure cloud CLI authentication before using these skills.** WinClaw will not ask for your credentials — they must be pre-configured in your terminal environment.
+
+| Provider | Authentication Command | Verification |
+|----------|----------------------|-------------|
+| AWS | `aws configure` (Access Key + Secret Key) | `aws sts get-caller-identity` |
+| Azure | `az login` (browser-based SSO) | `az account show` |
+| Alibaba Cloud | `aliyun configure` (Access Key + Secret Key) | `aliyun sts GetCallerIdentity` |
+
+> **Security Note:** Never paste credentials directly into WinClaw Chat. Always configure authentication through the cloud provider's CLI tool in your terminal. WinClaw reads the pre-configured credentials from the CLI environment and never stores them.
+
+#### How to Use
+
+1. **Start** — Tell WinClaw: *"Deploy my project to AWS"* (or Azure / Alibaba Cloud)
+2. **Answer questions** — WinClaw detects your project and asks about budget, traffic, DB needs
+3. **Review plan** — WinClaw recommends an architecture with cost breakdown. Approve or adjust
+4. **Deploy** — WinClaw generates infrastructure templates, provisions resources, deploys your code
+5. **Verify** — WinClaw runs health checks and provides a deployment report with access URLs
+
+```
+You:    Deploy my Express app to AWS, budget around $100/month
+WinClaw: I detected a Node.js/Express project (port 3000).
+         Let me ask a few questions to design the right architecture...
+         [Asks about traffic, database, security needs]
+         ...
+         Recommended: Standard pattern (EC2 + ALB + RDS MySQL)
+         Estimated cost: $71.62/month — Approve?
+You:    Yes, deploy it
+WinClaw: [Generates CloudFormation → Deploys stack → SCP code → Health check]
+         Deployment complete! Access URL: http://my-app-alb-123.us-east-1.elb.amazonaws.com/
+```
 
 ---
 

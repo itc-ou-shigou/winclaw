@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Standalone RDS database instance supporting MySQL and PostgreSQL engines.
+  Uses Conditions to automatically set the correct port based on the
+  selected engine. Designed for import via cross-stack references from a
+  base VPC template.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  DBEngine:
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+    Description: Database engine type
+
+  DBEngineVersion:
+    Type: String
+    Default: ""
+    Description: >
+      Database engine version. Leave empty to use the default
+      (8.0 for MySQL, 16.3 for PostgreSQL).
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.small
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t3.large
+      - db.r5.large
+      - db.r5.xlarge
+      - db.r6g.large
+      - db.r6g.xlarge
+    Description: RDS instance class
+
+  DBName:
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+    Description: Initial database name
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters or underscores.
+
+  DBMasterUsername:
+    Type: String
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+    Description: Master username for the database
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters or underscores.
+
+  DBMasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Description: Master password for the database (min 8 characters)
+
+  AllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 65536
+    Description: Allocated storage in GiB
+
+  MultiAZ:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable Multi-AZ deployment for high availability
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the RDS instance will be deployed
+
+  Subnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: First subnet ID for the DB subnet group
+
+  Subnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Second subnet ID for the DB subnet group
+
+  SourceSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID allowed to connect to the database
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  IsMySQL: !Equals [!Ref DBEngine, "mysql"]
+  IsPostgreSQL: !Equals [!Ref DBEngine, "postgres"]
+  IsMultiAZ: !Equals [!Ref MultiAZ, "true"]
+  HasCustomEngineVersion: !Not [!Equals [!Ref DBEngineVersion, ""]]
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # -------------------------------------------------------------------------
+  # DB Subnet Group
+  # -------------------------------------------------------------------------
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub "Subnet group for ${AWS::StackName} RDS instance"
+      SubnetIds:
+        - !Ref Subnet1Id
+        - !Ref Subnet2Id
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-db-subnet-group"
+
+  # -------------------------------------------------------------------------
+  # Database Security Group
+  # -------------------------------------------------------------------------
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${AWS::StackName} RDS instance"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsMySQL, 3306, 5432]
+          ToPort: !If [IsMySQL, 3306, 5432]
+          SourceSecurityGroupId: !Ref SourceSecurityGroupId
+          Description: !Sub "Allow ${DBEngine} access from application tier"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-db-sg"
+
+  # -------------------------------------------------------------------------
+  # RDS Instance
+  # -------------------------------------------------------------------------
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-db"
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !Ref DBEngine
+      EngineVersion: !If
+        - HasCustomEngineVersion
+        - !Ref DBEngineVersion
+        - !If [IsMySQL, "8.0", "16.3"]
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+      AllocatedStorage: !Ref AllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: !If [IsMultiAZ, true, false]
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      Port: !If [IsMySQL, "3306", "5432"]
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: "03:00-04:00"
+      PreferredMaintenanceWindow: "sun:04:30-sun:05:30"
+      AutoMinorVersionUpgrade: true
+      CopyTagsToSnapshot: true
+      DeletionProtection: false
+      PubliclyAccessible: false
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSMonitoringRole.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-db"
+        - Key: Engine
+          Value: !Ref DBEngine
+
+  # -------------------------------------------------------------------------
+  # Enhanced Monitoring IAM Role
+  # -------------------------------------------------------------------------
+  RDSMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-rds-monitoring-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  DBEndpoint:
+    Description: Database endpoint address
+    Value: !GetAtt DBInstance.Endpoint.Address
+
+  DBPort:
+    Description: Database port
+    Value: !GetAtt DBInstance.Endpoint.Port
+
+  DBInstanceId:
+    Description: RDS instance identifier
+    Value: !Ref DBInstance
+
+  DBEngine:
+    Description: Database engine type
+    Value: !Ref DBEngine
+
+  DBSecurityGroupId:
+    Description: Security group ID for the database
+    Value: !Ref DBSecurityGroup
+
+  ConnectionString:
+    Description: Database connection hint (password not included)
+    Value: !Sub
+      - "${Engine}://${User}@${Host}:${Port}/${Name}"
+      - Engine: !Ref DBEngine
+        User: !Ref DBMasterUsername
+        Host: !GetAtt DBInstance.Endpoint.Address
+        Port: !GetAtt DBInstance.Endpoint.Port
+        Name: !Ref DBName

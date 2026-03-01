@@ -1,0 +1,554 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  ALB + ASG + RDS HA - High-availability architecture with Auto Scaling Group,
+  Application Load Balancer, NAT Gateway, and Multi-AZ RDS. Suitable for
+  production web applications requiring resilience and horizontal scaling.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - m5.large
+      - m5.xlarge
+    Description: EC2 instance type for Auto Scaling launch template
+
+  MinSize:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 20
+    Description: Minimum number of instances in the Auto Scaling Group
+
+  MaxSize:
+    Type: Number
+    Default: 6
+    MinValue: 1
+    MaxValue: 50
+    Description: Maximum number of instances in the Auto Scaling Group
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.small
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t3.large
+      - db.r5.large
+    Description: RDS instance class
+
+  DBEngine:
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+    Description: Database engine type
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Description: Database master password (min 8 characters)
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 key pair for SSH access
+
+  EnvironmentName:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name for resource tagging
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  IsMySQL: !Equals [!Ref DBEngine, 'mysql']
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # VPC & Networking
+  # =========================================================================
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # --- Public Subnets ---
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-2'
+
+  # --- Private Subnets ---
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-2'
+
+  # --- Public Route Table ---
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # --- NAT Gateway (for private subnet internet access) ---
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-nat-eip'
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-nat'
+
+  # --- Private Route Table ---
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-rt'
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # =========================================================================
+  # Security Groups
+  # =========================================================================
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ALB - allows HTTP/HTTPS from internet
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb-sg'
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for application instances
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: HTTP from ALB only
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-app-sg'
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsMySQL, 3306, 5432]
+          ToPort: !If [IsMySQL, 3306, 5432]
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Database access from application tier only
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db-sg'
+
+  # =========================================================================
+  # Application Load Balancer
+  # =========================================================================
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Name: !Sub '${AWS::StackName}-alb'
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+        - Key: routing.http.drop_invalid_header_fields.enabled
+          Value: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+        - Key: stickiness.enabled
+          Value: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-tg'
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  # =========================================================================
+  # Launch Template & Auto Scaling
+  # =========================================================================
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-lt'
+      LaunchTemplateData:
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds:
+          - !Ref AppSecurityGroup
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 20
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        Monitoring:
+          Enabled: true
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${AWS::StackName}-app'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            dnf update -y
+            dnf install -y httpd stress-ng
+
+            systemctl enable httpd
+            systemctl start httpd
+
+            INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+            AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+            cat > /var/www/html/index.html <<HTML
+            <h1>${AWS::StackName} - HA Application</h1>
+            <p>Instance: $INSTANCE_ID</p>
+            <p>AZ: $AZ</p>
+            HTML
+
+            cat > /var/www/html/health <<HTML
+            OK
+            HTML
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      AutoScalingGroupName: !Sub '${AWS::StackName}-asg'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref MinSize
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 120
+      MetricsCollection:
+        - Granularity: 1Minute
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-asg-instance'
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvironmentName
+          PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M
+        WaitOnResourceSignals: false
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+
+  # --- Scaling Policy ---
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 70.0
+        DisableScaleIn: false
+
+  # =========================================================================
+  # RDS Database (Multi-AZ)
+  # =========================================================================
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub 'Multi-AZ subnet group for ${AWS::StackName}'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db-subnet-group'
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub '${AWS::StackName}-db'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !If [IsMySQL, mysql, postgres]
+      EngineVersion: !If [IsMySQL, '8.0', '16']
+      DBName: appdb
+      MasterUsername: dbadmin
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: true
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 14
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      DeletionProtection: false
+      CopyTagsToSnapshot: true
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  ALBDNSName:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBDNSName'
+
+  ALBUrl:
+    Description: HTTP URL of the Application Load Balancer
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}'
+
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ASGName'
+
+  RDSEndpoint:
+    Description: RDS endpoint address (Multi-AZ)
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSEndpoint'
+
+  RDSPort:
+    Description: RDS port
+    Value: !GetAtt RDSInstance.Endpoint.Port
+
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  NatGatewayIP:
+    Description: NAT Gateway Elastic IP (outbound traffic from private subnets)
+    Value: !Ref NatGatewayEIP

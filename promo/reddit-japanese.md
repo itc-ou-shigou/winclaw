@@ -1,65 +1,113 @@
-# 【OSS】Windows PCでClaude Code（AI開発ツール）を使いたい人へ — WinClaw を紹介します
+# 【OSS無料】WinClaw の AI 自動テスト機能が凄い — テストスクリプト不要で Web アプリを全自動テスト
 
-**概要:** WinClaw は Claude Code（OpenClaw）の Windows 対応進化版です。EXEインストーラーで一発インストール、18個の業務自動化プラグイン（88コマンド + 90以上のAIスキル）、AI駆動の5段階Web自動テスト機能を搭載。OSSで無料です。
+**投稿先**: r/programming_jp, r/softwaretesting, r/webdev_ja
 
 ---
 
-## こんな悩みありませんか？
+## はじめに
 
-- Web アプリの自動テストをしたいけど、テストスクリプトを書く時間がない
-- Claude Code を使いたいけど、Windows に対応していない
-- 営業レポート、契約書レビュー、月次決算…毎回同じ作業の繰り返し
+Web アプリの自動テストを導入したいけど、テストスクリプトを書く時間がない。E2E テストフレームワークの学習コストが高い。そんな悩みを抱えていた時に見つけたのが **WinClaw** の AI 自動テスト機能です。
 
-## WinClaw とは？
+実際に使ってみて驚いたのは、**テストスクリプトを一行も書かずに**、AIがソースコードを読み解き、ビジネスロジックを抽出し、テストデータを生成し、APIテストからブラウザUIテストまで全自動で実行してくれるところです。
 
-Claude Code（現 OpenClaw）をベースに、Windows ユーザー向けに進化させたオープンソースツールです。
+## WinClaw とは
 
-| 比較項目 | Claude Code | WinClaw |
-|---------|------------|---------|
-| 対応OS | macOS/Linux | **Windows + macOS + Linux** |
-| インストール | npm手動設定 | **EXEインストーラー（Node.js内蔵）** |
-| プラグイン | なし | **18個の業務プラグイン** |
-| 業務自動化 | なし | **88コマンド + 90以上のAIスキル** |
+WinClaw は Claude Code（現 OpenClaw）をベースにした Windows 対応のオープンソースツールです。18個の業務自動化プラグイン（88コマンド + 90以上のAIスキル）を搭載していますが、中でも一番の目玉が **AI Dev System Testing** スキルです。
 
-### インストール方法
+## テストの実行フロー（Phase 2 〜 Phase 6）
 
-EXEをダウンロードして実行するだけ。Node.js 22ランタイム内蔵で前提条件ゼロ。
+### Phase 2: コード静的解析
 
-- **SourceForge**: https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.28.exe/download
+フロントエンドとバックエンドのソースコードを AI が自動スキャンします。セキュリティの脆弱性、コーディング規約違反、パフォーマンス問題などを検出し、レポートを生成します。
+
+### Phase 3: コードレビュー + 自動修正 + ビジネスロジック抽出
+
+ここが最も重要なフェーズです。AI がコードを深く分析し、以下の **6カテゴリのビジネスロジックパターン** を抽出します：
+
+1. **Validation Rules（バリデーションルール）** — 入力検証、フォーマットチェック、必須フィールド
+2. **State Machines（状態遷移）** — 注文ステータスの遷移、ワークフローの状態管理
+3. **Authorization Patterns（認可パターン）** — ロールベースアクセス制御、リソースの所有権チェック
+4. **Business Constraints（業務制約）** — 在庫上限、価格範囲、日付制約
+5. **Error Handling Paths（エラーハンドリング）** — 異常系の処理フロー
+6. **Conditional Business Logic（条件分岐ロジック）** — 割引計算、税率適用、会員ランク別処理
+
+抽出したビジネスロジックは `business-logic-*.md` ファイルに保存され、後続のテストフェーズで活用されます。
+
+さらに、コードレビューで発見された問題を AI が自動修正し、**通過率95%以上になるまで最大15回反復** します。
+
+### Phase 5A: テストデータ生成
+
+Phase 3 で抽出したビジネスロジックに基づいて、テストデータを自動生成します。正常系だけでなく、境界値や異常系のテストデータも含まれます。
+
+### Phase 5B: API テスト（二層テストプロトコル）
+
+バックエンドの全 API エンドポイントに対して、**二層構造のテストプロトコル** を実行します：
+
+- **Layer 1（標準CRUDテスト）**: 全エンドポイントの作成・読取・更新・削除を網羅的にテスト
+- **Layer 2（シナリオベーステスト）**: Phase 3 で抽出したビジネスロジックに基づく、シナリオ型のテスト（例：「在庫0の商品に対する注文処理」「管理者権限でないユーザーが管理画面にアクセス」）
+
+テストが失敗した場合、AI が原因を分析し、コードを修正して再テスト。**最大15回の反復** で通過率を高めます。
+
+### Phase 5C: ブラウザ UI テスト（二層テストプロトコル）
+
+Chrome MCP（Claude in Chrome 拡張機能）を通じて、AI が実際にブラウザを操作します：
+
+- **Layer 1**: 全ページの基本表示・ナビゲーション・フォーム操作をテスト
+- **Layer 2**: ビジネスロジックに基づくシナリオテスト（例：「ログイン → 商品をカートに追加 → 在庫上限を超える数量を入力 → エラーメッセージを確認」）
+
+AI が実際にボタンをクリックし、フォームに入力し、画面遷移を確認し、表示結果を検証します。
+
+### Phase 6: ドキュメント生成
+
+全フェーズのテスト結果を集約し、HTML形式のテストレポートを自動生成します。
+
+## なぜテストが信頼できるのか
+
+1. **ビジネスロジック駆動**: ランダムなテストではなく、実際のコードから抽出した6カテゴリのビジネスロジックに基づくテスト
+2. **二層テストプロトコル**: 標準CRUDテスト + シナリオベーステストの二層構造で漏れを防止
+3. **反復自動修正**: 失敗時に最大15回の修正ループで通過率を向上
+4. **フレームワーク最適化**: Python-FastAPI、Java-Spring Boot、PHP-Laravel、Go-Zero、React-Next.js 向けのベストプラクティスを内蔵
+
+## 導入方法
+
+### 1. WinClaw のインストール
+
+- **Windows EXE（推奨）**: [SourceForge からダウンロード](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download)（Node.js 22 ランタイム内蔵、前提条件ゼロ）
 - **GitHub**: https://github.com/itc-ou-shigou/winclaw/releases
+- **npm**: `npm install -g winclaw`
 
-### AI駆動Web自動テスト（最大の目玉機能）
+### 2. Claude in Chrome のインストール
 
-5段階の完全自動テスト：
+ブラウザUIテスト（Phase 5C）には **Claude in Chrome** 拡張機能が必要です。Chrome ウェブストアからインストールしてください。
 
-1. **コード静的解析** — フロント/バックエンドのセキュリティ・品質問題を検出
-2. **コードレビュー + 自動修正** — AIが問題を修正、通過率95%以上まで最大15回反復
-3. **APIテスト** — 全バックエンドAPIエンドポイントを自動テスト
-4. **ブラウザUIテスト** — Chrome MCPで自動操作、ページ操作を検証
-5. **ドキュメント生成** — テストレポート自動生成
+### 3. GLM-5 で安く使う方法（推奨）
 
-AIが実際にブラウザを開いて、ボタンをクリックし、フォームに入力し、結果を検証します。
+Anthropic の API や Pro サブスクリプション（月額$20）の代わりに、**智譜 GLM-5**（中国のLLM）を使えば無料枠で試せます。
 
-### 18個の業務プラグイン
+**Windows での設定手順:**
 
-- **ビジネス基盤**: productivity, data（SQL/ダッシュボード）, finance（財務諸表/SOX）, operations
-- **顧客対応**: sales（パイプライン/アウトリーチ）, customer-support, marketing（キャンペーン/SEO）
-- **プロダクト**: product-management, engineering, design
-- **専門分野**: legal（契約/NDA）, human-resources, enterprise-search, bio-research（PubMed/臨床試験）
-- **パートナー**: apollo, brand-voice, common-room, slack
+1. [z.ai](https://z.ai/) でアカウント登録
+2. API キーを取得
+3. Windows の環境変数を設定：
 
-### 無料LLM対応
+```
+set ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
+set ANTHROPIC_AUTH_TOKEN=あなたのAPIキー
+set ANTHROPIC_MODEL=glm-5
+```
 
-Anthropic Claude だけでなく、無料のLLMプロバイダーにも対応：
-- Google AI Studio（Gemini 2.5 Pro）
-- Groq（Llama 3.3 70B — 超高速）
-- OpenRouter、Ollama（完全オフライン）
+永続化する場合はシステム環境変数に追加：
+```
+setx ANTHROPIC_BASE_URL "https://api.z.ai/api/anthropic"
+setx ANTHROPIC_AUTH_TOKEN "あなたのAPIキー"
+setx ANTHROPIC_MODEL "glm-5"
+```
 
 ## リンク
 
 - **GitHub**: https://github.com/itc-ou-shigou/winclaw
-- **Windows EXE**: https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.28.exe/download
+- **Windows EXE**: https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download
 - **npm**: `npm install -g winclaw`
-- **ライセンス**: Apache-2.0（個人・商用とも無料）
+- **ライセンス**: Apache-2.0（個人・商用とも完全無料）
 
-Windows ユーザーでAI開発・業務自動化に興味がある方、ぜひ試してみてください！
+テストスクリプトを書くのに疲れた方、ぜひ試してみてください！質問があればコメントで聞いてください。

@@ -1,0 +1,200 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  S3 bucket with encryption, public access blocking, versioning, and
+  lifecycle management. Supports SSE-S3 and SSE-KMS encryption modes.
+  Includes an optional bucket policy for controlled access patterns
+  such as CloudFront OAC.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  BucketName:
+    Type: String
+    Default: ""
+    Description: >
+      Optional bucket name. Leave empty to auto-generate a unique name
+      using the stack name and account ID.
+    MaxLength: 63
+
+  EnableVersioning:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable S3 versioning on the bucket
+
+  EncryptionType:
+    Type: String
+    Default: SSE-S3
+    AllowedValues:
+      - SSE-S3
+      - SSE-KMS
+    Description: >
+      Server-side encryption type. SSE-S3 uses Amazon-managed keys.
+      SSE-KMS uses AWS KMS for key management with audit trail.
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  HasBucketName: !Not [!Equals [!Ref BucketName, ""]]
+  UseKMS: !Equals [!Ref EncryptionType, "SSE-KMS"]
+  UseVersioning: !Equals [!Ref EnableVersioning, "true"]
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # -------------------------------------------------------------------------
+  # KMS Key (created only when SSE-KMS is selected)
+  # -------------------------------------------------------------------------
+  BucketKMSKey:
+    Type: AWS::KMS::Key
+    Condition: UseKMS
+    Properties:
+      Description: !Sub "KMS key for ${AWS::StackName} S3 bucket encryption"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableRootAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowS3ServiceUsage
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-s3-kms-key"
+
+  BucketKMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Condition: UseKMS
+    Properties:
+      AliasName: !Sub "alias/${AWS::StackName}-s3-key"
+      TargetKeyId: !Ref BucketKMSKey
+
+  # -------------------------------------------------------------------------
+  # S3 Bucket
+  # -------------------------------------------------------------------------
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !If
+        - HasBucketName
+        - !Ref BucketName
+        - !Ref AWS::NoValue
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: !If [UseKMS, "aws:kms", "AES256"]
+              KMSMasterKeyID: !If
+                - UseKMS
+                - !GetAtt BucketKMSKey.Arn
+                - !Ref AWS::NoValue
+            BucketKeyEnabled: !If [UseKMS, true, false]
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: !If [UseVersioning, Enabled, Suspended]
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToInfrequentAccess
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+            NoncurrentVersionTransitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
+          - Id: CleanupIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Name
+          Value: !If
+            - HasBucketName
+            - !Ref BucketName
+            - !Sub "${AWS::StackName}-bucket"
+
+  # -------------------------------------------------------------------------
+  # Bucket Policy -- enforces TLS-only access
+  # -------------------------------------------------------------------------
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyNonTLSAccess
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt S3Bucket.Arn
+              - !Sub "${S3Bucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+          - Sid: DenyOutdatedTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt S3Bucket.Arn
+              - !Sub "${S3Bucket.Arn}/*"
+            Condition:
+              NumericLessThan:
+                "s3:TlsVersion": "1.2"
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  BucketName:
+    Description: Name of the S3 bucket
+    Value: !Ref S3Bucket
+
+  BucketArn:
+    Description: ARN of the S3 bucket
+    Value: !GetAtt S3Bucket.Arn
+
+  BucketDomainName:
+    Description: Domain name of the S3 bucket
+    Value: !GetAtt S3Bucket.DomainName
+
+  BucketRegionalDomainName:
+    Description: Regional domain name of the S3 bucket
+    Value: !GetAtt S3Bucket.RegionalDomainName
+
+  KMSKeyArn:
+    Description: ARN of the KMS key (only when SSE-KMS is used)
+    Condition: UseKMS
+    Value: !GetAtt BucketKMSKey.Arn
+
+  EncryptionMode:
+    Description: Encryption type configured for the bucket
+    Value: !Ref EncryptionType

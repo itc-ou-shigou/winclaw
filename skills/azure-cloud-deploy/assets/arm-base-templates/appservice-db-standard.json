@@ -1,0 +1,139 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "metadata": { "description": "Project name used as prefix for all resources" }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "appServiceSku": {
+      "type": "string",
+      "defaultValue": "B1",
+      "allowedValues": ["F1", "B1", "B2", "S1", "P1v3"]
+    },
+    "linuxFxVersion": {
+      "type": "string",
+      "defaultValue": "NODE|20-lts",
+      "allowedValues": ["NODE|20-lts", "PYTHON|3.12", "JAVA|17-java17", "DOTNETCORE|8.0", "PHP|8.3"]
+    },
+    "dbEngine": {
+      "type": "string",
+      "defaultValue": "mysql",
+      "allowedValues": ["mysql", "postgresql"]
+    },
+    "dbSku": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms"
+    },
+    "dbVersion": {
+      "type": "string",
+      "defaultValue": "8.0.21"
+    },
+    "dbStorageGB": {
+      "type": "int",
+      "defaultValue": 20
+    },
+    "dbAdminUser": {
+      "type": "string",
+      "defaultValue": "dbadmin"
+    },
+    "dbAdminPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "prefix": "[parameters('projectName')]",
+    "planName": "[format('{0}-plan', variables('prefix'))]",
+    "appName": "[format('{0}-app', variables('prefix'))]",
+    "dbServerName": "[format('{0}-db', variables('prefix'))]",
+    "dbType": "[if(equals(parameters('dbEngine'), 'mysql'), 'Microsoft.DBforMySQL/flexibleServers', 'Microsoft.DBforPostgreSQL/flexibleServers')]",
+    "dbTier": "[if(startsWith(parameters('dbSku'), 'Standard_B'), 'Burstable', if(startsWith(parameters('dbSku'), 'Standard_E'), 'MemoryOptimized', 'GeneralPurpose'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('planName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "[parameters('appServiceSku')]" },
+      "kind": "linux",
+      "properties": { "reserved": true }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('appName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "siteConfig": {
+          "linuxFxVersion": "[parameters('linuxFxVersion')]",
+          "alwaysOn": "[not(equals(parameters('appServiceSku'), 'F1'))]",
+          "appSettings": [
+            { "name": "DB_HOST", "value": "[format('{0}.{1}.database.azure.com', variables('dbServerName'), parameters('dbEngine'))]" },
+            { "name": "DB_PORT", "value": "[if(equals(parameters('dbEngine'), 'mysql'), '3306', '5432')]" },
+            { "name": "DB_USER", "value": "[parameters('dbAdminUser')]" },
+            { "name": "DB_NAME", "value": "[format('{0}db', variables('prefix'))]" }
+          ]
+        },
+        "httpsOnly": true
+      }
+    },
+    {
+      "condition": "[equals(parameters('dbEngine'), 'mysql')]",
+      "type": "Microsoft.DBforMySQL/flexibleServers",
+      "apiVersion": "2023-06-30",
+      "name": "[variables('dbServerName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('dbSku')]",
+        "tier": "[variables('dbTier')]"
+      },
+      "properties": {
+        "version": "[parameters('dbVersion')]",
+        "administratorLogin": "[parameters('dbAdminUser')]",
+        "administratorLoginPassword": "[parameters('dbAdminPassword')]",
+        "storage": { "storageSizeGB": "[parameters('dbStorageGB')]" },
+        "backup": { "backupRetentionDays": 7, "geoRedundantBackup": "Disabled" },
+        "highAvailability": { "mode": "Disabled" }
+      }
+    },
+    {
+      "condition": "[equals(parameters('dbEngine'), 'postgresql')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2023-06-01-preview",
+      "name": "[variables('dbServerName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('dbSku')]",
+        "tier": "[variables('dbTier')]"
+      },
+      "properties": {
+        "version": "[parameters('dbVersion')]",
+        "administratorLogin": "[parameters('dbAdminUser')]",
+        "administratorLoginPassword": "[parameters('dbAdminPassword')]",
+        "storage": { "storageSizeGB": "[parameters('dbStorageGB')]" },
+        "backup": { "backupRetentionDays": 7, "geoRedundantBackup": "Disabled" },
+        "highAvailability": { "mode": "Disabled" }
+      }
+    }
+  ],
+  "outputs": {
+    "appUrl": {
+      "type": "string",
+      "value": "[format('https://{0}.azurewebsites.net', variables('appName'))]"
+    },
+    "dbFqdn": {
+      "type": "string",
+      "value": "[format('{0}.{1}.database.azure.com', variables('dbServerName'), parameters('dbEngine'))]"
+    }
+  }
+}

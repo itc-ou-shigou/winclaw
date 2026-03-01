@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Base VPC networking template providing a reusable foundation for
+  multi-tier architectures. Includes public/private subnets across two
+  availability zones and security groups for web, application, and
+  database tiers. All resource IDs are exported for cross-stack references.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+    AllowedPattern: "^(10|172\\.(1[6-9]|2[0-9]|3[01])|192\\.168)\\.\\d{1,3}\\.\\d{1,3}/\\d{1,2}$"
+    ConstraintDescription: Must be a valid private IPv4 CIDR block.
+
+  AppPort:
+    Type: Number
+    Default: 3000
+    MinValue: 1
+    MaxValue: 65535
+    Description: Application port for the App tier security group ingress rule
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # -------------------------------------------------------------------------
+  # VPC
+  # -------------------------------------------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-vpc"
+
+  # -------------------------------------------------------------------------
+  # Subnets
+  # -------------------------------------------------------------------------
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-1a"
+        - Key: Tier
+          Value: Public
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-1b"
+        - Key: Tier
+          Value: Public
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-1a"
+        - Key: Tier
+          Value: Private
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-1b"
+        - Key: Tier
+          Value: Private
+
+  # -------------------------------------------------------------------------
+  # Internet Gateway
+  # -------------------------------------------------------------------------
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-igw"
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # -------------------------------------------------------------------------
+  # Public Route Table
+  # -------------------------------------------------------------------------
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-rt"
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # -------------------------------------------------------------------------
+  # Security Groups
+  # -------------------------------------------------------------------------
+
+  # Web Tier -- allows inbound HTTP and HTTPS from the internet
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Web tier - allows HTTP/HTTPS from the internet
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-web-sg"
+        - Key: Tier
+          Value: Web
+
+  # App Tier -- allows inbound from the Web SG on the application port
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "App tier - allows port ${AppPort} from Web SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AppPort
+          ToPort: !Ref AppPort
+          SourceSecurityGroupId: !Ref WebSecurityGroup
+          Description: Allow app traffic from web tier
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-app-sg"
+        - Key: Tier
+          Value: App
+
+  # DB Tier -- allows inbound MySQL (3306) and PostgreSQL (5432) from App SG
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: DB tier - allows MySQL/PostgreSQL from App SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Allow MySQL from app tier
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Allow PostgreSQL from app tier
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-db-sg"
+        - Key: Tier
+          Value: Database
+
+# ---------------------------------------------------------------------------
+# Outputs -- all exported for cross-stack references
+# ---------------------------------------------------------------------------
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+
+  PublicSubnet1Id:
+    Description: Public Subnet 1 ID (AZ-a)
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1Id"
+
+  PublicSubnet2Id:
+    Description: Public Subnet 2 ID (AZ-b)
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet2Id"
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 ID (AZ-a)
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1Id"
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 ID (AZ-b)
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet2Id"
+
+  WebSecurityGroupId:
+    Description: Web tier Security Group ID
+    Value: !Ref WebSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-WebSecurityGroupId"
+
+  AppSecurityGroupId:
+    Description: App tier Security Group ID
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-AppSecurityGroupId"
+
+  DBSecurityGroupId:
+    Description: Database tier Security Group ID
+    Value: !Ref DBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DBSecurityGroupId"

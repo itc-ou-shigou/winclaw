@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": { "description": "Azure Storage Account for Functions, static sites, or blob storage." },
+  "parameters": {
+    "projectName": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "[resourceGroup().location]" },
+    "storageSku": { "type": "string", "defaultValue": "Standard_LRS", "allowedValues": ["Standard_LRS", "Standard_GRS", "Standard_ZRS", "Premium_LRS"] },
+    "enableStaticSite": { "type": "bool", "defaultValue": false }
+  },
+  "variables": {
+    "storageName": "[format('{0}st', replace(parameters('projectName'), '-', ''))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageName')]",
+      "location": "[parameters('location')]",
+      "kind": "StorageV2",
+      "sku": { "name": "[parameters('storageSku')]" },
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountName": { "type": "string", "value": "[variables('storageName')]" },
+    "storageAccountId": { "type": "string", "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]" },
+    "primaryEndpoint": { "type": "string", "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))).primaryEndpoints.blob]" }
+  }
+}

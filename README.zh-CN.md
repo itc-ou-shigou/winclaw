@@ -25,7 +25,7 @@ WinClaw 现已提供原生 Windows 支持，包含基于 Inno Setup 构建的 EX
 
 安装程序内置完整 Node.js 22 运行时，无需任何前置条件。
 
-1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
+1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.1.exe/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
 2. 运行安装程序（默认使用用户权限，无需管理员）
 3. 在安装向导中按需选择选项：
 
@@ -209,7 +209,7 @@ winclaw tui
 
 ## ⭐ 重点推荐技能
 
-WinClaw 内置了两个强大的自动化技能，大幅提升你在 Windows PC 上的开发效率。
+WinClaw 内置了五个强大的自动化技能，大幅提升你在 Windows PC 上的开发效率。
 
 ### 🧪 AI Dev System Testing — Web 应用自动化测试
 
@@ -338,6 +338,74 @@ $env:TEST_USER_PASSWORD = "YourTestPassword123"
 5. 在 **WinClaw 模型切换下拉菜单** 中选择使用免费模型
 
 首次运行时自动注册每日更新定时任务，无需手动配置。
+
+---
+
+### ☁️ 云部署技能 — 一键部署到 AWS、Azure 和阿里云
+
+WinClaw 内置三个云部署技能，通过 WinClaw Chat 中的自然语言对话，即可完成从需求分析、架构设计、基础设施搭建到代码部署的全流程。
+
+| 技能 | 云平台 | 触发短语 | IaC 格式 |
+|------|--------|---------|---------|
+| **aws-cloud-deploy** | Amazon Web Services | "deploy to aws"、"AWS deploy"、"部署到AWS" | CloudFormation (YAML) |
+| **azure-cloud-deploy** | Microsoft Azure | "deploy to azure"、"Azure deploy"、"部署到Azure" | ARM Templates (JSON) |
+| **aliyun-cloud-deploy** | 阿里云 | "deploy to aliyun"、"阿里云部署"、"部署到阿里云" | ROS Templates (JSON) |
+
+#### 6 种架构模式
+
+根据预算、流量和需求自动选择最优架构模式：
+
+| 模式 | 预算 | 流量 | AWS | Azure | 阿里云 |
+|------|------|------|-----|-------|--------|
+| **Lite** | $10-40/月 | <500/天 | EC2 + EIP | VM + Public IP | ECS + EIP |
+| **Standard** | $50-150/月 | 500-5K/天 | EC2 + ALB + RDS | App Service + DB | ECS + SLB + RDS |
+| **HA** | $150-300/月 | 5K-50K/天 | ASG + Multi-AZ RDS | App Gateway + HA DB | ESS + Multi-AZ RDS |
+| **Elastic** | $250-600/月 | 50K-500K/天 | ASG + ElastiCache + CloudFront | VMSS + Redis + CDN | ESS + Redis + CDN |
+| **Serverless** | $0-100/月 | 弹性 | Lambda + API Gateway | Functions + API Mgmt | FC + API Gateway |
+| **Container** | $300+/月 | 50K-1M+/天 | EKS + ECR | AKS + ACR | ACK + ACR |
+
+#### 工作流程
+
+```
+Phase 1: 需求收集     → 检测项目类型，询问预算/流量/数据库/安全等级
+Phase 2: 方案设计     → 推荐架构方案，展示费用估算表，获取用户确认
+Phase 3A: 基础设施部署 → 生成并验证 IaC 模板，通过 CLI 或控制台部署
+Phase 3B: 代码部署    → 生成部署脚本，执行 SCP/Docker/kubectl/CLI 部署
+Phase 3C: 验证报告    → 健康检查，生成包含访问 URL 的部署报告
+```
+
+#### 前提条件 — 云平台 CLI 认证配置
+
+**使用云部署技能前，必须预先配置好云平台 CLI 认证。** WinClaw 不会在聊天中要求你输入凭据 — 请在终端环境中提前完成认证配置。
+
+| 云平台 | 认证命令 | 验证命令 |
+|--------|---------|---------|
+| AWS | `aws configure`（Access Key + Secret Key） | `aws sts get-caller-identity` |
+| Azure | `az login`（浏览器 SSO 认证） | `az account show` |
+| 阿里云 | `aliyun configure`（Access Key + Secret Key） | `aliyun sts GetCallerIdentity` |
+
+> **安全提示：** 切勿将凭据直接粘贴到 WinClaw Chat 中。请务必通过云平台的 CLI 工具在终端中配置认证。WinClaw 只会从 CLI 环境中读取已配置的凭据，不会存储任何敏感信息。
+
+#### 使用方法
+
+1. **启动** — 告诉 WinClaw：*"把我的项目部署到 AWS"*（Azure / 阿里云同理）
+2. **回答问题** — WinClaw 检测项目类型后，询问预算、流量、数据库需求
+3. **审核方案** — WinClaw 推荐架构并展示费用明细，确认或调整
+4. **执行部署** — WinClaw 生成基础设施模板，创建云资源，部署应用代码
+5. **验证结果** — 执行健康检查，提供包含访问 URL 的完整部署报告
+
+```
+你：    把我的 Express 应用部署到 AWS，预算每月 $100 左右
+WinClaw: 检测到 Node.js/Express 项目（端口 3000）。
+         为了设计最佳架构，我需要问你几个问题…
+         [询问流量、数据库、安全需求]
+         …
+         推荐：Standard 模式（EC2 + ALB + RDS MySQL）
+         预估费用：$71.62/月 — 确认部署吗？
+你：    确认，开始部署
+WinClaw: [生成 CloudFormation → 部署堆栈 → SCP 代码 → 健康检查]
+         部署完成！访问地址：http://my-app-alb-123.us-east-1.elb.amazonaws.com/
+```
 
 ---
 

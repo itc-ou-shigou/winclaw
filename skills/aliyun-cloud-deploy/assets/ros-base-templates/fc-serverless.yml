@@ -1,0 +1,564 @@
+ROSTemplateFormatVersion: '2015-09-01'
+Description:
+  zh-cn: 搭建Serverless Web文件处理服务，自动压缩/解压、获取MD5与元信息，通过API、SDK或控制台上传至OSS触发。
+  en: Build a Serverless Web file processing service, automatically compress/decompress, obtain MD5 and meta information, and upload it to OSS for triggering through API, SDK or console.
+Parameters:
+  BucketName:
+    Type: String
+    Label:
+      en: Bucket Name
+      zh-cn: 存储空间名称
+    Description:
+      en: The name must be 3 to 63 bytes in length, The name must start and end with
+        a lowercase letter or digit.The name can contain only lowercase letters, digits,
+        and hyphens (-).;<br><b>note：<font color='blue'>A bucket name must be globally
+        unique within OSS. Bucket names cannot be changed after the bucket is created.</b></font>
+      zh-cn: 长度为3~63个字符，必须以小写字母或数字开头和结尾，可以包含小写字母、数字和连字符(-);<br><b>注：<font color='blue'>需要全网唯一性，已经存在的不能在创建</b></font>
+    Default: storfiles
+    MinLength: 3
+    MaxLength: 63
+  BucketAccessControl:
+    Type: String
+    Label:
+      en: Access Control List
+      zh-cn: 读写权限
+    Description:
+      en: '<font color=''blue''><b>Optional values: </b></font><br>[private：<font
+        color=''green''>All access to the file requires authentication</font>]<br>[public-read：<font
+        color=''green''>File writes need to be authenticated；Files can be read anonymously</font>]<br>[public-read-write：<font
+        color=''green''>Anyone (including anonymous visitors) can perform read and
+        write operators on the files in the bucket</font>]'
+      zh-cn: '<font color=''blue''><b>可选值: </b></font><br>[private：<font color=''green''>对文件的所有访问操作需要进行身份验证</font>]<br>[public-read：<font
+        color=''green''>对文件写操作需要进行身份验证；可以对文件进行匿名读</font>]<br>[public-read-write：<font
+        color=''green''>所有人都可以对文件进行读写操作</font>]'
+    Default: private
+    AllowedValues:
+    - private
+    - public-read
+    - public-read-write
+  BucketCompressFolder:
+    Type: String
+    Label:
+      en: Compression Function Folder
+      zh-cn: 压缩函数文件目录
+    Description:
+      en: The compression function is triggered when a file is uploaded or updated
+        under this folder
+      zh-cn: 在该文件夹下上传或更新文件时会触发压缩函数执行
+    Default: source
+  BucketDeletionForce:
+    Type: Boolean
+    Label:
+      en: Support for Force Deletion
+      zh-cn: 支持强制删除
+    Description:
+      en: Do you want to force the deletion of files in OSS?
+      zh-cn: 是否强制删除OSS中的文件
+    Default: false
+  SlsProjectName:
+    Type: String
+    Label:
+      en: Project Name
+      zh-cn: 项目名称
+    Description:
+      en: 'Logging service project name; Supports only lowercase letters, numbers,
+        hyphens (-), and underscores, and must begin and end with lowercase letters
+        and numbers, with names 3-63 characters in length.<br><b>note: <font color=''blue''>project
+        name global unique</b></font>'
+      zh-cn: 日志服务项目名称；只支持小写字母、数字、连字符(-)和下划线(_)，必须以小写字母和数字开头和结尾，名称长度为3-63个字符。<br><b>注：<font
+        color='blue'>项目名称全局唯一</b></font>
+    Default: sls-fc-storfiles
+    MinLength: 3
+    MaxLength: 63
+  SlsLogStoreName:
+    Type: String
+    Label:
+      en: Log Store Name
+      zh-cn: 日志库名称
+    Description:
+      en: Log store name; only lowercase letters, numbers, hyphens (-), and underscores
+        are supported, and must begin and end with lowercase letters and numbers,
+        with names 3-63 characters in length.
+      zh-cn: 日志库名称；Supports only lowercase letters, numbers, hyphens (-), and underscores,
+        and must begin and end with lowercase letters and numbers, with names 3-63
+        characters in length.
+    Default: logstore-fc-storfiles
+    MinLength: 3
+    MaxLength: 63
+Resources:
+  OssBucket:
+    Type: ALIYUN::OSS::Bucket
+    Properties:
+      AccessControl:
+        Ref: BucketAccessControl
+      BucketName:
+        Ref: BucketName
+      DeletionForce:
+        Ref: BucketDeletionForce
+      StorageClass: Standard
+  RamRole:
+    Type: ALIYUN::RAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - fc.aliyuncs.com
+            - oss.aliyuncs.com
+            - log.aliyuncs.com
+        Version: '1'
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - log:PostLogStoreLogs
+            Effect: Allow
+            Resource:
+            - acs:log:*:*:*
+          - Action:
+            - fc:*
+            Effect: Allow
+            Resource:
+            - '*'
+          - Action:
+            - oss:*
+            Effect: Allow
+            Resource:
+            - '*'
+          Version: '1'
+        PolicyName:
+          Fn::Join:
+          - '-'
+          - - StackId
+            - Ref: ALIYUN::StackId
+      RoleName:
+        Fn::Join:
+        - '-'
+        - - StackId
+          - Ref: ALIYUN::StackId
+  SlsProject:
+    Type: ALIYUN::SLS::Project
+    Properties:
+      Description: 创建函数计算服务FC-storfiles的日志服务
+      Name:
+        Ref: SlsProjectName
+  SlsLogStore:
+    Type: ALIYUN::SLS::Logstore
+    Properties:
+      AppendMeta: true
+      AutoSplit: true
+      EnableTracking: false
+      LogstoreName:
+        Ref: SlsLogStoreName
+      MaxSplitShard: 64
+      PreserveStorage: true
+      ProjectName:
+        Ref: SlsProjectName
+      ShardCount: 2
+    DependsOn: SlsProject
+  FcService:
+    Type: ALIYUN::FC::Service
+    Properties:
+      Description: 网站文件处理函数计算服务
+      InternetAccess: true
+      Role:
+        Fn::GetAtt:
+        - RamRole
+        - Arn
+      ServiceName:
+        Fn::Join:
+        - '-'
+        - - StackId
+          - Ref: ALIYUN::StackId
+          - FC-Service
+    DependsOn:
+    - OssBucket
+    - RamRole
+    - SlsLogStore
+    - SlsProject
+  FcCompress:
+    Type: ALIYUN::FC::Function
+    Properties:
+      Code:
+        SourceCode:
+          Fn::Join:
+          - ''
+          - - "# -*- coding: utf-8 -*-   \nimport os\nimport oss2   \nimport zipfile\
+              \  \nimport shutil   \nimport time   \nimport json   \n   \ndef handler(event,\
+              \ context):    \n    evt = json.loads(event)   \n    creds = context.credentials\
+              \   \n    auth = oss2.StsAuth(creds.accessKeyId, creds.accessKeySecret,\
+              \ creds.securityToken)   \n    endpoint = 'oss-{}.aliyuncs.com'.format(context.region)\
+              \  \n    bucket = oss2.Bucket(auth, endpoint, evt['events'][0]['oss']['bucket']['name'])\
+              \   \n    #your source list   \n    sourceFolder = \""
+            - Ref: BucketCompressFolder
+            - "/\"\n    #zip name   \n    uid = 'ZIP123456'   \n    tmpdir = '/tmp/download/'\
+              \   \n       \n    os.system(\"rm -rf /tmp/*\")   \n    os.mkdir(tmpdir)\
+              \   \n          \n    #download   \n    for obj in oss2.ObjectIterator(bucket,\
+              \ prefix=sourceFolder, delimiter = '/') :   \n        millis = int(round(time.time()\
+              \ * 1000))   \n        if not obj.is_prefix():\n            bucket.get_object_to_file(obj.key\
+              \ , tmpdir + str(millis) + '.jpg')   \n       \n    #zip file   \n \
+              \   zipname = '/tmp/'+uid + '.zip'   \n    make_zip(tmpdir , zipname)\
+              \   \n   \n    #upload   \n    total_size = os.path.getsize(zipname)\
+              \   \n    part_size = oss2.determine_part_size(total_size, preferred_size\
+              \ = 128 * 1024)   \n   \n    key = uid + '.zip'   \n    upload_id =\
+              \ bucket.init_multipart_upload(key).upload_id   \n \n    with open(zipname,\
+              \ 'rb') as fileobj:   \n        parts = []   \n        part_number =\
+              \ 1   \n        offset = 0   \n        while offset < total_size:  \
+              \ \n            num_to_upload = min(part_size, total_size - offset)\
+              \   \n            result = bucket.upload_part(key, upload_id, part_number,oss2.SizedFileAdapter(fileobj,\
+              \ num_to_upload))   \n            parts.append(oss2.models.PartInfo(part_number,\
+              \ result.etag))   \n            offset += num_to_upload   \n       \
+              \     part_number += 1   \n               \n        bucket.complete_multipart_upload(key,\
+              \ upload_id, parts) \n            \n    return total_size   \n    \n\
+              \    \ndef make_zip(source_dir, output_filename):   \n    zipf = zipfile.ZipFile(output_filename,\
+              \ 'w')       \n    pre_len = len(os.path.dirname(source_dir))   \n \
+              \   for parent, dirnames, filenames in os.walk(source_dir):   \n   \
+              \     for filename in filenames:   \n            pathfile = os.path.join(parent,\
+              \ filename)   \n            arcname = pathfile[pre_len:].strip(os.path.sep)\
+              \        \n            zipf.write(pathfile, arcname)   \n    zipf.close()"
+      FunctionName: compress
+      Handler: index.handler
+      Runtime: python2.7
+      ServiceName:
+        Fn::GetAtt:
+        - FcService
+        - ServiceName
+    DependsOn:
+    - FcService
+  FcCompressTrigger:
+    Type: ALIYUN::FC::Trigger
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - FcCompress
+        - FunctionName
+      InvocationRole:
+        Fn::GetAtt:
+        - RamRole
+        - Arn
+      ServiceName:
+        Fn::GetAtt:
+        - FcService
+        - ServiceName
+      SourceArn:
+        Fn::Join:
+        - ':'
+        - - acs:oss
+          - Ref: ALIYUN::Region
+          - Ref: ALIYUN::TenantId
+          - Fn::GetAtt:
+            - OssBucket
+            - Name
+      TriggerConfig:
+        BucketName:
+          Ref: BucketName
+        Events:
+        - oss:ObjectCreated:PutObject
+        - oss:ObjectCreated:PostObject
+        Filter:
+          Key:
+            Prefix:
+              Fn::Join:
+              - ''
+              - - Ref: BucketCompressFolder
+                - /
+            Suffix: ''
+      TriggerName: compress_trigger
+      TriggerType: oss
+    DependsOn:
+    - FcCompress
+    - OssBucket
+    - RamRole
+  FcNewFolder:
+    Type: ALIYUN::FC::Function
+    Properties:
+      Code:
+        SourceCode:
+          Fn::Join:
+          - ''
+          - - "# -*- coding: utf-8 -*-   \n\nimport oss2    \nimport json   \n   \n\
+              def handler(event, context):   \n    creds = context.credentials   \n\
+              \    auth = oss2.StsAuth(creds.accessKeyId, creds.accessKeySecret, creds.securityToken)\
+              \   \n    endpoint = 'oss-{}.aliyuncs.com'.format(context.region)  \n\
+              \    bucket = oss2.Bucket(auth, endpoint, \""
+            - Fn::GetAtt:
+              - OssBucket
+              - Name
+            - "\")   \n    sourceFolder = \""
+            - Ref: BucketCompressFolder
+            - |-
+              /"
+                  bucket.put_object(sourceFolder, b'')
+      FunctionName: new_folder
+      Handler: index.handler
+      Runtime: python2.7
+      ServiceName:
+        Fn::GetAtt:
+        - FcService
+        - ServiceName
+    DependsOn: FcService
+  FcNewFolderInvoker:
+    Type: ALIYUN::FC::FunctionInvoker
+    Properties:
+      ExecuteVersion: 1
+      FunctionName:
+        Fn::GetAtt:
+        - FcNewFolder
+        - FunctionName
+      ServiceName:
+        Fn::GetAtt:
+        - FcService
+        - ServiceName
+    DependsOn:
+    - FcNewFolder
+    - FcService
+Outputs:
+  FcServiceName:
+    Description:
+      en: Function calculates the service name
+      zh-cn: 函数计算服务名称
+    Value:
+      Fn::GetAtt:
+      - FcService
+      - ServiceName
+  OssBucketDomainName:
+    Description:
+      en: OSS Bucket domain name
+      zh-cn: 存储空间外网访问域名
+    Value:
+      Fn::GetAtt:
+      - OssBucket
+      - DomainName
+  OssBucketInternalDomainName:
+    Description:
+      en: OSS Bucket internal domain name
+      zh-cn: 存储空间内网访问域名
+    Value:
+      Fn::GetAtt:
+      - OssBucket
+      - InternalDomainName
+  OssBucketName:
+    Description:
+      en: OSS Bucket Name
+      zh-cn: 存储空间名称
+    Value:
+      Fn::GetAtt:
+      - OssBucket
+      - Name
+  SlsLogStoreName:
+    Description:
+      en: Log store name
+      zh-cn: 日志存储库名称
+    Value:
+      Fn::GetAtt:
+      - SlsLogStore
+      - LogstoreName
+  SlsProjectName:
+    Description:
+      en: Log service name
+      zh-cn: 日志服务名称
+    Value:
+      Fn::GetAtt:
+      - SlsProject
+      - Name
+Metadata:
+  ALIYUN::ROS::Interface:
+    ParameterGroups:
+    - Parameters:
+      - BucketName
+      - BucketAccessControl
+      - BucketCompressFolder
+      - BucketDeletionForce
+      Label:
+        default: OSS
+    - Parameters:
+      - SlsProjectName
+      - SlsLogStoreName
+      Label:
+        default: SLS
+    TemplateTags:
+    - acs:solution:无服务计算:基于函数计算搭建网站文件处理
+  ALIYUN::ROS::Composer:
+    4adcd37e:
+      Rect:
+        - 698
+        - 542
+        - -25
+        - -16
+        - 1
+        - 0
+      ResT: Composer::ROSParameter::AlibabaCloud
+    09b5c7c9:
+      Parent: 4adcd37e
+      Rect:
+        - 636
+        - 455
+        - 6
+        - 28
+        - 2
+        - 0
+      ResT: Composer::ROSParameter::Region
+    b05ba315:
+      Res:
+        - FcCompressTrigger
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 35
+        - 257
+        - 3
+        - 0
+      Hidden: true
+    b2cfcf16:
+      Res:
+        - RamRole
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 569
+        - 242
+        - 3
+        - 0
+      Hidden: true
+    13663a16:
+      Res:
+        - OssBucket
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 87
+        - 148
+        - 3
+        - 0
+    ee06c798:
+      Res:
+        - SlsProject
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 283
+        - 68
+        - 3
+        - 0
+    b04e4e8e:
+      Res:
+        - SlsLogStore
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 178
+        - 68
+        - 3
+        - 0
+    08a51a51:
+      Res:
+        - FcService
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 453
+        - 242
+        - 3
+        - 0
+    c88b510a:
+      Res:
+        - FcCompress
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 231
+        - 332
+        - 3
+        - 0
+    9f6e4cfc:
+      Res:
+        - FcNewFolder
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 231
+        - 148
+        - 3
+        - 0
+    255f1975:
+      Res:
+        - FcNewFolderInvoker
+      Parent: 09b5c7c9
+      Rect:
+        - 40
+        - 40
+        - 35
+        - 68
+        - 3
+        - 0
+      Hidden: true
+    10738f53:
+      Parent: 09b5c7c9
+      Edge:
+        - 08a51a51
+        - b2cfcf16
+      Line: 0:0:0:gray:0
+    8c1d3b55:
+      Parent: 09b5c7c9
+      Edge:
+        - c88b510a
+        - 08a51a51
+      Line: 0:0:0:gray:0
+    bf99a5e6:
+      Parent: 09b5c7c9
+      Edge:
+        - b05ba315
+        - c88b510a
+      Line: 0:0:0:gray:0
+    b40dc1fe:
+      Parent: 09b5c7c9
+      Edge:
+        - b05ba315
+        - b2cfcf16
+      Line: 0:0:0:gray:0
+    f9ee337b:
+      Parent: 09b5c7c9
+      Edge:
+        - b05ba315
+        - 08a51a51
+      Line: 0:0:0:gray:0
+    98105e4f:
+      Parent: 09b5c7c9
+      Edge:
+        - b05ba315
+        - 13663a16
+      Line: 0:0:0:gray:0
+    f4477307:
+      Parent: 09b5c7c9
+      Edge:
+        - 9f6e4cfc
+        - 13663a16
+      Line: 0:0:0:gray:0
+    860f4c98:
+      Parent: 09b5c7c9
+      Edge:
+        - 9f6e4cfc
+        - 08a51a51
+      Line: 0:0:0:gray:0
+    023bad5f:
+      Parent: 09b5c7c9
+      Edge:
+        - 255f1975
+        - 9f6e4cfc
+      Line: 0:0:0:gray:0
+    31975fa3:
+      Parent: 09b5c7c9
+      Edge:
+        - 255f1975
+        - 08a51a51
+      Line: 0:0:0:gray:0

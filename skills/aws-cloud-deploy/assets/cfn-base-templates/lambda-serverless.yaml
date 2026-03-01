@@ -1,0 +1,399 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Lambda Serverless - Serverless architecture with Lambda function, API Gateway
+  REST API, S3 bucket for assets, and CloudWatch logging. Suitable for APIs,
+  webhooks, microservices, and lightweight backends.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  FunctionName:
+    Type: String
+    Default: my-api-handler
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z0-9-_]+'
+    ConstraintDescription: Alphanumeric characters, hyphens, and underscores only
+    Description: Name of the Lambda function
+
+  Runtime:
+    Type: String
+    Default: python3.12
+    AllowedValues:
+      - python3.12
+      - python3.11
+      - python3.10
+      - nodejs20.x
+      - nodejs18.x
+    Description: Lambda runtime environment
+
+  MemorySize:
+    Type: Number
+    Default: 128
+    AllowedValues:
+      - 128
+      - 256
+      - 512
+      - 1024
+      - 2048
+    Description: Lambda function memory in MB
+
+  Timeout:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 900
+    Description: Lambda function timeout in seconds
+
+  StageName:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: API Gateway deployment stage name
+
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name for resource tagging
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # IAM Role for Lambda
+  # =========================================================================
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: !Sub '${AWS::StackName}-s3-access'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt AssetsBucket.Arn
+                  - !Sub '${AssetsBucket.Arn}/*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-lambda-role'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # =========================================================================
+  # Lambda Function
+  # =========================================================================
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LambdaLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-${FunctionName}'
+      Runtime: !Ref Runtime
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: !Ref MemorySize
+      Timeout: !Ref Timeout
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          STAGE: !Ref StageName
+          BUCKET_NAME: !Ref AssetsBucket
+          STACK_NAME: !Ref AWS::StackName
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import datetime
+
+          def handler(event, context):
+              """
+              Main Lambda handler for API Gateway proxy integration.
+              Handles all HTTP methods and paths via {proxy+} resource.
+              """
+              http_method = event.get('httpMethod', 'GET')
+              path = event.get('path', '/')
+              query_params = event.get('queryStringParameters') or {}
+              headers = event.get('headers') or {}
+
+              # Health check endpoint
+              if path == '/health':
+                  return _response(200, {
+                      'status': 'healthy',
+                      'timestamp': datetime.datetime.utcnow().isoformat(),
+                      'function': context.function_name,
+                      'version': context.function_version,
+                      'memory_limit_mb': context.memory_limit_in_mb,
+                  })
+
+              # Root endpoint
+              if path == '/':
+                  return _response(200, {
+                      'message': 'Welcome to the Serverless API',
+                      'stage': os.environ.get('STAGE', 'unknown'),
+                      'endpoints': [
+                          'GET  /         - This help message',
+                          'GET  /health   - Health check',
+                          'ANY  /{proxy+} - Proxy handler',
+                      ],
+                  })
+
+              # Default proxy handler
+              return _response(200, {
+                  'message': f'Received {http_method} request',
+                  'path': path,
+                  'queryStringParameters': query_params,
+                  'timestamp': datetime.datetime.utcnow().isoformat(),
+              })
+
+          def _response(status_code, body):
+              """Build API Gateway proxy response."""
+              return {
+                  'statusCode': status_code,
+                  'headers': {
+                      'Content-Type': 'application/json',
+                      'Access-Control-Allow-Origin': '*',
+                      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+                      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                  },
+                  'body': json.dumps(body, default=str),
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-${FunctionName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # =========================================================================
+  # CloudWatch Log Group
+  # =========================================================================
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-${FunctionName}'
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-lambda-logs'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # =========================================================================
+  # API Gateway
+  # =========================================================================
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      Description: !Sub 'REST API for ${AWS::StackName}'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-api'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # --- Root Method (ANY /) ---
+  ApiGatewayRootMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+
+  # --- Proxy Resource ({proxy+}) ---
+  ApiGatewayProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: '{proxy+}'
+
+  ApiGatewayProxyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref ApiGatewayProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+        RequestParameters:
+          integration.request.path.proxy: method.request.path.proxy
+
+  # --- Deployment & Stage ---
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayRootMethod
+      - ApiGatewayProxyMethod
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref StageName
+      RestApiId: !Ref ApiGatewayRestApi
+      DeploymentId: !Ref ApiGatewayDeployment
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
+          DataTraceEnabled: false
+          LoggingLevel: ERROR
+          MetricsEnabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-${StageName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # --- Lambda Permission for API Gateway ---
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*'
+
+  # =========================================================================
+  # S3 Bucket (Assets / Uploads)
+  # =========================================================================
+
+  AssetsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-assets-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-assets'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  AssetsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AssetsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt AssetsBucket.Arn
+              - !Sub '${AssetsBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway invoke URL
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  ApiGatewayHealthUrl:
+    Description: Health check endpoint URL
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/health'
+
+  LambdaFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt LambdaFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaArn'
+
+  LambdaFunctionName:
+    Description: Lambda function name
+    Value: !Ref LambdaFunction
+
+  S3BucketName:
+    Description: S3 assets bucket name
+    Value: !Ref AssetsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-S3BucketName'
+
+  S3BucketArn:
+    Description: S3 assets bucket ARN
+    Value: !GetAtt AssetsBucket.Arn
+
+  LambdaRoleArn:
+    Description: Lambda execution role ARN
+    Value: !GetAtt LambdaExecutionRole.Arn
+
+  CloudWatchLogGroup:
+    Description: CloudWatch Log Group for Lambda
+    Value: !Ref LambdaLogGroup

@@ -1,0 +1,228 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "[resourceGroup().location]" },
+    "vmSize": { "type": "string", "defaultValue": "Standard_B2s" },
+    "vmssCapacity": { "type": "int", "defaultValue": 2 },
+    "adminUsername": { "type": "string", "defaultValue": "azureuser" },
+    "adminPassword": { "type": "securestring" },
+    "dbSku": { "type": "string", "defaultValue": "Standard_D2ds_v4" },
+    "dbAdminUser": { "type": "string", "defaultValue": "dbadmin" },
+    "dbAdminPassword": { "type": "securestring" }
+  },
+  "variables": {
+    "prefix": "[parameters('projectName')]",
+    "vnetName": "[format('{0}-vnet', variables('prefix'))]",
+    "subnetName": "default",
+    "nsgName": "[format('{0}-nsg', variables('prefix'))]",
+    "publicIPName": "[format('{0}-lb-pip', variables('prefix'))]",
+    "lbName": "[format('{0}-lb', variables('prefix'))]",
+    "vmssName": "[format('{0}-vmss', variables('prefix'))]",
+    "dbServerName": "[format('{0}-db', variables('prefix'))]",
+    "redisName": "[format('{0}-redis', variables('prefix'))]",
+    "cdnProfileName": "[format('{0}-cdn', variables('prefix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          { "name": "AllowHTTP", "properties": { "priority": 100, "direction": "Inbound", "access": "Allow", "protocol": "Tcp", "sourcePortRange": "*", "destinationPortRange": "80", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } },
+          { "name": "AllowHTTPS", "properties": { "priority": 110, "direction": "Inbound", "access": "Allow", "protocol": "Tcp", "sourcePortRange": "*", "destinationPortRange": "443", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"],
+      "properties": {
+        "addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('publicIPName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard" },
+      "properties": { "publicIPAllocationMethod": "Static" }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('lbName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard" },
+      "dependsOn": ["[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "frontendIP",
+            "properties": { "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]" } }
+          }
+        ],
+        "backendAddressPools": [{ "name": "backendPool" }],
+        "loadBalancingRules": [
+          {
+            "name": "httpRule",
+            "properties": {
+              "frontendIPConfiguration": { "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('lbName'), 'frontendIP')]" },
+              "backendAddressPool": { "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'backendPool')]" },
+              "probe": { "id": "[resourceId('Microsoft.Network/loadBalancers/probes', variables('lbName'), 'httpProbe')]" },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80,
+              "enableFloatingIP": false
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "httpProbe",
+            "properties": { "protocol": "Http", "port": 80, "requestPath": "/", "intervalInSeconds": 15, "numberOfProbes": 2 }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('vmssName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/loadBalancers', variables('lbName'))]"
+      ],
+      "sku": { "name": "[parameters('vmSize')]", "tier": "Standard", "capacity": "[parameters('vmssCapacity')]" },
+      "properties": {
+        "overprovision": true,
+        "upgradePolicy": { "mode": "Automatic" },
+        "virtualMachineProfile": {
+          "storageProfile": {
+            "imageReference": { "publisher": "Canonical", "offer": "0001-com-ubuntu-server-jammy", "sku": "22_04-lts-gen2", "version": "latest" },
+            "osDisk": { "createOption": "FromImage", "managedDisk": { "storageAccountType": "StandardSSD_LRS" } }
+          },
+          "osProfile": {
+            "computerNamePrefix": "[variables('prefix')]",
+            "adminUsername": "[parameters('adminUsername')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "nic",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipconfig",
+                      "properties": {
+                        "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]" },
+                        "loadBalancerBackendAddressPools": [
+                          { "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('lbName'), 'backendPool')]" }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/autoscalesettings",
+      "apiVersion": "2022-10-01",
+      "name": "[format('{0}-autoscale', variables('vmssName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('vmssName'))]"],
+      "properties": {
+        "targetResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('vmssName'))]",
+        "enabled": true,
+        "profiles": [
+          {
+            "name": "defaultProfile",
+            "capacity": { "minimum": "2", "maximum": "10", "default": "[string(parameters('vmssCapacity'))]" },
+            "rules": [
+              {
+                "metricTrigger": { "metricName": "Percentage CPU", "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('vmssName'))]", "timeGrain": "PT1M", "statistic": "Average", "timeWindow": "PT5M", "timeAggregation": "Average", "operator": "GreaterThan", "threshold": 70 },
+                "scaleAction": { "direction": "Increase", "type": "ChangeCount", "value": "1", "cooldown": "PT5M" }
+              },
+              {
+                "metricTrigger": { "metricName": "Percentage CPU", "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('vmssName'))]", "timeGrain": "PT1M", "statistic": "Average", "timeWindow": "PT10M", "timeAggregation": "Average", "operator": "LessThan", "threshold": 25 },
+                "scaleAction": { "direction": "Decrease", "type": "ChangeCount", "value": "1", "cooldown": "PT10M" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.DBforMySQL/flexibleServers",
+      "apiVersion": "2023-06-30",
+      "name": "[variables('dbServerName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "[parameters('dbSku')]", "tier": "GeneralPurpose" },
+      "properties": {
+        "version": "8.0.21",
+        "administratorLogin": "[parameters('dbAdminUser')]",
+        "administratorLoginPassword": "[parameters('dbAdminPassword')]",
+        "storage": { "storageSizeGB": 64 },
+        "backup": { "backupRetentionDays": 7, "geoRedundantBackup": "Disabled" },
+        "highAvailability": { "mode": "Disabled" }
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2023-08-01",
+      "name": "[variables('redisName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": { "name": "Standard", "family": "C", "capacity": 1 },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisConfiguration": { "maxmemory-policy": "allkeys-lru" }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('cdnProfileName')]",
+      "location": "global",
+      "sku": { "name": "Standard_Microsoft" },
+      "properties": {}
+    }
+  ],
+  "outputs": {
+    "lbPublicIP": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))).ipAddress]"
+    },
+    "dbFqdn": {
+      "type": "string",
+      "value": "[format('{0}.mysql.database.azure.com', variables('dbServerName'))]"
+    },
+    "redisHost": {
+      "type": "string",
+      "value": "[format('{0}.redis.cache.windows.net', variables('redisName'))]"
+    }
+  }
+}

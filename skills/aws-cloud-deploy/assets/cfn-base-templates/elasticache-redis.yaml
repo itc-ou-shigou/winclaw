@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  ElastiCache Redis replication group. Supports both single-node basic
+  deployments and multi-node high-availability configurations with
+  automatic failover. Designed for import via cross-stack references
+  from a base VPC template.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+      - cache.r6g.large
+      - cache.r6g.xlarge
+      - cache.r7g.large
+      - cache.r7g.xlarge
+    Description: ElastiCache node instance type
+
+  NumCacheClusters:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 6
+    Description: >
+      Number of cache clusters (nodes) in the replication group.
+      Use 1 for basic single-node setup, 2 or more for HA with
+      automatic failover (primary + read replicas).
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the ElastiCache cluster will be deployed
+
+  Subnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: First subnet ID for the cache subnet group
+
+  Subnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Second subnet ID for the cache subnet group
+
+  SourceSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID allowed to connect to Redis
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  EnableHA: !Not [!Equals [!Ref NumCacheClusters, 1]]
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # -------------------------------------------------------------------------
+  # Cache Subnet Group
+  # -------------------------------------------------------------------------
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub "${AWS::StackName}-redis-subnet-group"
+      Description: !Sub "Subnet group for ${AWS::StackName} Redis cluster"
+      SubnetIds:
+        - !Ref Subnet1Id
+        - !Ref Subnet2Id
+
+  # -------------------------------------------------------------------------
+  # Redis Security Group
+  # -------------------------------------------------------------------------
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${AWS::StackName} Redis cluster"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref SourceSecurityGroupId
+          Description: Allow Redis access from application tier
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-redis-sg"
+
+  # -------------------------------------------------------------------------
+  # ElastiCache Replication Group
+  # -------------------------------------------------------------------------
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: !Sub "${AWS::StackName} Redis replication group"
+      ReplicationGroupId: !Sub "${AWS::StackName}-redis"
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheClusters: !Ref NumCacheClusters
+      AutomaticFailoverEnabled: !If [EnableHA, true, false]
+      MultiAZEnabled: !If [EnableHA, true, false]
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      Port: 6379
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      SnapshotRetentionLimit: 7
+      SnapshotWindow: "03:00-05:00"
+      PreferredMaintenanceWindow: "sun:05:00-sun:07:00"
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-redis"
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  RedisEndpoint:
+    Description: Redis primary endpoint address
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+
+  RedisPort:
+    Description: Redis port
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Port
+
+  ReplicationGroupId:
+    Description: ElastiCache replication group ID
+    Value: !Ref RedisReplicationGroup
+
+  RedisSecurityGroupId:
+    Description: Security group ID for the Redis cluster
+    Value: !Ref RedisSecurityGroup
+
+  RedisConnectionUrl:
+    Description: Redis connection URL (TLS enabled)
+    Value: !Sub
+      - "rediss://${Host}:${Port}"
+      - Host: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+        Port: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Port
+
+  IsHighAvailability:
+    Description: Whether the cluster is running in HA mode
+    Value: !If [EnableHA, "true", "false"]

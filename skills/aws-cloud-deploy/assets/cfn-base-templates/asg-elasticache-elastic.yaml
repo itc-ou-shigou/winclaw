@@ -1,0 +1,689 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  ASG + ElastiCache + CloudFront Elastic - Full elastic architecture with Auto
+  Scaling Group, Redis ElastiCache, Multi-AZ RDS, and CloudFront CDN. Suitable
+  for high-traffic web applications, e-commerce, and content-heavy platforms.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - m5.large
+      - m5.xlarge
+      - c5.large
+    Description: EC2 instance type for the Auto Scaling launch template
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.small
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t3.large
+      - db.r5.large
+      - db.r5.xlarge
+    Description: RDS instance class
+
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+      - cache.r5.large
+    Description: ElastiCache node type for Redis
+
+  DBEngine:
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+    Description: Database engine type
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Description: Database master password (min 8 characters)
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 key pair for SSH access
+
+  EnvironmentName:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name for resource tagging
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  IsMySQL: !Equals [!Ref DBEngine, 'mysql']
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # VPC & Networking
+  # =========================================================================
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # --- Public Subnets ---
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-2'
+
+  # --- Private Subnets ---
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-2'
+
+  # --- Public Route Table ---
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # --- NAT Gateway ---
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-nat-eip'
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-nat'
+
+  # --- Private Route Table ---
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-private-rt'
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # =========================================================================
+  # Security Groups
+  # =========================================================================
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB security group - HTTP/HTTPS from internet
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb-sg'
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application security group - HTTP from ALB only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: HTTP from ALB
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-app-sg'
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database security group - access from app tier only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If [IsMySQL, 3306, 5432]
+          ToPort: !If [IsMySQL, 3306, 5432]
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Database from app tier
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db-sg'
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Redis security group - access from app tier only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: Redis from app tier
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-redis-sg'
+
+  # =========================================================================
+  # Application Load Balancer
+  # =========================================================================
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Name: !Sub '${AWS::StackName}-alb'
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+        - Key: routing.http.drop_invalid_header_fields.enabled
+          Value: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb'
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-tg'
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  # =========================================================================
+  # Launch Template & Auto Scaling Group
+  # =========================================================================
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-lt'
+      LaunchTemplateData:
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds:
+          - !Ref AppSecurityGroup
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 20
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        Monitoring:
+          Enabled: true
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${AWS::StackName}-app'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash -xe
+              dnf update -y
+              dnf install -y httpd
+
+              systemctl enable httpd
+              systemctl start httpd
+
+              INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+              AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+              cat > /var/www/html/index.html <<HTML
+              <h1>${AWS::StackName} - Elastic App</h1>
+              <p>Instance: $INSTANCE_ID | AZ: $AZ</p>
+              <p>Redis: ${RedisEndpoint}:6379</p>
+              HTML
+
+              cat > /var/www/html/health <<HTML
+              OK
+              HTML
+            - RedisEndpoint: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn:
+      - VPCGatewayAttachment
+      - NatGateway
+    Properties:
+      AutoScalingGroupName: !Sub '${AWS::StackName}-asg'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 2
+      MaxSize: 10
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 120
+      MetricsCollection:
+        - Granularity: 1Minute
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-asg-instance'
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvironmentName
+          PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M
+        WaitOnResourceSignals: false
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 70.0
+        DisableScaleIn: false
+
+  # =========================================================================
+  # RDS Database (Multi-AZ)
+  # =========================================================================
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub 'Multi-AZ subnet group for ${AWS::StackName}'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db-subnet-group'
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub '${AWS::StackName}-db'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !If [IsMySQL, mysql, postgres]
+      EngineVersion: !If [IsMySQL, '8.0', '16']
+      DBName: appdb
+      MasterUsername: dbadmin
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 200
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: true
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 14
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      DeletionProtection: false
+      CopyTagsToSnapshot: true
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # =========================================================================
+  # ElastiCache Redis
+  # =========================================================================
+
+  ElastiCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: !Sub 'Subnet group for ${AWS::StackName} Redis'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: !Sub '${AWS::StackName} Redis cluster'
+      NumCacheClusters: 1
+      CacheNodeType: !Ref CacheNodeType
+      Engine: redis
+      EngineVersion: '7.1'
+      Port: 6379
+      CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      AutomaticFailoverEnabled: false
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: false
+      SnapshotRetentionLimit: 3
+      SnapshotWindow: '05:00-06:00'
+      PreferredMaintenanceWindow: 'sun:06:00-sun:07:00'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-redis'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # =========================================================================
+  # CloudFront Distribution
+  # =========================================================================
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${AWS::StackName} CDN distribution'
+        DefaultCacheBehavior:
+          TargetOriginId: ALBOrigin
+          ViewerProtocolPolicy: allow-all
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: true
+            Headers:
+              - Host
+              - Origin
+              - Accept
+              - Authorization
+            Cookies:
+              Forward: all
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 86400
+          Compress: true
+        CacheBehaviors:
+          - PathPattern: '/static/*'
+            TargetOriginId: ALBOrigin
+            ViewerProtocolPolicy: allow-all
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            DefaultTTL: 86400
+            MinTTL: 3600
+            MaxTTL: 604800
+            Compress: true
+        Origins:
+          - Id: ALBOrigin
+            DomainName: !GetAtt ApplicationLoadBalancer.DNSName
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 60
+              OriginKeepaliveTimeout: 5
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-cdn'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  CloudFrontDomain:
+    Description: CloudFront distribution domain name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontDomain'
+
+  CloudFrontUrl:
+    Description: CloudFront URL
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+
+  ALBDNSName:
+    Description: DNS name of the Application Load Balancer (origin)
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBDNSName'
+
+  RDSEndpoint:
+    Description: RDS endpoint address (Multi-AZ)
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSEndpoint'
+
+  RedisEndpoint:
+    Description: Redis primary endpoint address
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RedisEndpoint'
+
+  RedisPort:
+    Description: Redis port
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Port
+
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  AutoScalingGroupName:
+    Description: Auto Scaling Group name
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ASGName'

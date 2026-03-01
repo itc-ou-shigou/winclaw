@@ -1,0 +1,113 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "[resourceGroup().location]" },
+    "kubernetesVersion": { "type": "string", "defaultValue": "1.29" },
+    "nodeVmSize": { "type": "string", "defaultValue": "Standard_D2s_v5" },
+    "nodeCount": { "type": "int", "defaultValue": 3 },
+    "minNodeCount": { "type": "int", "defaultValue": 2 },
+    "maxNodeCount": { "type": "int", "defaultValue": 5 },
+    "acrSku": { "type": "string", "defaultValue": "Standard", "allowedValues": ["Basic", "Standard", "Premium"] }
+  },
+  "variables": {
+    "prefix": "[parameters('projectName')]",
+    "vnetName": "[format('{0}-vnet', variables('prefix'))]",
+    "subnetName": "aks-subnet",
+    "nsgName": "[format('{0}-nsg', variables('prefix'))]",
+    "aksName": "[format('{0}-aks', variables('prefix'))]",
+    "acrName": "[format('{0}acr', replace(variables('prefix'), '-', ''))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          { "name": "AllowHTTP", "properties": { "priority": 100, "direction": "Inbound", "access": "Allow", "protocol": "Tcp", "sourcePortRange": "*", "destinationPortRange": "80", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } },
+          { "name": "AllowHTTPS", "properties": { "priority": 110, "direction": "Inbound", "access": "Allow", "protocol": "Tcp", "sourcePortRange": "*", "destinationPortRange": "443", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"],
+      "properties": {
+        "addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/22",
+              "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('acrName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "[parameters('acrSku')]" },
+      "properties": { "adminUserEnabled": true }
+    },
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('aksName')]",
+      "location": "[parameters('location')]",
+      "identity": { "type": "SystemAssigned" },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "properties": {
+        "dnsPrefix": "[variables('prefix')]",
+        "kubernetesVersion": "[parameters('kubernetesVersion')]",
+        "agentPoolProfiles": [
+          {
+            "name": "nodepool1",
+            "count": "[parameters('nodeCount')]",
+            "vmSize": "[parameters('nodeVmSize')]",
+            "osType": "Linux",
+            "mode": "System",
+            "enableAutoScaling": true,
+            "minCount": "[parameters('minNodeCount')]",
+            "maxCount": "[parameters('maxNodeCount')]",
+            "availabilityZones": ["1", "2", "3"],
+            "vnetSubnetID": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+          }
+        ],
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "loadBalancerSku": "standard"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "aksClusterName": {
+      "type": "string",
+      "value": "[variables('aksName')]"
+    },
+    "aksGetCredentials": {
+      "type": "string",
+      "value": "[format('az aks get-credentials --resource-group {0} --name {1}', resourceGroup().name, variables('aksName'))]"
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))).loginServer]"
+    },
+    "acrAttachCommand": {
+      "type": "string",
+      "value": "[format('az aks update --resource-group {0} --name {1} --attach-acr {2}', resourceGroup().name, variables('aksName'), variables('acrName'))]"
+    }
+  }
+}

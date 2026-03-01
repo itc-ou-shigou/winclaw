@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  EC2 Lite - Single EC2 instance with basic VPC networking, Elastic IP,
+  and security group. Suitable for dev/test workloads, small applications,
+  and prototyping.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3a.micro
+      - t3a.small
+      - t3a.medium
+      - t3a.large
+    Description: EC2 instance type
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 key pair for SSH access
+
+  SSHLocation:
+    Type: String
+    Default: '0.0.0.0/0'
+    AllowedPattern: '(\d{1,3}\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid CIDR block (e.g. 203.0.113.0/24)
+    Description: CIDR block allowed to SSH into the instance
+
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name for resource tagging
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # --- VPC ---
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # --- Internet Gateway ---
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # --- Public Subnet ---
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # --- Route Table ---
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # --- Security Group ---
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'Security group for ${AWS::StackName} EC2 instance'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+          Description: SSH access from specified CIDR
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP access from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS access from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  # --- EC2 Instance ---
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-instance'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          dnf update -y
+          dnf install -y httpd
+          systemctl enable httpd
+          systemctl start httpd
+          echo "<h1>EC2 Lite - ${AWS::StackName}</h1><p>Instance: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)</p>" > /var/www/html/index.html
+
+  # --- Elastic IP ---
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-eip'
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      InstanceId: !Ref EC2Instance
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  PublicIP:
+    Description: Elastic IP address of the EC2 instance
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIP'
+
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  SecurityGroupId:
+    Description: Security Group ID
+    Value: !Ref InstanceSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupId'
+
+  SSHCommand:
+    Description: SSH command to connect to the instance
+    Value: !Sub 'ssh -i ${KeyPairName}.pem ec2-user@${ElasticIP}'
+
+  HTTPUrl:
+    Description: HTTP URL of the instance
+    Value: !Sub 'http://${ElasticIP}'
