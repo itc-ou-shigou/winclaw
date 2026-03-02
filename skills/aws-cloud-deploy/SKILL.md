@@ -13,7 +13,7 @@ description: >
 
 # AWS Cloud Deploy
 
-End-to-end deployment: requirements gathering → architecture design → cost estimation → infrastructure provisioning → code deployment → verification report.
+End-to-end deployment: requirements gathering → architecture design → cost estimation → infrastructure provisioning → code deployment → **verification + diagnosis** → report.
 
 ## Scripts
 
@@ -38,6 +38,52 @@ End-to-end deployment: requirements gathering → architecture design → cost e
 | `references/deployment-checklist.md` | Phase 3A-3C: Step-by-step checklist, post-deployment report template |
 | `references/service-selection-guide.md` | Phase 1-2: Compute/DB/Network selection decision trees, scaling strategies |
 | `references/cfn-template-catalog.md` | Phase 3A: Index of base templates in `assets/cfn-base-templates/` |
+| **`references/aws-deployment-health-issues.md`** | **Phase 3C: 错误诊断、日志读取、验证步骤（必读！）** |
+
+### Security Architecture Design (via Engineering Plugin)
+
+When the user selects **Enterprise** security level or requests advanced security architecture (WAF, zero-trust, compliance, etc.), this skill's built-in templates only cover Basic-to-Standard tier security. For complex security design, invoke the **engineering plugin's `/architecture` command**:
+
+```
+Plugin location: C:\work\winclaw\plugins\engineering\
+Command: /architecture
+Related skill: system-design (auto-triggered)
+```
+
+**When to invoke** (any of these conditions):
+- User selects `--security enterprise` in Phase 1
+- User mentions: WAF, DDoS, zero-trust, compliance (PCI-DSS, HIPAA, SOC2), PrivateLink, GuardDuty
+- User asks "what's the best security architecture for my deployment?"
+- Traffic forecast suggests high-value target (financial, healthcare, e-commerce)
+
+**How to invoke**:
+```
+/architecture Design a security architecture for [APP_NAME] on AWS with the following requirements:
+- Architecture pattern: [lite/standard/ha/elastic/serverless/container]
+- Security tier: Enterprise
+- Compliance: [PCI-DSS / HIPAA / SOC2 / none]
+- Traffic: [X visits/day]
+- Constraints: [budget, team size, timeline]
+
+Key decisions needed:
+1. VPC network segmentation (public/private/isolated subnets, VPC endpoints)
+2. WAF rules (OWASP Top 10, rate limiting, geo-blocking)
+3. DDoS protection (Shield Standard vs Advanced)
+4. Encryption strategy (KMS CMK, RDS TDE, S3 SSE-KMS, in-transit TLS 1.3)
+5. IAM design (roles, permission boundaries, cross-account access)
+6. Threat detection (GuardDuty, Security Hub, Macie)
+7. Compliance monitoring (AWS Config rules, conformance packs)
+8. Secrets management (Secrets Manager rotation, Parameter Store)
+9. Network security (PrivateLink, VPC Flow Logs, Network Firewall)
+10. Logging & audit (CloudTrail, centralized CloudWatch, S3 access logs)
+```
+
+**After `/architecture` produces an ADR**:
+1. Use the ADR's recommendations to customize the CloudFormation template in Phase 3A
+2. Add WAF, KMS, GuardDuty, Config resources to the generated template
+3. Reference `C:\work\aws-eks-best-practices\` for EKS-specific security hardening
+4. Reference `C:\work\cloud-operations-best-practices\` for CloudTrail/Config patterns
+5. Include security architecture decisions in the Phase 3D deployment report
 
 ## Base CloudFormation Templates (in `assets/cfn-base-templates/`)
 
@@ -70,7 +116,8 @@ Phase 1: Hearing     → Ask user 5-6 questions, detect workspace project
 Phase 2: Plan        → Recommend architecture, show cost table, get approval
 Phase 3A: Infra      → Generate CloudFormation template, validate, deploy via AWS CLI
 Phase 3B: Code       → Generate deploy script, execute deployment
-Phase 3C: Verify     → Health check, report results
+Phase 3C: Verify     → **Health check + log diagnosis + error fixing** ⚠️ NEW
+Phase 3D: Report     → Generate complete deployment report
 ```
 
 ## Phase 1: Requirements Gathering
@@ -100,6 +147,22 @@ This identifies: project type (Node.js/Python/Java/Go/PHP/Static), framework, bu
    - See `references/security-tiers.md` for definitions
 5. **Region**: us-east-1 / us-west-2 / eu-west-1 / ap-southeast-1 / ap-northeast-1 / etc.
 6. **App Type**: Website / API / SPA+API / Microservice
+
+### Step 1.2B: Security Architecture Check (Conditional)
+
+**If user selected Enterprise security OR mentioned compliance/WAF/zero-trust**:
+
+→ **STOP and invoke `/architecture`** before proceeding to Phase 2.
+See "Security Architecture Design (via Engineering Plugin)" section above for the invocation template.
+
+The `/architecture` command will produce an ADR with:
+- Network segmentation design (multi-tier VPC, VPC Endpoints, PrivateLink)
+- WAF + DDoS strategy with cost trade-offs
+- IAM roles and permission boundary design
+- Encryption and secrets management strategy
+- Compliance monitoring approach
+
+Use the ADR output to enrich the Phase 2 architecture plan and Phase 3A CloudFormation template.
 
 ### Step 1.3: Analyze Requirements
 
@@ -275,41 +338,628 @@ aws lambda update-function-code \
   --zip-file fileb:///tmp/function.zip
 ```
 
-## Phase 3C: Verification & Report
+## Phase 3C: Verification & Diagnosis (⚠️ MANDATORY - 不可跳过)
 
-### Step 3C.1: Health Checks
+### Step 3C.1: CloudFormation Stack Status Check
 
-1. **EC2**: `curl -s -o /dev/null -w "%{http_code}" http://<PUBLIC_IP>/` → expect `200`
-2. **ALB**: `curl http://<ALB_DNS>/` → expect `200`
-3. **EKS**: `kubectl get svc` → verify external IP, `curl http://<EXTERNAL_IP>/`
-4. **Lambda**: `aws lambda invoke --function-name <NAME> /tmp/response.json`
-5. **Database**: Verify app can connect (check app logs / CloudWatch)
+**必须执行**:
+```bash
+# 1. 检查CloudFormation Stack状态
+STACK_STATUS=$(aws cloudformation describe-stacks \
+    --stack-name "$STACK_NAME" \
+    --query 'Stacks[0].StackStatus' --output text 2>/dev/null)
 
-### Step 3C.2: Generate Deployment Report
+case "$STACK_STATUS" in
+    "CREATE_COMPLETE"|"UPDATE_COMPLETE")
+        echo "✅ Stack status: $STACK_STATUS"
+        ;;
+    "CREATE_IN_PROGRESS"|"UPDATE_IN_PROGRESS")
+        echo "⏳ Stack still in progress: $STACK_STATUS"
+        echo "[ACTION] Wait for completion:"
+        echo "aws cloudformation wait stack-create-complete --stack-name $STACK_NAME"
+        ;;
+    "ROLLBACK_COMPLETE"|"ROLLBACK_IN_PROGRESS"|"CREATE_FAILED"|"UPDATE_ROLLBACK_COMPLETE")
+        echo "❌ CRITICAL: Stack failed: $STACK_STATUS"
+        echo "[ACTION] Check stack events for root cause"
+        aws cloudformation describe-stack-events \
+            --stack-name "$STACK_NAME" \
+            --query 'StackEvents[?ResourceStatus==`CREATE_FAILED`].[LogicalResourceId,ResourceStatusReason]' \
+            --output table
+        ;;
+    *)
+        echo "⚠️  Unexpected stack status: $STACK_STATUS"
+        ;;
+esac
 
-Present a complete report:
-- Stack Name, Region, Status
-- All resource IDs and IPs/endpoints
-- Application access URL
-- Database connection info (except password)
-- Estimated monthly cost
-- Next steps (custom domain, SSL, monitoring, backup)
+# 2. 列出所有Stack Outputs
+echo ""
+echo "=== Stack Outputs ==="
+aws cloudformation describe-stacks \
+    --stack-name "$STACK_NAME" \
+    --query 'Stacks[0].Outputs[].[OutputKey,OutputValue]' \
+    --output table
+```
 
-### Step 3C.3: Recommend Next Steps
+### Step 3C.2: Basic Health Check
 
-1. **Custom Domain**: Add CNAME/A record via Route 53 or external DNS
-2. **SSL**: Configure ACM certificate (free) + attach to ALB/CloudFront
-3. **Monitoring**: Enable CloudWatch Alarms + SNS notification
-4. **Backup**: Configure RDS automated backup, S3 lifecycle policies
-5. **Security**: Review Security Groups, enable AWS WAF if needed
+**必须执行** (根据部署模式):
+```bash
+# EC2/ALB 模式
+check_ec2_health() {
+    # 1. 检查EC2实例状态
+    INSTANCE_ID="$1"
+    INSTANCE_STATE=$(aws ec2 describe-instance-status \
+        --instance-ids "$INSTANCE_ID" \
+        --query 'InstanceStatuses[0].InstanceState.Name' --output text)
+
+    if [ "$INSTANCE_STATE" = "running" ]; then
+        echo "✅ EC2 instance state: running"
+    else
+        echo "❌ EC2 instance state: $INSTANCE_STATE"
+        echo "[ACTION] Check system logs:"
+        echo "aws ec2 get-console-output --instance-id $INSTANCE_ID"
+    fi
+
+    # 2. 检查系统状态检查
+    SYSTEM_CHECK=$(aws ec2 describe-instance-status \
+        --instance-ids "$INSTANCE_ID" \
+        --query 'InstanceStatuses[0].SystemStatus.Status' --output text)
+
+    INSTANCE_CHECK=$(aws ec2 describe-instance-status \
+        --instance-ids "$INSTANCE_ID" \
+        --query 'InstanceStatuses[0].InstanceStatus.Status' --output text)
+
+    echo "System check: $SYSTEM_CHECK | Instance check: $INSTANCE_CHECK"
+
+    # 3. 测试HTTP访问
+    PUBLIC_IP=$(aws ec2 describe-instances \
+        --instance-ids "$INSTANCE_ID" \
+        --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$PUBLIC_IP/" --connect-timeout 10 || echo "000")
+
+    case "$HTTP_STATUS" in
+        "200"|"301"|"302")
+            echo "✅ Health check passed (HTTP $HTTP_STATUS)"
+            ;;
+        "000")
+            echo "❌ Connection refused/timeout"
+            echo "[ACTION] Check Security Group allows inbound HTTP (port 80/443)"
+            echo "[ACTION] Check application is started: ssh ec2-user@$PUBLIC_IP 'systemctl status app || pm2 status'"
+            ;;
+        "502"|"503")
+            echo "❌ Service Unavailable (HTTP $HTTP_STATUS)"
+            echo "[ACTION] Check application process and logs"
+            ;;
+        "500")
+            echo "❌ Internal Server Error (HTTP 500)"
+            echo "[ACTION] Check application error logs"
+            ;;
+        *)
+            echo "⚠️  Unexpected HTTP status: $HTTP_STATUS"
+            ;;
+    esac
+}
+
+# ALB 模式 - 检查Target Group健康状态
+check_alb_health() {
+    TARGET_GROUP_ARN="$1"
+
+    echo "=== ALB Target Group Health ==="
+    aws elbv2 describe-target-health \
+        --target-group-arn "$TARGET_GROUP_ARN" \
+        --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason,TargetHealth.Description]' \
+        --output table
+
+    # 检查不健康的目标
+    UNHEALTHY=$(aws elbv2 describe-target-health \
+        --target-group-arn "$TARGET_GROUP_ARN" \
+        --query 'TargetHealthDescriptions[?TargetHealth.State!=`healthy`].Target.Id' --output text)
+
+    if [ -z "$UNHEALTHY" ]; then
+        echo "✅ All targets healthy"
+    else
+        echo "❌ Unhealthy targets: $UNHEALTHY"
+        echo "[ACTION] Check Security Group, application status, and health check path"
+    fi
+}
+
+# EKS 模式
+check_eks_health() {
+    echo "=== EKS Pod Status ==="
+    kubectl get pods -l app=app -o wide
+
+    # 检查CrashLoopBackOff
+    CRASH_PODS=$(kubectl get pods -l app=app -o jsonpath='{.items[?(@.status.containerStatuses[0].state.waiting.reason=="CrashLoopBackOff")].metadata.name}')
+    if [ -n "$CRASH_PODS" ]; then
+        echo "❌ Pods in CrashLoopBackOff: $CRASH_PODS"
+        echo "[ACTION] Check pod logs:"
+        for pod in $CRASH_PODS; do
+            echo "--- Logs for $pod ---"
+            kubectl logs "$pod" --tail=50
+        done
+    fi
+
+    echo ""
+    echo "=== EKS Service Status ==="
+    kubectl get svc app-svc
+    EXTERNAL_IP=$(kubectl get svc app-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+    if [ -n "$EXTERNAL_IP" ]; then
+        echo "External endpoint: $EXTERNAL_IP"
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$EXTERNAL_IP/" --connect-timeout 10 || echo "000")
+        echo "HTTP Status: $HTTP_STATUS"
+    fi
+}
+
+# Lambda 模式
+check_lambda_health() {
+    FUNCTION_NAME="$1"
+
+    # 检查函数配置
+    echo "=== Lambda Function Status ==="
+    aws lambda get-function-configuration \
+        --function-name "$FUNCTION_NAME" \
+        --query '{State:State,LastUpdateStatus:LastUpdateStatus,Runtime:Runtime,MemorySize:MemorySize,Timeout:Timeout}' \
+        --output table
+
+    # 调用测试
+    echo "=== Lambda Invocation Test ==="
+    aws lambda invoke \
+        --function-name "$FUNCTION_NAME" \
+        --payload '{}' \
+        /tmp/lambda-response.json \
+        --query '{StatusCode:StatusCode,FunctionError:FunctionError}' \
+        --output table
+
+    if [ -f /tmp/lambda-response.json ]; then
+        echo "Response:"
+        cat /tmp/lambda-response.json
+    fi
+}
+```
+
+### Step 3C.3: Log Download and Analysis
+
+**如果健康检查失败，必须执行**:
+```bash
+diagnose_deployment() {
+    echo "=========================================="
+    echo "  AWS Deployment Failure Diagnosis"
+    echo "=========================================="
+    echo ""
+
+    # ===== EC2 Diagnosis =====
+    diagnose_ec2() {
+        INSTANCE_ID="$1"
+
+        # Step 1: EC2 Console Output (启动日志)
+        echo "[1/5] Getting EC2 console output (boot log)..."
+        aws ec2 get-console-output \
+            --instance-id "$INSTANCE_ID" \
+            --output text > /tmp/ec2-console.log 2>/dev/null
+
+        if [ -f /tmp/ec2-console.log ]; then
+            echo "Checking for boot errors..."
+
+            # Cloud-init failures
+            if grep -q "Cloud-init.*FAIL\|Cloud-init.*ERROR" /tmp/ec2-console.log; then
+                echo ""
+                echo "❌ DIAGNOSIS: Cloud-init (UserData) failed"
+                echo "   PROBABLE CAUSE: UserData script has errors"
+                echo "   ACTION: Check UserData script syntax and commands"
+            fi
+
+            # Package installation failures
+            if grep -q "No package.*available\|E: Unable to locate package" /tmp/ec2-console.log; then
+                echo ""
+                echo "❌ DIAGNOSIS: Package installation failed"
+                echo "   PROBABLE CAUSE: Package name incorrect or repo unavailable"
+                echo "   ACTION: Verify package names for the AMI's OS"
+            fi
+        fi
+
+        # Step 2: SSH检查应用日志
+        echo ""
+        echo "[2/5] Checking application logs via SSH..."
+        echo "Commands to run on EC2:"
+        echo "  ssh -i <KEY>.pem ec2-user@<IP> 'cat /var/log/cloud-init-output.log | tail -50'"
+        echo "  ssh -i <KEY>.pem ec2-user@<IP> 'cat /var/log/app.log | tail -50'"
+        echo "  ssh -i <KEY>.pem ec2-user@<IP> 'pm2 logs --lines 50'  # Node.js"
+        echo "  ssh -i <KEY>.pem ec2-user@<IP> 'journalctl -u app -n 50'  # systemd"
+
+        # Step 3: CloudWatch Logs (如果已配置)
+        echo ""
+        echo "[3/5] Checking CloudWatch Logs..."
+        LOG_GROUP="/aws/ec2/$STACK_NAME"
+        aws logs describe-log-streams \
+            --log-group-name "$LOG_GROUP" \
+            --order-by LastEventTime --descending \
+            --limit 1 \
+            --query 'logStreams[0].logStreamName' --output text 2>/dev/null
+
+        if [ $? -eq 0 ]; then
+            STREAM=$(aws logs describe-log-streams \
+                --log-group-name "$LOG_GROUP" \
+                --order-by LastEventTime --descending --limit 1 \
+                --query 'logStreams[0].logStreamName' --output text)
+            echo "Latest log stream: $STREAM"
+            aws logs get-log-events \
+                --log-group-name "$LOG_GROUP" \
+                --log-stream-name "$STREAM" \
+                --limit 50 \
+                --query 'events[].[timestamp,message]' --output text
+        else
+            echo "⚠️  CloudWatch Log Group not found: $LOG_GROUP"
+            echo "   Use SSH to check logs directly on EC2"
+        fi
+
+        # Step 4: Security Group检查
+        echo ""
+        echo "[4/5] Checking Security Group rules..."
+        SG_ID=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text)
+
+        echo "Inbound rules for $SG_ID:"
+        aws ec2 describe-security-groups \
+            --group-ids "$SG_ID" \
+            --query 'SecurityGroups[0].IpPermissions[].[IpProtocol,FromPort,ToPort,IpRanges[0].CidrIp]' \
+            --output table
+
+        # 检查HTTP/HTTPS端口是否开放
+        HTTP_OPEN=$(aws ec2 describe-security-groups \
+            --group-ids "$SG_ID" \
+            --query 'SecurityGroups[0].IpPermissions[?FromPort==`80`]' --output text)
+        if [ -z "$HTTP_OPEN" ]; then
+            echo "❌ Port 80 (HTTP) is NOT open in Security Group"
+            echo "   ACTION: Add inbound rule for port 80"
+        fi
+
+        # Step 5: 生成修复建议
+        echo ""
+        echo "[5/5] Generating recommendations..."
+        echo ""
+        echo "=========================================="
+        echo "  Diagnosis Complete"
+        echo "=========================================="
+    }
+
+    # ===== CloudFormation Event Diagnosis =====
+    diagnose_cfn_failure() {
+        echo "=== CloudFormation Failed Events ==="
+        aws cloudformation describe-stack-events \
+            --stack-name "$STACK_NAME" \
+            --query 'StackEvents[?ResourceStatus==`CREATE_FAILED`].[Timestamp,LogicalResourceId,ResourceType,ResourceStatusReason]' \
+            --output table
+
+        echo ""
+        echo "=== Common CloudFormation Failures ==="
+        echo ""
+
+        # 检查IAM权限问题
+        EVENTS=$(aws cloudformation describe-stack-events \
+            --stack-name "$STACK_NAME" \
+            --query 'StackEvents[?ResourceStatus==`CREATE_FAILED`].ResourceStatusReason' --output text)
+
+        if echo "$EVENTS" | grep -qi "not authorized\|AccessDenied"; then
+            echo "❌ DIAGNOSIS: IAM Permission Denied"
+            echo "   ACTION: Ensure your IAM user/role has required permissions"
+            echo "   HINT: Add AdministratorAccess for testing, then restrict later"
+        fi
+
+        if echo "$EVENTS" | grep -qi "limit\|quota\|LimitExceeded"; then
+            echo "❌ DIAGNOSIS: Service Limit/Quota Exceeded"
+            echo "   ACTION: Request quota increase via AWS Service Quotas console"
+        fi
+
+        if echo "$EVENTS" | grep -qi "already exists"; then
+            echo "❌ DIAGNOSIS: Resource Already Exists"
+            echo "   ACTION: Delete conflicting resource or use a different name"
+        fi
+
+        if echo "$EVENTS" | grep -qi "VPCIdNotSpecified\|SubnetNotFound\|InvalidSubnet"; then
+            echo "❌ DIAGNOSIS: VPC/Subnet Configuration Error"
+            echo "   ACTION: Verify VPC and subnet IDs exist in the target region/AZ"
+        fi
+    }
+}
+```
+
+### Step 3C.4: Node.js Specific Verification
+
+**如果是Node.js应用，必须执行**:
+```bash
+verify_nodejs_ec2() {
+    EC2_IP="$1"
+    KEY_FILE="$2"
+
+    echo "=========================================="
+    echo "  Node.js Deployment Verification (EC2)"
+    echo "=========================================="
+
+    # 1. 检查node_modules是否存在
+    echo "[1/4] Checking node_modules..."
+    NODE_MODULES=$(ssh -i "$KEY_FILE" ec2-user@"$EC2_IP" \
+        'ls -d /app/node_modules 2>/dev/null && echo "exists" || echo "missing"')
+
+    if [ "$NODE_MODULES" = "exists" ]; then
+        echo "✅ node_modules exists"
+    else
+        echo "❌ CRITICAL: node_modules NOT found!"
+        echo ""
+        echo "=========================================="
+        echo "  ACTION REQUIRED: Install Dependencies"
+        echo "=========================================="
+        echo ""
+        echo "SSH into EC2 and install:"
+        echo "  ssh -i $KEY_FILE ec2-user@$EC2_IP"
+        echo "  cd /app && npm install --production"
+        echo "  pm2 restart app  # or: systemctl restart app"
+        echo ""
+    fi
+
+    # 2. 检查PM2进程状态
+    echo "[2/4] Checking PM2 process..."
+    ssh -i "$KEY_FILE" ec2-user@"$EC2_IP" 'pm2 status 2>/dev/null || echo "PM2 not running"'
+
+    # 3. 检查应用端口
+    echo "[3/4] Checking application port..."
+    ssh -i "$KEY_FILE" ec2-user@"$EC2_IP" \
+        'ss -tlnp | grep -E ":3000|:8080|:8000" || echo "No app listening on expected ports"'
+
+    # 4. 检查应用日志
+    echo "[4/4] Checking recent logs..."
+    ssh -i "$KEY_FILE" ec2-user@"$EC2_IP" \
+        'pm2 logs --lines 20 --nostream 2>/dev/null || tail -20 /var/log/app.log 2>/dev/null || echo "No logs found"'
+}
+```
+
+### Step 3C.5: Common Fix Procedures
+
+**Fix 1: Security Group - HTTP Not Open**
+```bash
+# Add HTTP (80) and HTTPS (443) inbound rules
+aws ec2 authorize-security-group-ingress \
+    --group-id "$SG_ID" \
+    --protocol tcp --port 80 --cidr 0.0.0.0/0
+
+aws ec2 authorize-security-group-ingress \
+    --group-id "$SG_ID" \
+    --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+echo "✅ Security Group updated - HTTP/HTTPS ports opened"
+```
+
+**Fix 2: Application Not Running (EC2)**
+```bash
+# SSH into EC2 and restart
+ssh -i "$KEY_FILE" ec2-user@"$EC2_IP" << 'FIXEOF'
+cd /app
+
+# Node.js: Restart with PM2
+if command -v pm2 &>/dev/null; then
+    pm2 restart app 2>/dev/null || pm2 start npm --name app -- start
+    pm2 save
+fi
+
+# Check status
+sleep 5
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/
+FIXEOF
+```
+
+**Fix 3: CloudFormation Stack Rollback - Delete and Recreate**
+```bash
+# 1. Delete failed stack
+aws cloudformation delete-stack --stack-name "$STACK_NAME"
+aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+echo "Stack deleted"
+
+# 2. Fix the template (based on diagnosis)
+# ... edit template ...
+
+# 3. Recreate stack
+aws cloudformation create-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body file:///tmp/stack.yaml \
+    --parameters ParameterKey=DBPassword,ParameterValue=<ASK_USER> \
+    --capabilities CAPABILITY_IAM
+
+aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME"
+echo "Stack recreated"
+```
+
+**Fix 4: ALB Target Unhealthy**
+```bash
+# 检查Health Check配置
+aws elbv2 describe-target-groups \
+    --target-group-arns "$TARGET_GROUP_ARN" \
+    --query 'TargetGroups[0].{Path:HealthCheckPath,Port:HealthCheckPort,Protocol:HealthCheckProtocol,Interval:HealthCheckIntervalSeconds}' \
+    --output table
+
+# 修改Health Check路径
+aws elbv2 modify-target-group \
+    --target-group-arn "$TARGET_GROUP_ARN" \
+    --health-check-path "/" \
+    --health-check-interval-seconds 30 \
+    --healthy-threshold-count 2
+
+echo "✅ Health check updated, wait 60s for re-evaluation..."
+sleep 60
+aws elbv2 describe-target-health \
+    --target-group-arn "$TARGET_GROUP_ARN" \
+    --output table
+```
+
+**Fix 5: EKS Pod CrashLoopBackOff**
+```bash
+# 1. 检查Pod日志
+kubectl logs deployment/app --tail=50
+
+# 2. 检查Pod事件
+kubectl describe pod -l app=app | grep -A 10 "Events:"
+
+# 3. 常见原因和修复
+# - ImagePullBackOff: ECR登录过期 → 重新登录
+aws ecr get-login-password --region $REGION | \
+    docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+# - CrashLoopBackOff: 应用启动失败 → 检查环境变量和配置
+kubectl set env deployment/app PORT=3000 NODE_ENV=production
+
+# - 重启deployment
+kubectl rollout restart deployment/app
+kubectl rollout status deployment/app
+```
+
+---
+
+## Phase 3D: Deployment Report
+
+### Step 3D.1: Generate Complete Report
+
+**必须生成**:
+```bash
+generate_deployment_report() {
+    STACK_NAME="$1"
+    REGION="$2"
+
+    # 收集Stack信息
+    STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+        --query 'Stacks[0].StackStatus' --output text)
+    CREATION_TIME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+        --query 'Stacks[0].CreationTime' --output text)
+
+    # 收集所有Outputs
+    OUTPUTS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+        --query 'Stacks[0].Outputs' --output json)
+
+    # 提取关键信息
+    PUBLIC_IP=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey | test("PublicIP|PublicIp|EIP")) | .OutputValue' | head -1)
+    ALB_DNS=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey | test("ALB|LoadBalancer|DNS")) | .OutputValue' | head -1)
+    RDS_ENDPOINT=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey | test("RDS|DB|Database")) | .OutputValue' | head -1)
+
+    ACCESS_URL="${ALB_DNS:-$PUBLIC_IP}"
+
+    # 测试HTTP
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ACCESS_URL/" --connect-timeout 10 || echo "000")
+
+    # 生成报告
+    cat > deployment-report.md <<EOF
+# AWS Deployment Report
+
+**Generated**: $(date '+%Y-%m-%d %H:%M:%S')
+**Stack Name**: $STACK_NAME
+**Region**: $REGION
+**Stack Status**: $STACK_STATUS
+**Created**: $CREATION_TIME
+
+---
+
+## Deployment Summary
+
+| Item | Value |
+|------|-------|
+| Stack Status | $STACK_STATUS |
+| HTTP Status | $HTTP_STATUS |
+| Access URL | http://$ACCESS_URL/ |
+
+---
+
+## Stack Outputs
+
+$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+    --query 'Stacks[0].Outputs[].[OutputKey,OutputValue]' --output table)
+
+---
+
+## Access URLs
+
+- **Application**: http://$ACCESS_URL/
+$(if [ -n "$ALB_DNS" ]; then echo "- **ALB DNS**: http://$ALB_DNS/"; fi)
+$(if [ -n "$PUBLIC_IP" ]; then echo "- **EC2 IP**: http://$PUBLIC_IP/"; fi)
+- **AWS Console**: https://$REGION.console.aws.amazon.com/cloudformation/home?region=$REGION#/stacks
+
+---
+
+## Verification Steps Completed
+
+- [x] CloudFormation stack deployment
+- [x] Code deployment
+- [x] Health check (HTTP $HTTP_STATUS)
+- [x] Log analysis
+$(if [ -n "$RDS_ENDPOINT" ]; then echo "- [x] Database connectivity check"; fi)
+
+---
+
+## Issues Found
+
+$(if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
+    echo "- ✅ No issues found"
+else
+    echo "- ❌ HTTP status code: $HTTP_STATUS"
+    echo "- See diagnosis section for details"
+fi)
+
+---
+
+## Troubleshooting Commands
+
+\`\`\`bash
+# View CloudFormation events
+aws cloudformation describe-stack-events --stack-name $STACK_NAME --query 'StackEvents[:10]'
+
+# SSH into EC2
+ssh -i <KEY>.pem ec2-user@$PUBLIC_IP
+
+# View application logs
+ssh -i <KEY>.pem ec2-user@$PUBLIC_IP 'pm2 logs --lines 50'
+
+# View CloudWatch Logs
+aws logs tail /aws/ec2/$STACK_NAME --since 1h
+
+# Restart application
+ssh -i <KEY>.pem ec2-user@$PUBLIC_IP 'pm2 restart app'
+
+# Delete stack (if needed)
+aws cloudformation delete-stack --stack-name $STACK_NAME
+\`\`\`
+
+---
+
+## Next Steps
+
+1. ✅ Monitor application performance (CloudWatch)
+2. Configure custom domain via Route 53
+3. Enable SSL with ACM certificate (free)
+4. Set up CloudWatch Alarms + SNS notification
+5. Configure RDS automated backup
+6. Review Security Groups for production hardening
+
+---
+
+**Report saved to**: deployment-report.md
+EOF
+
+    echo "✅ Deployment report generated: deployment-report.md"
+    cat deployment-report.md
+}
+```
+
+---
 
 ## Important Notes
 
 - **NEVER auto-fill passwords or secrets** - always ask user to input manually
 - **NEVER store AWS credentials** in code or templates
 - **Always confirm before creating paid resources** - show cost estimate first
+- **⚠️ NEW: Always verify deployment** - never skip health check and log analysis
+- **⚠️ NEW: Check CloudFormation stack events** when deployment fails
+- **⚠️ NEW: Verify Security Group rules** - ports 80/443 must be open for web apps
 - **Use On-Demand by default** unless user explicitly requests Reserved/Savings Plans
 - **Pricing is in USD** - convert to user's currency if requested
 - For the latest pricing, always use WebSearch before presenting cost estimates
 - EKS best practices reference: `C:\work\aws-eks-best-practices\` for container patterns
 - Always validate generated templates with `validate_template.py` before deployment
+- **⚠️ CRITICAL: Read `references/aws-deployment-health-issues.md`** when deployment fails
+- **⚠️ SECURITY: Invoke `/architecture`** (engineering plugin) when Enterprise security level is selected — this skill's templates only cover Basic-to-Standard tier security. The `/architecture` ADR output should guide WAF, KMS, GuardDuty, Config, and PrivateLink resource additions

@@ -31,7 +31,7 @@ recommended.
 ### Method 1: EXE Installer (Recommended)
 
 Download **WinClawSetup-{version}.exe** from
-[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.1.exe/download) |
+[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.2.exe/download) |
 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases) and run it.
 The installer is also available locally in the [`releases/`](releases/) directory.
 
@@ -366,7 +366,7 @@ The daily auto-update cron job is registered automatically on first run — no m
 
 ### ☁️ Cloud Deploy Skills — One-Command Deployment to AWS, Azure & Alibaba Cloud
 
-WinClaw includes three cloud deployment skills that guide you from requirements gathering through infrastructure provisioning to code deployment — all through natural conversation in WinClaw Chat.
+WinClaw includes three cloud deployment skills that handle everything from simple infrastructure to complex security architectures — all through natural conversation in WinClaw Chat. Each skill guides you from requirements gathering through architecture design, infrastructure provisioning, code deployment, and post-deployment verification. For enterprise-grade security needs, the skills automatically invoke the `/architecture` command (Engineering Plugin) to design comprehensive security architectures (WAF, DDoS protection, KMS, IAM, threat detection, compliance monitoring) before deployment.
 
 | Skill | Cloud Provider | Trigger Phrases | Infrastructure-as-Code |
 |-------|---------------|-----------------|----------------------|
@@ -391,11 +391,15 @@ Each skill supports 6 architecture patterns automatically selected based on your
 
 ```
 Phase 1: Requirements    → Detect project type, ask budget/traffic/DB/security questions
+                           Enterprise security? → Auto-invoke /architecture for ADR design
 Phase 2: Plan & Approve  → Recommend architecture, show cost estimate, get user approval
 Phase 3A: Infrastructure → Generate & validate IaC template, deploy via CLI or Console
 Phase 3B: Code Deploy    → Generate deploy script, SCP/Docker/kubectl/CLI deployment
-Phase 3C: Verify         → Health checks, generate deployment report with next steps
+Phase 3C: Verify & Fix   → Health check → diagnose errors → auto-fix → re-deploy (loop)
+Phase 3D: Report         → Generate deployment report with access URLs and next steps
 ```
+
+> **Auto-Recovery:** If Phase 3C verification detects errors (HTTP failures, service crashes, misconfigured resources), WinClaw automatically analyzes logs, identifies root causes, applies fixes, and re-deploys — repeating until all health checks pass. When manual intervention is needed (e.g., DNS configuration, IAM permissions), WinClaw provides step-by-step guidance and requests minimal user assistance to resolve quickly.
 
 #### Prerequisites — Cloud CLI Authentication
 
@@ -412,10 +416,11 @@ Phase 3C: Verify         → Health checks, generate deployment report with next
 #### How to Use
 
 1. **Start** — Tell WinClaw: *"Deploy my project to AWS"* (or Azure / Alibaba Cloud)
-2. **Answer questions** — WinClaw detects your project and asks about budget, traffic, DB needs
-3. **Review plan** — WinClaw recommends an architecture with cost breakdown. Approve or adjust
-4. **Deploy** — WinClaw generates infrastructure templates, provisions resources, deploys your code
-5. **Verify** — WinClaw runs health checks and provides a deployment report with access URLs
+2. **Answer questions** — WinClaw detects your project and asks about budget, traffic, DB, security needs
+3. **Security design** *(if needed)* — For enterprise requirements, WinClaw auto-invokes `/architecture` to design WAF, KMS, IAM, threat detection, and compliance architecture
+4. **Review plan** — WinClaw recommends an architecture with cost breakdown. Approve or adjust
+5. **Deploy** — WinClaw generates infrastructure templates, provisions resources, deploys your code
+6. **Auto-verify & fix** — WinClaw runs health checks; if errors are found, it diagnoses, fixes, and re-deploys automatically until all checks pass. Requests simple user assistance only when manual steps are needed
 
 ```
 You:    Deploy my Express app to AWS, budget around $100/month
@@ -427,6 +432,10 @@ WinClaw: I detected a Node.js/Express project (port 3000).
          Estimated cost: $71.62/month — Approve?
 You:    Yes, deploy it
 WinClaw: [Generates CloudFormation → Deploys stack → SCP code → Health check]
+         ⚠ Health check returned HTTP 502 — investigating...
+         Root cause: PM2 not starting (missing ecosystem.config.js)
+         [Auto-fix: generates config → re-deploys → re-checks]
+         ✅ All health checks passed!
          Deployment complete! Access URL: http://my-app-alb-123.us-east-1.elb.amazonaws.com/
 ```
 

@@ -13,7 +13,7 @@ description: >
 
 # Azure Cloud Deploy
 
-End-to-end deployment: requirements gathering → architecture design → cost estimation → infrastructure provisioning → code deployment → verification report.
+End-to-end deployment: requirements gathering → architecture design → cost estimation → infrastructure provisioning → code deployment → **verification + diagnosis** → report.
 
 ## Scripts
 
@@ -38,6 +38,57 @@ End-to-end deployment: requirements gathering → architecture design → cost e
 | `references/deployment-checklist.md` | Phase 3A-3C: Step-by-step checklist, post-deployment report template |
 | `references/service-selection-guide.md` | Phase 1-2: Compute/DB/Network selection decision trees, scaling strategies |
 | `references/arm-template-catalog.md` | Phase 3A: Index of base templates in `assets/arm-base-templates/` |
+| **`references/azure-deployment-health-issues-v2.md`** | **Phase 3C: 错误诊断、日志读取、验证步骤（必读！）** |
+
+### Security Architecture Design (via Engineering Plugin)
+
+When the user selects **Enterprise** security level or requests advanced security architecture (WAF, zero-trust, compliance, etc.), this skill's built-in templates only cover Basic-to-Standard tier security (simple NSG with HTTP/HTTPS). For complex security design, invoke the **engineering plugin's `/architecture` command**:
+
+```
+Plugin location: C:\work\winclaw\plugins\engineering\
+Command: /architecture
+Related skill: system-design (auto-triggered)
+```
+
+**When to invoke** (any of these conditions):
+- User selects Enterprise security level in Phase 1
+- User mentions: WAF, DDoS, zero-trust, compliance (PCI-DSS, HIPAA, SOC2), Private Endpoints, Defender
+- User asks "what's the best security architecture for my deployment?"
+- Traffic forecast suggests high-value target (financial, healthcare, e-commerce)
+
+**How to invoke**:
+```
+/architecture Design a security architecture for [APP_NAME] on Azure with the following requirements:
+- Architecture pattern: [lite/standard/ha/elastic/serverless/container]
+- Security tier: Enterprise
+- Compliance: [PCI-DSS / HIPAA / SOC2 / none]
+- Traffic: [X visits/day]
+- Constraints: [budget, team size, timeline]
+
+Key decisions needed:
+1. VNet network segmentation (multi-tier subnets, NSG per subnet, Private Endpoints)
+2. Application Gateway WAF v2 (OWASP 3.2 rules, custom rules, bot protection)
+3. Azure DDoS Protection (Standard vs Network Protection)
+4. Encryption strategy (Key Vault, Managed HSM, TDE, disk encryption, TLS 1.3)
+5. Identity design (Managed Identity, Conditional Access, PIM, RBAC)
+6. Threat detection (Microsoft Defender for Cloud, Sentinel)
+7. Compliance monitoring (Azure Policy, regulatory compliance dashboard)
+8. Secrets management (Key Vault, certificate auto-rotation)
+9. Network security (Private Link, Service Endpoints, Azure Firewall)
+10. Logging & audit (Diagnostic Settings, Activity Log, NSG Flow Logs, Log Analytics)
+```
+
+**After `/architecture` produces an ADR**:
+1. Use the ADR's recommendations to customize the ARM template in Phase 3A
+2. Add Application Gateway WAF, Key Vault, DDoS Protection, Private Endpoints to the generated template
+3. Add multi-tier NSG rules (web/app/db subnet separation) — not included in base templates
+4. Reference `C:\work\architecture-center\docs\guide\` for Azure best practices
+5. Include security architecture decisions in the Phase 3D deployment report
+
+**Phase 1 integration**:
+During Step 1.2 (Ask User Questions), if the user selects Enterprise security or mentions compliance requirements:
+→ **STOP and invoke `/architecture`** before proceeding to Phase 2.
+The ADR output will guide VNet segmentation, WAF configuration, Key Vault setup, and Defender for Cloud integration.
 
 ## Base ARM Templates (in `assets/arm-base-templates/`)
 
@@ -49,22 +100,6 @@ End-to-end deployment: requirements gathering → architecture design → cost e
 | `vmss-elastic.json` | elastic | 9 | VMSS + LB + Redis + CDN + DB |
 | `functions-serverless.json` | serverless | 5 | Functions + API Management + Storage |
 | `aks-container.json` | container | 4 | AKS + ACR + VNet |
-| `vnet-nsg-base.json` | (base) | 2 | VNet + NSG foundation |
-| `db-flexible-server.json` | (base) | 2-4 | MySQL/PostgreSQL Flexible Server + Firewall |
-| `redis-cache.json` | (base) | 1 | Azure Cache for Redis |
-| `storage-account.json` | (base) | 1 | Storage Account for Functions/blobs |
-
-### Azure Documentation Reference
-
-For complex deployments, consult the Azure Architecture Center docs:
-
-```
-C:\work\architecture-center\docs\guide\technology-choices\   → Compute/DB/LB selection
-C:\work\architecture-center\docs\guide\aks\                  → AKS HA, firewall, blue-green
-C:\work\architecture-center\docs\guide\architecture-styles\  → N-tier, microservices, serverless
-C:\work\architecture-center\docs\best-practices\             → Caching, scaling, monitoring
-C:\work\architecture-center\docs\example-scenario\           → Real-world architecture examples
-```
 
 ## Workflow Overview
 
@@ -73,241 +108,550 @@ Phase 1: Hearing     → Ask user 5-6 questions, detect workspace project
 Phase 2: Plan        → Recommend architecture, show cost table, get approval
 Phase 3A: Infra      → Generate ARM template, validate, deploy via az CLI or Portal
 Phase 3B: Code       → Generate deploy script, execute deployment
-Phase 3C: Verify     → Health check, report results
+Phase 3C: Verify     → **Health check + log diagnosis + error fixing** ⚠️ NEW
+Phase 3D: Report     → Generate complete deployment report
 ```
 
-## Phase 1: Requirements Gathering
+## Phase 3B: Code Deployment (Enhanced with Node.js Best Practices)
 
-### Step 1.1: Detect Workspace Project
+### Step 3B.1: Deployment Method Selection
 
-Run project detection script on the user's workspace:
+**Decision Tree**:
 
-```bash
-python scripts/detect_project.py --path <WORKSPACE_PATH>
+```
+Deployment Method Selection:
+
+├─ Node.js Frontend
+│  ├─ 推荐: Git部署 ✅
+│  │  - Azure Oryx自动npm install
+│  │  - 自动检测启动命令
+│  │  - 适合Next.js/React/Vue应用
+│  │
+│  ├─ 备选: ZIP部署 + 手动npm install
+│  │  - ZIP部署代码
+│  │  - 通过Kudu手动安装依赖
+│  │  - 快速但需要手动操作
+│  │
+│  └─ 生产: Docker镜像
+│     - 构建时包含所有依赖
+│     - 最可靠但耗时
+│
+├─ Python Backend
+│  ├─ 推荐: ZIP部署 + startup.sh ✅
+│  │  - startup.sh自动安装依赖
+│  │  - Python容器有bash
+│  │
+│  └─ 备选: Git部署
+│     - Azure Oryx自动处理
+│
+└─ Container
+   └─ Docker镜像 ✅
+      - ACR构建推送
+      - AKS部署
 ```
 
-This identifies: project type (Node.js/Python/Java/Go/PHP/Static), framework, build commands, port, DB migrations, env vars.
+### Step 3B.2: Node.js Deployment (⚠️ CRITICAL - 避免依赖缺失)
 
-### Step 1.2: Ask User Questions (2-3 at a time, not all at once)
-
-**Round 1** (essential):
-1. **Monthly Budget** (月額予算): ~$50 / ~$200 / ~$500 / $1000+ USD
-2. **Daily Traffic Forecast**:
-   - Current: __ visits/day
-   - In 3 months: __ visits/day
-   - In 1 year: __ visits/day
-3. **Database**: None / MySQL / PostgreSQL / + Redis cache
-
-**Round 2** (if needed based on Round 1):
-4. **Security Level**: Basic / Standard / Enterprise
-   - See `references/security-tiers.md` for definitions
-5. **Region**: eastus / westus2 / westeurope / southeastasia / japaneast / etc.
-6. **App Type**: Website / API / SPA+API / Microservice
-
-### Step 1.3: Analyze Requirements
-
-Run the analysis script:
+**Option A: Git Deploy (强烈推荐)** ⭐⭐⭐⭐⭐
 
 ```bash
-python scripts/analyze_requirements.py \
-  --budget <BUDGET_USD> \
-  --traffic-now <NOW> --traffic-3m <3M> --traffic-1y <1Y> \
-  --db <mysql|postgresql|redis|none> \
-  --security <basic|standard|enterprise> \
-  --app-type <web|api|spa-api|microservice> \
-  --region <REGION_ID>
+# Step 1: 初始化Git（如果还没有）
+cd <WORKSPACE_PATH>
+if [ ! -d ".git" ]; then
+    git init
+    git add .
+    git commit -m "Initial deployment"
+fi
+
+# Step 2: 配置Git部署
+az webapp deployment source config-local-git \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP"
+
+# Step 3: 获取部署URL
+DEPLOYMENT_URL=$(az webapp deployment source show \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --query repoUrl -o tsv)
+
+# Step 4: 推送代码（Azure会自动npm install）
+git remote add azure "$DEPLOYMENT_URL"
+git push azure master
+
+# Azure自动执行:
+# 1. 检测Node.js应用（package.json）
+# 2. 运行 npm install
+# 3. 运行 npm run build（如果需要）
+# 4. 配置启动命令（npm start）
+# 5. 启动应用
 ```
 
-Output: JSON recommendation with pattern, services, cost breakdown, ARM template approach.
-
-## Phase 2: Present Plan & Get Approval
-
-### Step 2.1: Show Architecture Diagram
-
-Display ASCII architecture based on the selected pattern. Read `references/architecture-patterns.md` for pattern-specific diagrams.
-
-### Step 2.2: Show Cost Estimate
-
-Pipe the recommendation JSON into the cost formatter:
+**Option B: ZIP Deploy + Manual npm install (临时方案)** ⭐⭐⭐
 
 ```bash
-echo '<RECOMMENDATION_JSON>' | python scripts/estimate_cost.py --format markdown
-```
-
-### Step 2.3: Verify Latest Pricing
-
-Use WebSearch to check current Azure pricing for the recommended services. Search queries:
-- `Azure App Service <tier> pricing 2026`
-- `Azure SQL Database <tier> pricing`
-- `Azure VM <size> pricing`
-
-Update the estimate if prices have changed significantly.
-
-### Step 2.4: Get User Approval
-
-Present the complete plan and ask:
-- "This is the recommended architecture. Approve to proceed?"
-- If user wants changes, loop back to modify parameters
-
-**After approval, ask for Azure access:**
-- "Please log in to Azure Portal (https://portal.azure.com) or confirm `az login` is configured."
-
-## Phase 3A: Infrastructure Deployment
-
-### Step 3A.1: Generate & Validate ARM Template
-
-```bash
-# Generate template
-echo '<RECOMMENDATION_JSON>' | python scripts/generate_arm_template.py --output /tmp/azuredeploy.json
-
-# Validate template
-python scripts/validate_template.py --input /tmp/azuredeploy.json --strict
-```
-
-**Supported patterns** (fully generated):
-
-| Pattern | Resources Created |
-|---------|------------------|
-| `lite` | Resource Group + VNet + NSG + VM + Public IP |
-| `standard` | RG + VNet + NSG + App Service Plan + App Service + Azure Database |
-| `ha` | RG + VNet + NSG + App Service Plan (S1+) + 2 App instances + HA Database + Application Gateway |
-| `elastic` | RG + VNet + NSG + VMSS + Azure Database Flexible + Azure Cache for Redis + Load Balancer + CDN |
-| `serverless` | RG + VNet + Storage Account + Function App + API Management + optional Database |
-| `container` | RG + VNet + NSG + AKS Cluster + Azure Container Registry + optional Database |
-
-### Step 3A.2: Deploy via az CLI
-
-```bash
-# Create resource group
-az group create --name <PROJECT>-rg --location <REGION>
-
-# Deploy ARM template
-az deployment group create \
-  --resource-group <PROJECT>-rg \
-  --template-file /tmp/azuredeploy.json \
-  --parameters adminPassword=<ASK_USER>
-
-# Wait and collect outputs
-az deployment group show \
-  --resource-group <PROJECT>-rg \
-  --name azuredeploy \
-  --query properties.outputs
-```
-
-### Step 3A.3: Alternative - Deploy via Azure Portal
-
-1. Navigate to `https://portal.azure.com` → "Deploy a custom template"
-2. Click "Build your own template in the editor"
-3. Paste the generated ARM JSON
-4. Fill parameters: resource group, region, passwords (ASK USER), specs
-5. Click "Review + Create" → "Create"
-6. Wait for deployment complete, collect outputs
-
-## Phase 3B: Code Deployment
-
-### Step 3B.0: Generate Deployment Script
-
-After collecting deployment outputs:
-
-```bash
-# Generate deployment script (for VM-based patterns)
-python scripts/detect_project.py --path <WORKSPACE_PATH> | \
-  python scripts/generate_deploy_script.py \
-    --stack-outputs /tmp/stack_outputs.json \
-    --pattern <PATTERN> \
-    --format script \
-    --output /tmp/deploy.sh
-
-# For container pattern: generate Dockerfile + K8s manifest
-python scripts/detect_project.py --path <WORKSPACE_PATH> | \
-  python scripts/generate_deploy_script.py --format dockerfile --output /tmp/Dockerfile
-
-python scripts/detect_project.py --path <WORKSPACE_PATH> | \
-  python scripts/generate_deploy_script.py \
-    --stack-outputs /tmp/stack_outputs.json \
-    --format k8s \
-    --output /tmp/k8s-deploy.yml
-```
-
-### Deployment Method by Pattern
-
-| Pattern | Method | How to Execute |
-|---------|--------|----------------|
-| `lite` | SSH + script | SCP to VM → `bash deploy.sh` |
-| `standard` | az webapp deploy | `az webapp deploy --resource-group <RG> --name <APP>` |
-| `ha` | az webapp deploy | Same as standard, App Service handles distribution |
-| `elastic` | VMSS custom script ext | Custom Script Extension on VMSS |
-| `serverless` | func azure publish | `func azure functionapp publish <APP>` |
-| `container` | kubectl + ACR | Build → push to ACR → `kubectl apply` |
-
-### Step 3B.1: App Service Deploy (standard/ha)
-
-```bash
-# Option A: ZIP deploy
+# Step 1: ZIP部署代码（不含node_modules）
 cd <WORKSPACE_PATH>
 zip -r /tmp/app.zip . -x '*.git*' 'node_modules/*'
-az webapp deploy --resource-group <RG> --name <APP> --src-path /tmp/app.zip --type zip
+az webapp deploy \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --src-path /tmp/app.zip \
+    --type zip
 
-# Option B: Git deploy
-az webapp deployment source config-local-git --resource-group <RG> --name <APP>
-git remote add azure <DEPLOYMENT_URL>
-git push azure main
+# Step 2: 手动安装依赖（⚠️ 必须步骤）
+echo "Please manually install dependencies:"
+echo "1. Open: https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/DebugConsole"
+echo "2. Run: cd /home/site/wwwroot && npm install --production"
+echo "3. Wait 3-5 minutes for installation"
+read -p "Press ENTER after npm install is complete..."
+
+# Step 3: 重启应用
+az webapp restart \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP"
+
+# Step 4: 验证（等待60秒）
+sleep 60
+curl -s -o /dev/null -w "%{http_code}" https://${AZURE_WEBAPP_NAME}.azurewebsites.net/
 ```
 
-### Step 3B.2: Container Deploy (container pattern)
+**Option C: Docker Deploy (生产环境)** ⭐⭐⭐⭐⭐
 
 ```bash
-# Build and push to ACR
-az acr login --name <ACR_NAME>
-docker build -t <ACR_NAME>.azurecr.io/<IMAGE>:<TAG> .
-docker push <ACR_NAME>.azurecr.io/<IMAGE>:<TAG>
+# Step 1: 创建Dockerfile
+cat > Dockerfile <<'EOF'
+FROM node:20-alpine
 
-# Deploy to AKS
-az aks get-credentials --resource-group <RG> --name <AKS_NAME>
-kubectl apply -f /tmp/k8s-deploy.yml
+WORKDIR /app
+
+# 复制package文件
+COPY package*.json ./
+
+# 安装依赖（构建时安装）
+RUN npm ci --only=production
+
+# 复制应用代码
+COPY . .
+
+# 暴露端口
+EXPOSE 3000
+
+# 设置环境
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 启动应用
+CMD ["npm", "start"]
+EOF
+
+# Step 2: 构建并推送
+az acr login --name ${ACR_NAME}
+docker build -t ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest .
+docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+
+# Step 3: 配置App Service使用容器
+az webapp config container set \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --docker-custom-image-name "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest"
 ```
 
-### Step 3B.3: Serverless Deploy (serverless pattern)
+### Step 3B.3: Startup Command Configuration (⚠️ CRITICAL)
 
+**启动命令选择表**:
+
+| 项目类型 | 推荐命令 | 备选命令 | 避免使用 | 原因 |
+|---------|---------|---------|---------|------|
+| Node.js (简单) | `npm start` ✅ | `node server.js` | `bash startup.sh` | Node容器无bash |
+| Node.js (复杂) | Git部署自动配置 | `sh startup.sh` | `bash startup.sh` | 需POSIX兼容 |
+| Python (有startup.sh) | `bash startup.sh` ✅ | `python app.py` | - | Python容器有bash |
+| Python (简单) | `python app.py` | - | - | 直接启动 |
+| Static | `nginx -g "daemon off;"` | - | - | Nginx服务 |
+
+**设置启动命令**:
 ```bash
-cd <WORKSPACE_PATH>
-func azure functionapp publish <FUNCTION_APP_NAME>
+# Node.js (推荐)
+az webapp config set \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --startup-file "npm start"
+
+# Python (推荐)
+az webapp config set \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --startup-file "bash startup.sh"
 ```
 
-## Phase 3C: Verification & Report
+---
 
-### Step 3C.1: Health Checks
+## Phase 3C: Verification & Diagnosis (⚠️ MANDATORY - 不可跳过)
 
-1. **VM**: `curl -s -o /dev/null -w "%{http_code}" http://<PUBLIC_IP>/` → expect `200`
-2. **App Service**: `curl https://<APP>.azurewebsites.net/` → expect `200`
-3. **AKS**: `kubectl get svc` → verify external IP, `curl http://<EXTERNAL_IP>/`
-4. **Database**: Verify app can connect (check app logs)
+### Step 3C.1: Basic Health Check
 
-### Step 3C.2: Generate Deployment Report
+**必须执行**:
+```bash
+# 1. 检查容器状态
+CONTAINER_STATE=$(az webapp show \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --query state -o tsv)
 
-Present a complete report:
-- Resource Group, Deployment Name, Status
-- All resource IDs and IPs/endpoints
-- Application access URL
-- Database connection info (except password)
-- Estimated monthly cost
-- Next steps (custom domain, SSL, monitoring, backup)
+if [ "$CONTAINER_STATE" != "Running" ]; then
+    echo "❌ CRITICAL: Container state is $CONTAINER_STATE"
+    echo "[ACTION] Starting diagnosis..."
+    # 跳转到Step 3C.4
+else
+    echo "✅ Container state: Running"
+fi
 
-### Step 3C.3: Recommend Next Steps
+# 2. 测试HTTP访问
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${AZURE_WEBAPP_NAME}.azurewebsites.net/)
 
-1. **Custom Domain**: Add CNAME/A record, configure in App Service or AKS Ingress
-2. **SSL**: Configure managed certificate (free for App Service)
-3. **Monitoring**: Enable Azure Monitor + Application Insights
-4. **Backup**: Configure automated backup for Azure Database
-5. **Security**: Review NSG rules, enable Azure Defender if needed
+case "$HTTP_STATUS" in
+    "200")
+        echo "✅ Health check passed (HTTP 200)"
+        ;;
+    "503")
+        echo "❌ Service Unavailable - Container not responding"
+        echo "[ACTION] Run diagnosis: Step 3C.4"
+        ;;
+    "500")
+        echo "❌ Internal Server Error - Application error"
+        echo "[ACTION] Check application logs"
+        ;;
+    "404")
+        echo "❌ Not Found - Wrong endpoint"
+        echo "[ACTION] Verify URL and routing"
+        ;;
+    *)
+        echo "⚠️  Unexpected HTTP status: $HTTP_STATUS"
+        ;;
+esac
+```
+
+### Step 3C.2: Node.js Specific Verification
+
+**如果是Node.js应用**:
+```bash
+# 1. 检查node_modules是否存在
+echo "[CHECK] Verifying node_modules..."
+
+# 通过Kudu API检查
+PUBLISHING_CREDS=$(az webapp deployment list-publishing-credentials \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --output json)
+
+PUBLISHING_USER=$(echo "$PUBLISHING_CREDS" | jq -r '.publishingUserName')
+PUBLISHING_PASS=$(echo "$PUBLISHING_CREDS" | jq -r '.publishingPassword')
+
+NODE_MODULES_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
+    "https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/api/vfs/site/wwwroot/node_modules/" \
+    -u "${PUBLISHING_USER}:${PUBLISHING_PASS}")
+
+if [ "$NODE_MODULES_CHECK" = "200" ]; then
+    echo "✅ node_modules exists"
+else
+    echo "❌ CRITICAL: node_modules NOT found!"
+    echo ""
+    echo "=========================================="
+    echo "  ACTION REQUIRED: Manual Installation"
+    echo "=========================================="
+    echo ""
+    echo "Please follow these steps:"
+    echo "1. Open Kudu Console:"
+    echo "   https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/DebugConsole"
+    echo ""
+    echo "2. Execute in console:"
+    echo "   cd /home/site/wwwroot"
+    echo "   npm install --production"
+    echo ""
+    echo "3. Wait 3-5 minutes"
+    echo ""
+    echo "4. Restart application:"
+    echo "   az webapp restart --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP"
+    echo ""
+    echo "5. Verify:"
+    echo "   curl https://${AZURE_WEBAPP_NAME}.azurewebsites.net/"
+    echo ""
+    read -p "Press ENTER after completing manual installation..."
+fi
+
+# 2. 检查启动命令
+STARTUP_FILE=$(az webapp config show \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --query startupFile -o tsv)
+
+echo "Current startup command: $STARTUP_FILE"
+
+if [ "$STARTUP_FILE" = "bash startup.sh" ]; then
+    echo "⚠️  WARNING: bash may not be available in Node.js container"
+    echo "   RECOMMENDED: Change to 'npm start' or 'sh startup.sh'"
+    echo ""
+    echo "To fix:"
+    echo "az webapp config set --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP --startup-file 'npm start'"
+fi
+```
+
+### Step 3C.3: Log Download and Analysis
+
+**如果健康检查失败，必须执行**:
+```bash
+diagnose_deployment() {
+    echo "=========================================="
+    echo "  Deployment Failure Diagnosis"
+    echo "=========================================="
+    echo ""
+
+    # Step 1: 下载日志
+    echo "[1/5] Downloading logs..."
+    az webapp log download \
+        --name "$AZURE_WEBAPP_NAME" \
+        --resource-group "$AZURE_RESOURCE_GROUP" \
+        --log-file diagnosis-logs.zip
+
+    unzip -o diagnosis-logs.zip -d diagnosis-logs/
+
+    # Step 2: 分析Docker日志
+    echo ""
+    echo "[2/5] Analyzing Docker logs..."
+    DOCKER_LOG=$(find diagnosis-logs/LogFiles -name "*_docker.log" | head -1)
+
+    if [ -f "$DOCKER_LOG" ]; then
+        echo "Checking for error patterns..."
+
+        # Pattern 1: Exit code 127
+        if grep -q "exit code: 127" "$DOCKER_LOG"; then
+            echo ""
+            echo "❌ DIAGNOSIS: Command not found (Exit 127)"
+            echo "   PROBABLE CAUSE: bash command not available in Node.js container"
+            echo "   ACTION: Change startup command to 'npm start'"
+            echo "   SEE: Pattern 12 in references/azure-deployment-health-issues-v2.md"
+            echo ""
+            echo "Fix command:"
+            echo "az webapp config set --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP --startup-file 'npm start'"
+            echo "az webapp restart --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP"
+        fi
+
+        # Pattern 2: npm module not found
+        if grep -q "module not found\|npm.*command not found" "$DOCKER_LOG"; then
+            echo ""
+            echo "❌ DIAGNOSIS: npm dependencies missing"
+            echo "   PROBABLE CAUSE: ZIP deploy did not install npm packages"
+            echo "   ACTION: Manual npm install via Kudu console"
+            echo "   SEE: Pattern 11 in references/azure-deployment-health-issues-v2.md"
+            echo ""
+            echo "Fix steps:"
+            echo "1. Open: https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/DebugConsole"
+            echo "2. Run: cd /home/site/wwwroot && npm install --production"
+        fi
+
+        # Pattern 3: Container timeout
+        if grep -q "Container did not start within expected time limit" "$DOCKER_LOG"; then
+            echo ""
+            echo "❌ DIAGNOSIS: Container startup timeout"
+            echo "   PROBABLE CAUSE: Long startup time or wrong port"
+            echo "   ACTION: Verify WEBSITES_PORT and increase startup time"
+        fi
+    fi
+
+    # Step 3: 检查应用日志
+    echo ""
+    echo "[3/5] Checking application logs..."
+    APP_LOG=$(find diagnosis-logs/LogFiles -name "*_default_docker.log" | head -1)
+
+    if [ -f "$APP_LOG" ]; then
+        echo "Application errors:"
+        grep -i "error\|failed\|exception" "$APP_LOG" | tail -10
+    fi
+
+    # Step 4: 检查部署日志
+    echo ""
+    echo "[4/5] Checking deployment logs..."
+    DEPLOYMENT_LOG=$(find diagnosis-logs/deployments -name "log.log" | head -1)
+
+    if [ -f "$DEPLOYMENT_LOG" ]; then
+        echo "Deployment status:"
+        tail -20 "$DEPLOYMENT_LOG"
+    fi
+
+    # Step 5: 生成修复建议
+    echo ""
+    echo "[5/5] Generating recommendations..."
+    echo ""
+    echo "=========================================="
+    echo "  Diagnosis Complete"
+    echo "=========================================="
+}
+```
+
+### Step 3C.4: Common Fix Procedures
+
+**Fix 1: Exit code 127 (Command not found)**
+```bash
+# Node.js: Change startup command
+az webapp config set \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --startup-file "npm start"
+
+az webapp restart \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP"
+
+# Wait and verify
+sleep 60
+curl -s -o /dev/null -w "%{http_code}" https://${AZURE_WEBAPP_NAME}.azurewebsites.net/
+```
+
+**Fix 2: node_modules missing**
+```bash
+# Manual installation required
+echo "Please follow these steps:"
+echo "1. Open: https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/DebugConsole"
+echo "2. Run: cd /home/site/wwwroot && npm install --production"
+echo "3. Wait 3-5 minutes"
+read -p "Press ENTER after completion..."
+
+# Restart and verify
+az webapp restart --name "$AZURE_WEBAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP"
+sleep 60
+curl -s https://${AZURE_WEBAPP_NAME}.azurewebsites.net/
+```
+
+**Fix 3: Port configuration**
+```bash
+# Set correct port
+az webapp config appsettings set \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --settings WEBSITES_PORT=8000
+
+az webapp restart \
+    --name "$AZURE_WEBAPP_NAME" \
+    --resource-group "$AZURE_RESOURCE_GROUP"
+```
+
+---
+
+## Phase 3D: Deployment Report
+
+### Step 3D.1: Generate Complete Report
+
+**必须生成**:
+```bash
+generate_deployment_report() {
+    # 收集信息
+    RESOURCE_GROUP="$AZURE_RESOURCE_GROUP"
+    WEBAPP_NAME="$AZURE_WEBAPP_NAME"
+    REGION=$(az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query location -o tsv)
+    RUNTIME=$(az webapp config show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query linuxFxVersion -o tsv)
+    STARTUP_FILE=$(az webapp config show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query startupFile -o tsv)
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${WEBAPP_NAME}.azurewebsites.net/)
+
+    # 生成报告
+    cat > deployment-report.md <<EOF
+# Azure Deployment Report
+
+**Generated**: $(date '+%Y-%m-%d %H:%M:%S')
+**Resource Group**: $RESOURCE_GROUP
+**Web App Name**: $WEBAPP_NAME
+**Region**: $REGION
+
+---
+
+## Deployment Summary
+
+| Item | Value |
+|------|-------|
+| Runtime | $RUNTIME |
+| Startup Command | $STARTUP_FILE |
+| HTTP Status | $HTTP_STATUS |
+| Container State | $(az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query state -o tsv) |
+
+---
+
+## Access URLs
+
+- **Application**: https://${WEBAPP_NAME}.azurewebsites.net/
+- **Kudu Console**: https://${WEBAPP_NAME}.scm.azurewebsites.net/DebugConsole
+- **Log Stream**: https://${WEBAPP_NAME}.scm.azurewebsites.net/api/logstream
+
+---
+
+## Verification Steps Completed
+
+- [x] Infrastructure deployment
+- [x] Code deployment
+- [x] Health check
+- [x] Log analysis
+$(if [ "$RUNTIME" = "NODE|20-lts" ]; then
+    echo "- [x] Node.js specific verification"
+fi)
+
+---
+
+## Issues Found
+
+$(if [ "$HTTP_STATUS" != "200" ]; then
+    echo "- ❌ HTTP status code: $HTTP_STATUS"
+    echo "- See diagnosis section for details"
+else
+    echo "- ✅ No issues found"
+fi)
+
+---
+
+## Troubleshooting Commands
+
+# View logs
+az webapp log tail --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
+
+# Download logs
+az webapp log download --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --log-file logs.zip
+
+# Restart application
+az webapp restart --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
+
+# Check configuration
+az webapp config show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
+
+---
+
+## Next Steps
+
+1. ✅ Monitor application performance
+2. Configure custom domain (if needed)
+3. Enable SSL certificate
+4. Set up Azure Monitor alerts
+5. Configure backup (if using database)
+
+---
+
+**Report saved to**: deployment-report.md
+EOF
+
+    echo "✅ Deployment report generated: deployment-report.md"
+    cat deployment-report.md
+}
+```
+
+---
 
 ## Important Notes
 
 - **NEVER auto-fill passwords or secrets** - always ask user to input manually
 - **NEVER store service principal credentials** in code or templates
 - **Always confirm before creating paid resources** - show cost estimate first
+- **⚠️ NEW: Always verify deployment** - never skip health check and log analysis
+- **⚠️ NEW: Node.js ZIP部署必须手动npm install** - 或者使用Git部署
+- **⚠️ NEW: Check startup command compatibility** - Node.js容器无bash
 - **Use Pay-As-You-Go by default** unless user explicitly requests Reserved Instances
 - **Pricing is in USD** - convert to user's currency if requested
-- For the latest pricing, always use WebSearch before presenting cost estimates
-- ARM template reference: `C:\work\architecture-center\docs\guide\` for best practices
-- Always validate generated templates with `validate_template.py` before deployment
+- **For the latest pricing, always use WebSearch** before presenting cost estimates
+- **ARM template reference**: `C:\work\architecture-center\docs\guide\` for best practices
+- **Always validate generated templates** with `validate_template.py` before deployment
+- **⚠️ CRITICAL: Read `references/azure-deployment-health-issues-v2.md`** when deployment fails
+- **⚠️ SECURITY: Invoke `/architecture`** (engineering plugin) when Enterprise security level is selected — this skill's base NSG templates only cover HTTP/HTTPS inbound. The `/architecture` ADR output should guide Application Gateway WAF, Key Vault, Defender for Cloud, Private Endpoints, and multi-tier NSG additions
