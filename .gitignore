@@ -129,3 +129,4 @@ apps/windows/publish-fd/
 apps/electron/
 releases/
 releases/*.exe
+skills/evolver/.git-evolver-backup/

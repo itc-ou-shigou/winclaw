@@ -1,0 +1,14 @@
+node_modules/
+.env
+memory/
+assets/gep/candidates.jsonl
+assets/gep/external_candidates.jsonl
+dist-public/
+
+# Docker / vibe testing
+test/tmp/
+.docker-test-state/
+
+# Local identity persistence (device + node)
+.evomap_device_id
+.evomap_node_id
