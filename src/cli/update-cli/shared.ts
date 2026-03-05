@@ -5,6 +5,7 @@ import path from "node:path";
 import { resolveStateDir } from "../../config/paths.js";
 import { resolveWinClawPackageRoot } from "../../infra/winclaw-root.js";
 import { readPackageName, readPackageVersion } from "../../infra/package-json.js";
+import { normalizePackageTagInput } from "../../infra/package-tag.js";
 import { trimLogTail } from "../../infra/restart-sentinel.js";
 import { parseSemver } from "../../infra/runtime-guard.js";
 import { fetchNpmTagVersion } from "../../infra/update-check.js";
@@ -58,20 +59,7 @@ export const DEFAULT_PACKAGE_NAME = "winclaw";
 const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME]);
 
 export function normalizeTag(value?: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed.startsWith("winclaw@")) {
-    return trimmed.slice("winclaw@".length);
-  }
-  if (trimmed.startsWith(`${DEFAULT_PACKAGE_NAME}@`)) {
-    return trimmed.slice(`${DEFAULT_PACKAGE_NAME}@`.length);
-  }
-  return trimmed;
+  return normalizePackageTagInput(value, ["winclaw", DEFAULT_PACKAGE_NAME]);
 }
 
 export function normalizeVersionTag(tag: string): string | null {

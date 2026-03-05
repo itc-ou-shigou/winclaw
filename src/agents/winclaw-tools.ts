@@ -69,6 +69,8 @@ export function createWinClawTools(options?: {
   requesterSenderId?: string | null;
   /** Whether the requesting sender is an owner. */
   senderIsOwner?: boolean;
+  /** Session ID for session-scoped operations. */
+  sessionId?: string;
 }): AnyAgentTool[] {
   const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
   const imageTool = options?.agentDir?.trim()

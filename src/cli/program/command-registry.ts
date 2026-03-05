@@ -83,7 +83,7 @@ const coreEntries: CoreCliEntry[] = [
       {
         name: "config",
         description:
-          "Non-interactive config helpers (get/set/unset). Default: starts setup wizard.",
+          "Non-interactive config helpers (get/set/unset/file/validate). Default: starts setup wizard.",
         hasSubcommands: true,
       },
     ],
@@ -200,19 +200,6 @@ const coreEntries: CoreCliEntry[] = [
     register: async ({ program }) => {
       const mod = await import("../browser-cli.js");
       mod.registerBrowserCli(program);
-    },
-  },
-  {
-    commands: [
-      {
-        name: "grc",
-        description: "Manage GRC (Global Resource Center) integration",
-        hasSubcommands: true,
-      },
-    ],
-    register: async ({ program }) => {
-      const mod = await import("./register.grc.js");
-      mod.registerGrcCommand(program);
     },
   },
 ];

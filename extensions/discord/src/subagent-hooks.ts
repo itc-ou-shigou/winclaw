@@ -1,10 +1,10 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/discord";
 import {
   autoBindSpawnedDiscordSubagent,
   listThreadBindingsBySessionKey,
   resolveDiscordAccount,
   unbindThreadBindingsBySessionKey,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/discord";
 
 function summarizeError(err: unknown): string {
   if (err instanceof Error) {

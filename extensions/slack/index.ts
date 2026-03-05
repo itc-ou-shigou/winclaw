@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/slack";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/slack";
 import { slackPlugin } from "./src/channel.js";
 import { setSlackRuntime } from "./src/runtime.js";
 

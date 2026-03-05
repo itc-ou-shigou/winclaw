@@ -3,7 +3,7 @@ import {
   type WinClawPluginApi,
   type ProviderAuthContext,
   type ProviderAuthResult,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/copilot-proxy";
 
 const DEFAULT_BASE_URL = "http://localhost:3000/v1";
 const DEFAULT_API_KEY = "n/a";

@@ -1,4 +1,4 @@
-import type { WinClawConfig, WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawConfig, WinClawPluginApi } from "winclaw/plugin-sdk/thread-ownership";
 
 type ThreadOwnershipConfig = {
   forwarderUrl?: string;

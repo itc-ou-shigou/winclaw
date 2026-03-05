@@ -2,7 +2,7 @@ import type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
   WinClawConfig,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/googlechat";
 import {
   createActionGate,
   extractToolSend,
@@ -10,7 +10,7 @@ import {
   readNumberParam,
   readReactionParams,
   readStringParam,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/googlechat";
 import { listEnabledGoogleChatAccounts, resolveGoogleChatAccount } from "./accounts.js";
 import {
   createGoogleChatReaction,

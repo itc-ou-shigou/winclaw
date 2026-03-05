@@ -1,6 +1,6 @@
 import Contacts
 import Foundation
-import WinClawKit
+import OpenClawKit
 
 final class ContactsService: ContactsServicing {
     private static var payloadKeys: [CNKeyDescriptor] {
@@ -14,15 +14,8 @@ final class ContactsService: ContactsServicing {
         ]
     }
 
-    func search(params: WinClawContactsSearchParams) async throws -> WinClawContactsSearchPayload {
-        let store = CNContactStore()
-        let status = CNContactStore.authorizationStatus(for: .contacts)
-        let authorized = await Self.ensureAuthorization(store: store, status: status)
-        guard authorized else {
-            throw NSError(domain: "Contacts", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "CONTACTS_PERMISSION_REQUIRED: grant Contacts permission",
-            ])
-        }
+    func search(params: OpenClawContactsSearchParams) async throws -> OpenClawContactsSearchPayload {
+        let store = try await Self.authorizedStore()
 
         let limit = max(1, min(params.limit ?? 25, 200))
 
@@ -43,18 +36,11 @@ final class ContactsService: ContactsServicing {
         let sliced = Array(contacts.prefix(limit))
         let payload = sliced.map { Self.payload(from: $0) }
 
-        return WinClawContactsSearchPayload(contacts: payload)
+        return OpenClawContactsSearchPayload(contacts: payload)
     }
 
-    func add(params: WinClawContactsAddParams) async throws -> WinClawContactsAddPayload {
-        let store = CNContactStore()
-        let status = CNContactStore.authorizationStatus(for: .contacts)
-        let authorized = await Self.ensureAuthorization(store: store, status: status)
-        guard authorized else {
-            throw NSError(domain: "Contacts", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "CONTACTS_PERMISSION_REQUIRED: grant Contacts permission",
-            ])
-        }
+    func add(params: OpenClawContactsAddParams) async throws -> OpenClawContactsAddPayload {
+        let store = try await Self.authorizedStore()
 
         let givenName = params.givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let familyName = params.familyName?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -78,7 +64,7 @@ final class ContactsService: ContactsServicing {
                 phoneNumbers: phoneNumbers,
                 emails: emails)
             {
-                return WinClawContactsAddPayload(contact: Self.payload(from: existing))
+                return OpenClawContactsAddPayload(contact: Self.payload(from: existing))
             }
         }
 
@@ -109,7 +95,7 @@ final class ContactsService: ContactsServicing {
             persisted = contact
         }
 
-        return WinClawContactsAddPayload(contact: Self.payload(from: persisted))
+        return OpenClawContactsAddPayload(contact: Self.payload(from: persisted))
     }
 
     private static func ensureAuthorization(store: CNContactStore, status: CNAuthorizationStatus) async -> Bool {
@@ -125,6 +111,18 @@ final class ContactsService: ContactsServicing {
         @unknown default:
             return false
         }
+    }
+
+    private static func authorizedStore() async throws -> CNContactStore {
+        let store = CNContactStore()
+        let status = CNContactStore.authorizationStatus(for: .contacts)
+        let authorized = await Self.ensureAuthorization(store: store, status: status)
+        guard authorized else {
+            throw NSError(domain: "Contacts", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "CONTACTS_PERMISSION_REQUIRED: grant Contacts permission",
+            ])
+        }
+        return store
     }
 
     private static func normalizeStrings(_ values: [String]?, lowercased: Bool = false) -> [String] {
@@ -192,8 +190,8 @@ final class ContactsService: ContactsServicing {
         return normalized.isEmpty ? trimmed : normalized
     }
 
-    private static func payload(from contact: CNContact) -> WinClawContactPayload {
-        WinClawContactPayload(
+    private static func payload(from contact: CNContact) -> OpenClawContactPayload {
+        OpenClawContactPayload(
             identifier: contact.identifier,
             displayName: CNContactFormatter.string(from: contact, style: .fullName)
                 ?? "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespacesAndNewlines),

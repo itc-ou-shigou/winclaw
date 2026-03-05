@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/memory-core";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/memory-core";
 
 const memoryCorePlugin = {
   id: "memory-core",

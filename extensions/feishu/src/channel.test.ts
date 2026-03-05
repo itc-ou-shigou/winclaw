@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/feishu";
 import { describe, expect, it, vi } from "vitest";
 
 const probeFeishuMock = vi.hoisted(() => vi.fn());

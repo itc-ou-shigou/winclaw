@@ -141,11 +141,53 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       const cfg = await readJsonFile<{
         gateway?: { auth?: { mode?: string; token?: string } };
         agents?: { defaults?: { workspace?: string } };
+        tools?: { profile?: string };
       }>(configPath);
 
       expect(cfg?.agents?.defaults?.workspace).toBe(workspace);
+      expect(cfg?.tools?.profile).toBe("messaging");
       expect(cfg?.gateway?.auth?.mode).toBe("token");
       expect(cfg?.gateway?.auth?.token).toBe(token);
+    });
+  }, 60_000);
+
+  it("uses WINCLAW_GATEWAY_TOKEN when --gateway-token is omitted", async () => {
+    await withStateDir("state-env-token-", async (stateDir) => {
+      const envToken = "tok_env_fallback_123";
+      const workspace = path.join(stateDir, "winclaw");
+      const prevToken = process.env.WINCLAW_GATEWAY_TOKEN;
+      process.env.WINCLAW_GATEWAY_TOKEN = envToken;
+
+      try {
+        await runNonInteractiveOnboarding(
+          {
+            nonInteractive: true,
+            mode: "local",
+            workspace,
+            authChoice: "skip",
+            skipSkills: true,
+            skipHealth: true,
+            installDaemon: false,
+            gatewayBind: "loopback",
+            gatewayAuth: "token",
+          },
+          runtime,
+        );
+
+        const configPath = resolveStateConfigPath(process.env, stateDir);
+        const cfg = await readJsonFile<{
+          gateway?: { auth?: { mode?: string; token?: string } };
+        }>(configPath);
+
+        expect(cfg?.gateway?.auth?.mode).toBe("token");
+        expect(cfg?.gateway?.auth?.token).toBe(envToken);
+      } finally {
+        if (prevToken === undefined) {
+          delete process.env.WINCLAW_GATEWAY_TOKEN;
+        } else {
+          process.env.WINCLAW_GATEWAY_TOKEN = prevToken;
+        }
+      }
     });
   }, 60_000);
 

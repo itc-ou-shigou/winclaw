@@ -1,4 +1,4 @@
-import type { ChannelAccountSnapshot, ChannelStatusIssue } from "winclaw/plugin-sdk";
+import type { ChannelAccountSnapshot, ChannelStatusIssue } from "winclaw/plugin-sdk/zalo";
 
 type ZaloAccountStatus = {
   accountId?: unknown;

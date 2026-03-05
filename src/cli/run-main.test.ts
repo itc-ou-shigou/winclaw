@@ -114,6 +114,7 @@ describe("shouldEnsureCliPath", () => {
 
   it("skips path bootstrap for read-only fast paths", () => {
     expect(shouldEnsureCliPath(["node", "winclaw", "status"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "winclaw", "--log-level", "debug", "status"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "winclaw", "sessions", "--json"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "winclaw", "config", "get", "update"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "winclaw", "models", "status", "--json"])).toBe(false);

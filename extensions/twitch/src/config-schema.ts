@@ -1,4 +1,4 @@
-import { MarkdownConfigSchema } from "winclaw/plugin-sdk";
+import { MarkdownConfigSchema } from "winclaw/plugin-sdk/twitch";
 import { z } from "zod";
 
 /**

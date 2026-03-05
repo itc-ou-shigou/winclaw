@@ -38,6 +38,8 @@ inside a sandbox workspace under `~/.winclaw/sandboxes`, not your host workspace
 
 `winclaw onboard`, `winclaw configure`, or `winclaw setup` will create the
 workspace and seed the bootstrap files if they are missing.
+Sandbox seed copies only accept regular in-workspace files; symlink/hardlink
+aliases that resolve outside the source workspace are ignored.
 
 If you already manage the workspace files yourself, you can disable bootstrap
 file creation:

@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/twitch";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/twitch";
 import { twitchPlugin } from "./src/plugin.js";
 import { setTwitchRuntime } from "./src/runtime.js";
 

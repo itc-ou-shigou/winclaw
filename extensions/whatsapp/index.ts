@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/whatsapp";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/whatsapp";
 import { whatsappPlugin } from "./src/channel.js";
 import { setWhatsAppRuntime } from "./src/runtime.js";
 

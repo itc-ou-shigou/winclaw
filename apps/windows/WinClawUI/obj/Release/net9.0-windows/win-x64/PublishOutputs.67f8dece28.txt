@@ -1,0 +1,5 @@
+C:\work\winclaw\releases\publish\WinClawUI.pdb
+C:\work\winclaw\releases\publish\Microsoft.Web.WebView2.Core.xml
+C:\work\winclaw\releases\publish\Microsoft.Web.WebView2.Wpf.xml
+C:\work\winclaw\releases\publish\Microsoft.Web.WebView2.WinForms.xml
+C:\work\winclaw\releases\publish\WinClawUI.exe

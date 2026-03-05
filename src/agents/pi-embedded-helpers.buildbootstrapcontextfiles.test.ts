@@ -3,8 +3,10 @@ import type { WinClawConfig } from "../config/config.js";
 import {
   buildBootstrapContextFiles,
   DEFAULT_BOOTSTRAP_MAX_CHARS,
+  DEFAULT_BOOTSTRAP_PROMPT_TRUNCATION_WARNING_MODE,
   DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS,
   resolveBootstrapMaxChars,
+  resolveBootstrapPromptTruncationWarningMode,
   resolveBootstrapTotalMaxChars,
 } from "./pi-embedded-helpers.js";
 import type { WorkspaceBootstrapFile } from "./workspace.js";
@@ -192,5 +194,34 @@ describe("bootstrap limit resolvers", () => {
       } as WinClawConfig;
       expect(resolver.resolve(cfg)).toBe(resolver.defaultValue);
     }
+  });
+});
+
+describe("resolveBootstrapPromptTruncationWarningMode", () => {
+  it("defaults to once", () => {
+    expect(resolveBootstrapPromptTruncationWarningMode()).toBe(
+      DEFAULT_BOOTSTRAP_PROMPT_TRUNCATION_WARNING_MODE,
+    );
+  });
+
+  it("accepts explicit valid modes", () => {
+    expect(
+      resolveBootstrapPromptTruncationWarningMode({
+        agents: { defaults: { bootstrapPromptTruncationWarning: "off" } },
+      } as WinClawConfig),
+    ).toBe("off");
+    expect(
+      resolveBootstrapPromptTruncationWarningMode({
+        agents: { defaults: { bootstrapPromptTruncationWarning: "always" } },
+      } as WinClawConfig),
+    ).toBe("always");
+  });
+
+  it("falls back to default for invalid values", () => {
+    expect(
+      resolveBootstrapPromptTruncationWarningMode({
+        agents: { defaults: { bootstrapPromptTruncationWarning: "invalid" } },
+      } as unknown as WinClawConfig),
+    ).toBe(DEFAULT_BOOTSTRAP_PROMPT_TRUNCATION_WARNING_MODE);
   });
 });

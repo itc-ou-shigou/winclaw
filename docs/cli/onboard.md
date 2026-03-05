@@ -23,8 +23,11 @@ Interactive onboarding wizard (local or remote Gateway setup).
 winclaw onboard
 winclaw onboard --flow quickstart
 winclaw onboard --flow manual
-winclaw onboard --mode remote --remote-url ws://gateway-host:18789
+winclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
+
+For plaintext private-network `ws://` targets (trusted networks only), set
+`WINCLAW_ALLOW_INSECURE_PRIVATE_WS=1` in the onboarding process environment.
 
 Non-interactive custom provider:
 

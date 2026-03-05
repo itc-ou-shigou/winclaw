@@ -2,12 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import Ajv from "ajv";
-import { resolvePreferredWinClawTmpDir } from "winclaw/plugin-sdk";
+import { resolvePreferredWinClawTmpDir } from "winclaw/plugin-sdk/llm-task";
 // NOTE: This extension is intended to be bundled with WinClaw.
 // When running from source (tests/dev), WinClaw internals live under src/.
 // When running from a built install, internals live under dist/ (no src/ tree).
 // So we resolve internal imports dynamically with src-first, dist-fallback.
-import type { WinClawPluginApi } from "../../../src/plugins/types.js";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/llm-task";
 
 type RunEmbeddedPiAgentFn = (params: Record<string, unknown>) => Promise<unknown>;
 

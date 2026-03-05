@@ -1,4 +1,4 @@
-import type { PluginRuntime } from "winclaw/plugin-sdk";
+import type { PluginRuntime } from "winclaw/plugin-sdk/feishu";
 
 let runtime: PluginRuntime | null = null;
 

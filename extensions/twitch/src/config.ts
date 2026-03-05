@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/twitch";
 import type { TwitchAccountConfig } from "./types.js";
 
 /**

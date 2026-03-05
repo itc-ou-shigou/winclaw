@@ -1,4 +1,4 @@
-import type { BaseProbeResult } from "winclaw/plugin-sdk";
+import type { BaseProbeResult } from "winclaw/plugin-sdk/mattermost";
 import { normalizeMattermostBaseUrl, readMattermostError, type MattermostUser } from "./client.js";
 
 export type MattermostProbe = BaseProbeResult & {

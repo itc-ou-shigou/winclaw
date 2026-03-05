@@ -6,9 +6,10 @@ import CryptoKit
 import EventKit
 import Foundation
 import Darwin
-import WinClawKit
+import OpenClawKit
 import Network
 import Observation
+import os
 import Photos
 import ReplayKit
 import Security
@@ -754,7 +755,7 @@ final class GatewayConnectionController {
         if manualClientId?.isEmpty == false {
             return manualClientId!
         }
-        return "winclaw-ios"
+        return "openclaw-ios"
     }
 
     private func resolveManualPort(host: String, port: Int, useTLS: Bool) -> Int? {
@@ -784,32 +785,32 @@ final class GatewayConnectionController {
     }
 
     private func currentCaps() -> [String] {
-        var caps = [WinClawCapability.canvas.rawValue, WinClawCapability.screen.rawValue]
+        var caps = [OpenClawCapability.canvas.rawValue, OpenClawCapability.screen.rawValue]
 
         // Default-on: if the key doesn't exist yet, treat it as enabled.
         let cameraEnabled =
             UserDefaults.standard.object(forKey: "camera.enabled") == nil
                 ? true
                 : UserDefaults.standard.bool(forKey: "camera.enabled")
-        if cameraEnabled { caps.append(WinClawCapability.camera.rawValue) }
+        if cameraEnabled { caps.append(OpenClawCapability.camera.rawValue) }
 
         let voiceWakeEnabled = UserDefaults.standard.bool(forKey: VoiceWakePreferences.enabledKey)
-        if voiceWakeEnabled { caps.append(WinClawCapability.voiceWake.rawValue) }
+        if voiceWakeEnabled { caps.append(OpenClawCapability.voiceWake.rawValue) }
 
         let locationModeRaw = UserDefaults.standard.string(forKey: "location.enabledMode") ?? "off"
-        let locationMode = WinClawLocationMode(rawValue: locationModeRaw) ?? .off
-        if locationMode != .off { caps.append(WinClawCapability.location.rawValue) }
+        let locationMode = OpenClawLocationMode(rawValue: locationModeRaw) ?? .off
+        if locationMode != .off { caps.append(OpenClawCapability.location.rawValue) }
 
-        caps.append(WinClawCapability.device.rawValue)
+        caps.append(OpenClawCapability.device.rawValue)
         if WatchMessagingService.isSupportedOnDevice() {
-            caps.append(WinClawCapability.watch.rawValue)
+            caps.append(OpenClawCapability.watch.rawValue)
         }
-        caps.append(WinClawCapability.photos.rawValue)
-        caps.append(WinClawCapability.contacts.rawValue)
-        caps.append(WinClawCapability.calendar.rawValue)
-        caps.append(WinClawCapability.reminders.rawValue)
+        caps.append(OpenClawCapability.photos.rawValue)
+        caps.append(OpenClawCapability.contacts.rawValue)
+        caps.append(OpenClawCapability.calendar.rawValue)
+        caps.append(OpenClawCapability.reminders.rawValue)
         if Self.motionAvailable() {
-            caps.append(WinClawCapability.motion.rawValue)
+            caps.append(OpenClawCapability.motion.rawValue)
         }
 
         return caps
@@ -817,58 +818,58 @@ final class GatewayConnectionController {
 
     private func currentCommands() -> [String] {
         var commands: [String] = [
-            WinClawCanvasCommand.present.rawValue,
-            WinClawCanvasCommand.hide.rawValue,
-            WinClawCanvasCommand.navigate.rawValue,
-            WinClawCanvasCommand.evalJS.rawValue,
-            WinClawCanvasCommand.snapshot.rawValue,
-            WinClawCanvasA2UICommand.push.rawValue,
-            WinClawCanvasA2UICommand.pushJSONL.rawValue,
-            WinClawCanvasA2UICommand.reset.rawValue,
-            WinClawScreenCommand.record.rawValue,
-            WinClawSystemCommand.notify.rawValue,
-            WinClawChatCommand.push.rawValue,
-            WinClawTalkCommand.pttStart.rawValue,
-            WinClawTalkCommand.pttStop.rawValue,
-            WinClawTalkCommand.pttCancel.rawValue,
-            WinClawTalkCommand.pttOnce.rawValue,
+            OpenClawCanvasCommand.present.rawValue,
+            OpenClawCanvasCommand.hide.rawValue,
+            OpenClawCanvasCommand.navigate.rawValue,
+            OpenClawCanvasCommand.evalJS.rawValue,
+            OpenClawCanvasCommand.snapshot.rawValue,
+            OpenClawCanvasA2UICommand.push.rawValue,
+            OpenClawCanvasA2UICommand.pushJSONL.rawValue,
+            OpenClawCanvasA2UICommand.reset.rawValue,
+            OpenClawScreenCommand.record.rawValue,
+            OpenClawSystemCommand.notify.rawValue,
+            OpenClawChatCommand.push.rawValue,
+            OpenClawTalkCommand.pttStart.rawValue,
+            OpenClawTalkCommand.pttStop.rawValue,
+            OpenClawTalkCommand.pttCancel.rawValue,
+            OpenClawTalkCommand.pttOnce.rawValue,
         ]
 
         let caps = Set(self.currentCaps())
-        if caps.contains(WinClawCapability.camera.rawValue) {
-            commands.append(WinClawCameraCommand.list.rawValue)
-            commands.append(WinClawCameraCommand.snap.rawValue)
-            commands.append(WinClawCameraCommand.clip.rawValue)
+        if caps.contains(OpenClawCapability.camera.rawValue) {
+            commands.append(OpenClawCameraCommand.list.rawValue)
+            commands.append(OpenClawCameraCommand.snap.rawValue)
+            commands.append(OpenClawCameraCommand.clip.rawValue)
         }
-        if caps.contains(WinClawCapability.location.rawValue) {
-            commands.append(WinClawLocationCommand.get.rawValue)
+        if caps.contains(OpenClawCapability.location.rawValue) {
+            commands.append(OpenClawLocationCommand.get.rawValue)
         }
-        if caps.contains(WinClawCapability.device.rawValue) {
-            commands.append(WinClawDeviceCommand.status.rawValue)
-            commands.append(WinClawDeviceCommand.info.rawValue)
+        if caps.contains(OpenClawCapability.device.rawValue) {
+            commands.append(OpenClawDeviceCommand.status.rawValue)
+            commands.append(OpenClawDeviceCommand.info.rawValue)
         }
-        if caps.contains(WinClawCapability.watch.rawValue) {
-            commands.append(WinClawWatchCommand.status.rawValue)
-            commands.append(WinClawWatchCommand.notify.rawValue)
+        if caps.contains(OpenClawCapability.watch.rawValue) {
+            commands.append(OpenClawWatchCommand.status.rawValue)
+            commands.append(OpenClawWatchCommand.notify.rawValue)
         }
-        if caps.contains(WinClawCapability.photos.rawValue) {
-            commands.append(WinClawPhotosCommand.latest.rawValue)
+        if caps.contains(OpenClawCapability.photos.rawValue) {
+            commands.append(OpenClawPhotosCommand.latest.rawValue)
         }
-        if caps.contains(WinClawCapability.contacts.rawValue) {
-            commands.append(WinClawContactsCommand.search.rawValue)
-            commands.append(WinClawContactsCommand.add.rawValue)
+        if caps.contains(OpenClawCapability.contacts.rawValue) {
+            commands.append(OpenClawContactsCommand.search.rawValue)
+            commands.append(OpenClawContactsCommand.add.rawValue)
         }
-        if caps.contains(WinClawCapability.calendar.rawValue) {
-            commands.append(WinClawCalendarCommand.events.rawValue)
-            commands.append(WinClawCalendarCommand.add.rawValue)
+        if caps.contains(OpenClawCapability.calendar.rawValue) {
+            commands.append(OpenClawCalendarCommand.events.rawValue)
+            commands.append(OpenClawCalendarCommand.add.rawValue)
         }
-        if caps.contains(WinClawCapability.reminders.rawValue) {
-            commands.append(WinClawRemindersCommand.list.rawValue)
-            commands.append(WinClawRemindersCommand.add.rawValue)
+        if caps.contains(OpenClawCapability.reminders.rawValue) {
+            commands.append(OpenClawRemindersCommand.list.rawValue)
+            commands.append(OpenClawRemindersCommand.add.rawValue)
         }
-        if caps.contains(WinClawCapability.motion.rawValue) {
-            commands.append(WinClawMotionCommand.activity.rawValue)
-            commands.append(WinClawMotionCommand.pedometer.rawValue)
+        if caps.contains(OpenClawCapability.motion.rawValue) {
+            commands.append(OpenClawMotionCommand.activity.rawValue)
+            commands.append(OpenClawMotionCommand.pedometer.rawValue)
         }
 
         return commands
@@ -990,12 +991,16 @@ extension GatewayConnectionController {
 #endif
 
 private final class GatewayTLSFingerprintProbe: NSObject, URLSessionDelegate, @unchecked Sendable {
+    private struct ProbeState {
+        var didFinish = false
+        var session: URLSession?
+        var task: URLSessionWebSocketTask?
+    }
+
     private let url: URL
     private let timeoutSeconds: Double
     private let onComplete: (String?) -> Void
-    private var didFinish = false
-    private var session: URLSession?
-    private var task: URLSessionWebSocketTask?
+    private let state = OSAllocatedUnfairLock(initialState: ProbeState())
 
     init(url: URL, timeoutSeconds: Double, onComplete: @escaping (String?) -> Void) {
         self.url = url
@@ -1008,9 +1013,11 @@ private final class GatewayTLSFingerprintProbe: NSObject, URLSessionDelegate, @u
         config.timeoutIntervalForRequest = self.timeoutSeconds
         config.timeoutIntervalForResource = self.timeoutSeconds
         let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
-        self.session = session
         let task = session.webSocketTask(with: self.url)
-        self.task = task
+        self.state.withLock { s in
+            s.session = session
+            s.task = task
+        }
         task.resume()
 
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + self.timeoutSeconds) { [weak self] in
@@ -1036,12 +1043,18 @@ private final class GatewayTLSFingerprintProbe: NSObject, URLSessionDelegate, @u
     }
 
     private func finish(_ fingerprint: String?) {
-        objc_sync_enter(self)
-        defer { objc_sync_exit(self) }
-        guard !self.didFinish else { return }
-        self.didFinish = true
-        self.task?.cancel(with: .goingAway, reason: nil)
-        self.session?.invalidateAndCancel()
+        let (shouldComplete, taskToCancel, sessionToInvalidate) = self.state.withLock { s -> (Bool, URLSessionWebSocketTask?, URLSession?) in
+            guard !s.didFinish else { return (false, nil, nil) }
+            s.didFinish = true
+            let task = s.task
+            let session = s.session
+            s.task = nil
+            s.session = nil
+            return (true, task, session)
+        }
+        guard shouldComplete else { return }
+        taskToCancel?.cancel(with: .goingAway, reason: nil)
+        sessionToInvalidate?.invalidateAndCancel()
         self.onComplete(fingerprint)
     }
 

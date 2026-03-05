@@ -1,5 +1,5 @@
 import type * as Lark from "@larksuiteoapi/node-sdk";
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/feishu";
 import { listEnabledFeishuAccounts } from "./accounts.js";
 import { FeishuPermSchema, type FeishuPermParams } from "./perm-schema.js";
 import { createFeishuToolClient, resolveAnyEnabledFeishuToolsConfig } from "./tool-account.js";

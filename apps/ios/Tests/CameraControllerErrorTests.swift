@@ -1,5 +1,5 @@
 import Testing
-@testable import WinClaw
+@testable import OpenClaw
 
 @Suite struct CameraControllerErrorTests {
     @Test func errorDescriptionsAreStable() {

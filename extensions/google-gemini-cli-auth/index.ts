@@ -3,7 +3,7 @@ import {
   emptyPluginConfigSchema,
   type WinClawPluginApi,
   type ProviderAuthContext,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/google-gemini-cli-auth";
 import { loginGeminiCliOAuth } from "./oauth.js";
 
 const PROVIDER_ID = "google-gemini-cli";

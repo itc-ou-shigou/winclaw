@@ -16,6 +16,7 @@ COPY patches ./patches
 COPY ui ./ui
 COPY extensions/memory-core ./extensions/memory-core
 COPY vendor/a2ui/renderers/lit ./vendor/a2ui/renderers/lit
+COPY apps/shared/WinClawKit/Sources/WinClawKit/Resources ./apps/shared/WinClawKit/Sources/WinClawKit/Resources
 COPY apps/shared/WinClawKit/Tools/CanvasA2UI ./apps/shared/WinClawKit/Tools/CanvasA2UI
 
 RUN pnpm install --frozen-lockfile

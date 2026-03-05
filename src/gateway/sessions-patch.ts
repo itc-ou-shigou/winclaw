@@ -359,19 +359,6 @@ export async function applySessionsPatchToStore(params: {
     }
   }
 
-  if ("workspace" in patch) {
-    const raw = (patch as Record<string, unknown>).workspace;
-    if (raw === null) {
-      delete next.workspace;
-    } else if (raw !== undefined) {
-      const trimmed = String(raw).trim();
-      if (!trimmed) {
-        return invalid("invalid workspace: empty");
-      }
-      next.workspace = trimmed;
-    }
-  }
-
   store[storeKey] = next;
   return { ok: true, entry: next };
 }

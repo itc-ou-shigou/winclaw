@@ -1,4 +1,4 @@
-import type { AnyAgentTool, WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { AnyAgentTool, WinClawPluginApi } from "winclaw/plugin-sdk/feishu";
 
 type ToolContextLike = {
   agentAccountId?: string;

@@ -1,9 +1,9 @@
-import type { GroupPolicy, SenderGroupAccessDecision } from "winclaw/plugin-sdk";
+import type { GroupPolicy, SenderGroupAccessDecision } from "winclaw/plugin-sdk/zalo";
 import {
   evaluateSenderGroupAccess,
   isNormalizedSenderAllowed,
   resolveOpenProviderRuntimeGroupPolicy,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/zalo";
 
 const ZALO_ALLOW_FROM_PREFIX_RE = /^(zalo|zl):/i;
 

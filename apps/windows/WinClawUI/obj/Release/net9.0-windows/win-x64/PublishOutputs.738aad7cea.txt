@@ -1,0 +1,5 @@
+C:\work\winclaw\dist\win-staging\winclawui-publish\WinClawUI.pdb
+C:\work\winclaw\dist\win-staging\winclawui-publish\Microsoft.Web.WebView2.Core.xml
+C:\work\winclaw\dist\win-staging\winclawui-publish\Microsoft.Web.WebView2.Wpf.xml
+C:\work\winclaw\dist\win-staging\winclawui-publish\Microsoft.Web.WebView2.WinForms.xml
+C:\work\winclaw\dist\win-staging\winclawui-publish\WinClawUI.exe

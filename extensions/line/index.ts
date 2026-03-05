@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/line";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/line";
 import { registerLineCardCommand } from "./src/card-command.js";
 import { linePlugin } from "./src/channel.js";
 import { setLineRuntime } from "./src/runtime.js";

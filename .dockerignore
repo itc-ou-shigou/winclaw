@@ -51,6 +51,10 @@ vendor/
 # Keep the rest of apps/ and vendor/ excluded to avoid a large build context.
 !apps/shared/
 !apps/shared/WinClawKit/
+!apps/shared/WinClawKit/Sources/
+!apps/shared/WinClawKit/Sources/WinClawKit/
+!apps/shared/WinClawKit/Sources/WinClawKit/Resources/
+!apps/shared/WinClawKit/Sources/WinClawKit/Resources/tool-display.json
 !apps/shared/WinClawKit/Tools/
 !apps/shared/WinClawKit/Tools/CanvasA2UI/
 !apps/shared/WinClawKit/Tools/CanvasA2UI/**

@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/msteams",
-  "version": "2026.2.26",
+  "version": "2026.3.2",
   "description": "WinClaw Microsoft Teams channel plugin",
   "type": "module",
   "dependencies": {

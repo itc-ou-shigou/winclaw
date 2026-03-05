@@ -3,7 +3,7 @@ import {
   TtsConfigSchema,
   TtsModeSchema,
   TtsProviderSchema,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/voice-call";
 import { z } from "zod";
 
 // -----------------------------------------------------------------------------

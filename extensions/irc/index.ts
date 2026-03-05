@@ -1,5 +1,5 @@
-import type { ChannelPlugin, WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { ChannelPlugin, WinClawPluginApi } from "winclaw/plugin-sdk/irc";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/irc";
 import { ircPlugin } from "./src/channel.js";
 import { setIrcRuntime } from "./src/runtime.js";
 

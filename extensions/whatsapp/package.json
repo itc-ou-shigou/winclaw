@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/whatsapp",
-  "version": "2026.2.26",
+  "version": "2026.3.2",
   "private": true,
   "description": "WinClaw WhatsApp channel plugin",
   "type": "module",

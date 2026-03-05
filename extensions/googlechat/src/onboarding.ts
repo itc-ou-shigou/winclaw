@@ -1,4 +1,4 @@
-import type { WinClawConfig, DmPolicy } from "winclaw/plugin-sdk";
+import type { WinClawConfig, DmPolicy } from "winclaw/plugin-sdk/googlechat";
 import {
   addWildcardAllowFrom,
   formatDocsLink,
@@ -10,7 +10,7 @@ import {
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,
   migrateBaseNameToDefaultAccount,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/googlechat";
 import {
   listGoogleChatAccountIds,
   resolveDefaultGoogleChatAccountId,

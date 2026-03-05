@@ -17,3 +17,15 @@ test("exec supports pty output", async () => {
   const text = result.content?.find((item) => item.type === "text")?.text ?? "";
   expect(text).toContain("ok");
 });
+
+test("exec sets WINCLAW_SHELL in pty mode", async () => {
+  const tool = createExecTool({ allowBackground: false, security: "full", ask: "off" });
+  const result = await tool.execute("toolcall-winclaw-shell", {
+    command: "node -e \"process.stdout.write(process.env.WINCLAW_SHELL || '')\"",
+    pty: true,
+  });
+
+  expect(result.details.status).toBe("completed");
+  const text = result.content?.find((item) => item.type === "text")?.text ?? "";
+  expect(text).toContain("exec");
+});

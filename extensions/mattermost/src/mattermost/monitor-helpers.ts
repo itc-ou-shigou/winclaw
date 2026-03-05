@@ -2,8 +2,8 @@ import {
   formatInboundFromLabel as formatInboundFromLabelShared,
   resolveThreadSessionKeys as resolveThreadSessionKeysShared,
   type WinClawConfig,
-} from "winclaw/plugin-sdk";
-export { createDedupeCache, rawDataToString } from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/mattermost";
+export { createDedupeCache, rawDataToString } from "winclaw/plugin-sdk/mattermost";
 
 export type ResponsePrefixContext = {
   model?: string;

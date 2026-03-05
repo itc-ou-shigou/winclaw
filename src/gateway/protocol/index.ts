@@ -74,60 +74,6 @@ import {
   ConfigSetParamsSchema,
   type ConnectParams,
   ConnectParamsSchema,
-  type GrcEvolutionParams,
-  GrcEvolutionParamsSchema,
-  type GrcLoginParams,
-  GrcLoginParamsSchema,
-  type GrcLogoutParams,
-  GrcLogoutParamsSchema,
-  type GrcPairParams,
-  GrcPairParamsSchema,
-  type GrcPairVerifyParams,
-  GrcPairVerifyParamsSchema,
-  type GrcSkillsParams,
-  GrcSkillsParamsSchema,
-  type GrcStatusParams,
-  GrcStatusParamsSchema,
-  type GrcSyncParams,
-  GrcSyncParamsSchema,
-  type GrcTelemetryParams,
-  GrcTelemetryParamsSchema,
-  type GrcCommunityChannelsParams,
-  GrcCommunityChannelsParamsSchema,
-  type GrcCommunityFeedParams,
-  GrcCommunityFeedParamsSchema,
-  type GrcCommunityPostParams,
-  GrcCommunityPostParamsSchema,
-  type GrcCommunityRepliesParams,
-  GrcCommunityRepliesParamsSchema,
-  type GrcCommunityCreatePostParams,
-  GrcCommunityCreatePostParamsSchema,
-  type GrcCommunityReplyParams,
-  GrcCommunityReplyParamsSchema,
-  type GrcCommunityVoteParams,
-  GrcCommunityVoteParamsSchema,
-  type GrcCommunityStatsParams,
-  GrcCommunityStatsParamsSchema,
-  type GrcSkillsSearchParams,
-  GrcSkillsSearchParamsSchema,
-  type GrcSkillsDetailParams,
-  GrcSkillsDetailParamsSchema,
-  type GrcSkillsVersionsParams,
-  GrcSkillsVersionsParamsSchema,
-  type GrcSkillsInstallGrcParams,
-  GrcSkillsInstallGrcParamsSchema,
-  type GrcSkillsUpdateGrcParams,
-  GrcSkillsUpdateGrcParamsSchema,
-  type GrcSkillsUninstallGrcParams,
-  GrcSkillsUninstallGrcParamsSchema,
-  type GrcSkillsInstalledParams,
-  GrcSkillsInstalledParamsSchema,
-  type GrcSkillsRecommendedParams,
-  GrcSkillsRecommendedParamsSchema,
-  type GrcSkillsPublishParams,
-  GrcSkillsPublishParamsSchema,
-  type GrcSkillsRateParams,
-  GrcSkillsRateParamsSchema,
   type CronAddParams,
   CronAddParamsSchema,
   type CronJob,
@@ -222,6 +168,10 @@ import {
   type ResponseFrame,
   ResponseFrameSchema,
   SendParamsSchema,
+  type SecretsResolveParams,
+  type SecretsResolveResult,
+  SecretsResolveParamsSchema,
+  SecretsResolveResultSchema,
   type SessionsCompactParams,
   SessionsCompactParamsSchema,
   type SessionsDeleteParams,
@@ -338,6 +288,12 @@ export const validateNodeInvokeResultParams = ajv.compile<NodeInvokeResultParams
 );
 export const validateNodeEventParams = ajv.compile<NodeEventParams>(NodeEventParamsSchema);
 export const validatePushTestParams = ajv.compile<PushTestParams>(PushTestParamsSchema);
+export const validateSecretsResolveParams = ajv.compile<SecretsResolveParams>(
+  SecretsResolveParamsSchema,
+);
+export const validateSecretsResolveResult = ajv.compile<SecretsResolveResult>(
+  SecretsResolveResultSchema,
+);
 export const validateSessionsListParams = ajv.compile<SessionsListParams>(SessionsListParamsSchema);
 export const validateSessionsPreviewParams = ajv.compile<SessionsPreviewParams>(
   SessionsPreviewParamsSchema,
@@ -434,33 +390,6 @@ export const validateUpdateRunParams = ajv.compile<UpdateRunParams>(UpdateRunPar
 export const validateWebLoginStartParams =
   ajv.compile<WebLoginStartParams>(WebLoginStartParamsSchema);
 export const validateWebLoginWaitParams = ajv.compile<WebLoginWaitParams>(WebLoginWaitParamsSchema);
-export const validateGrcStatusParams = ajv.compile<GrcStatusParams>(GrcStatusParamsSchema);
-export const validateGrcLoginParams = ajv.compile<GrcLoginParams>(GrcLoginParamsSchema);
-export const validateGrcLogoutParams = ajv.compile<GrcLogoutParams>(GrcLogoutParamsSchema);
-export const validateGrcSyncParams = ajv.compile<GrcSyncParams>(GrcSyncParamsSchema);
-export const validateGrcSkillsParams = ajv.compile<GrcSkillsParams>(GrcSkillsParamsSchema);
-export const validateGrcEvolutionParams = ajv.compile<GrcEvolutionParams>(GrcEvolutionParamsSchema);
-export const validateGrcTelemetryParams = ajv.compile<GrcTelemetryParams>(GrcTelemetryParamsSchema);
-export const validateGrcPairParams = ajv.compile<GrcPairParams>(GrcPairParamsSchema);
-export const validateGrcPairVerifyParams = ajv.compile<GrcPairVerifyParams>(GrcPairVerifyParamsSchema);
-export const validateGrcCommunityChannelsParams = ajv.compile<GrcCommunityChannelsParams>(GrcCommunityChannelsParamsSchema);
-export const validateGrcCommunityFeedParams = ajv.compile<GrcCommunityFeedParams>(GrcCommunityFeedParamsSchema);
-export const validateGrcCommunityPostParams = ajv.compile<GrcCommunityPostParams>(GrcCommunityPostParamsSchema);
-export const validateGrcCommunityRepliesParams = ajv.compile<GrcCommunityRepliesParams>(GrcCommunityRepliesParamsSchema);
-export const validateGrcCommunityCreatePostParams = ajv.compile<GrcCommunityCreatePostParams>(GrcCommunityCreatePostParamsSchema);
-export const validateGrcCommunityReplyParams = ajv.compile<GrcCommunityReplyParams>(GrcCommunityReplyParamsSchema);
-export const validateGrcCommunityVoteParams = ajv.compile<GrcCommunityVoteParams>(GrcCommunityVoteParamsSchema);
-export const validateGrcCommunityStatsParams = ajv.compile<GrcCommunityStatsParams>(GrcCommunityStatsParamsSchema);
-export const validateGrcSkillsSearchParams = ajv.compile<GrcSkillsSearchParams>(GrcSkillsSearchParamsSchema);
-export const validateGrcSkillsDetailParams = ajv.compile<GrcSkillsDetailParams>(GrcSkillsDetailParamsSchema);
-export const validateGrcSkillsVersionsParams = ajv.compile<GrcSkillsVersionsParams>(GrcSkillsVersionsParamsSchema);
-export const validateGrcSkillsInstallGrcParams = ajv.compile<GrcSkillsInstallGrcParams>(GrcSkillsInstallGrcParamsSchema);
-export const validateGrcSkillsUpdateGrcParams = ajv.compile<GrcSkillsUpdateGrcParams>(GrcSkillsUpdateGrcParamsSchema);
-export const validateGrcSkillsUninstallGrcParams = ajv.compile<GrcSkillsUninstallGrcParams>(GrcSkillsUninstallGrcParamsSchema);
-export const validateGrcSkillsInstalledParams = ajv.compile<GrcSkillsInstalledParams>(GrcSkillsInstalledParamsSchema);
-export const validateGrcSkillsRecommendedParams = ajv.compile<GrcSkillsRecommendedParams>(GrcSkillsRecommendedParamsSchema);
-export const validateGrcSkillsPublishParams = ajv.compile<GrcSkillsPublishParams>(GrcSkillsPublishParamsSchema);
-export const validateGrcSkillsRateParams = ajv.compile<GrcSkillsRateParams>(GrcSkillsRateParamsSchema);
 
 export function formatValidationErrors(errors: ErrorObject[] | null | undefined) {
   if (!errors?.length) {
@@ -589,33 +518,6 @@ export {
   ChatSendParamsSchema,
   ChatInjectParamsSchema,
   UpdateRunParamsSchema,
-  GrcStatusParamsSchema,
-  GrcLoginParamsSchema,
-  GrcLogoutParamsSchema,
-  GrcSyncParamsSchema,
-  GrcSkillsParamsSchema,
-  GrcEvolutionParamsSchema,
-  GrcTelemetryParamsSchema,
-  GrcPairParamsSchema,
-  GrcPairVerifyParamsSchema,
-  GrcCommunityChannelsParamsSchema,
-  GrcCommunityFeedParamsSchema,
-  GrcCommunityPostParamsSchema,
-  GrcCommunityRepliesParamsSchema,
-  GrcCommunityCreatePostParamsSchema,
-  GrcCommunityReplyParamsSchema,
-  GrcCommunityVoteParamsSchema,
-  GrcCommunityStatsParamsSchema,
-  GrcSkillsSearchParamsSchema,
-  GrcSkillsDetailParamsSchema,
-  GrcSkillsVersionsParamsSchema,
-  GrcSkillsInstallGrcParamsSchema,
-  GrcSkillsUpdateGrcParamsSchema,
-  GrcSkillsUninstallGrcParamsSchema,
-  GrcSkillsInstalledParamsSchema,
-  GrcSkillsRecommendedParamsSchema,
-  GrcSkillsPublishParamsSchema,
-  GrcSkillsRateParamsSchema,
   TickEventSchema,
   ShutdownEventSchema,
   ProtocolSchemas,
@@ -726,31 +628,4 @@ export type {
   PollParams,
   UpdateRunParams,
   ChatInjectParams,
-  GrcStatusParams,
-  GrcLoginParams,
-  GrcLogoutParams,
-  GrcSyncParams,
-  GrcSkillsParams,
-  GrcEvolutionParams,
-  GrcTelemetryParams,
-  GrcPairParams,
-  GrcPairVerifyParams,
-  GrcCommunityChannelsParams,
-  GrcCommunityFeedParams,
-  GrcCommunityPostParams,
-  GrcCommunityRepliesParams,
-  GrcCommunityCreatePostParams,
-  GrcCommunityReplyParams,
-  GrcCommunityVoteParams,
-  GrcCommunityStatsParams,
-  GrcSkillsSearchParams,
-  GrcSkillsDetailParams,
-  GrcSkillsVersionsParams,
-  GrcSkillsInstallGrcParams,
-  GrcSkillsUpdateGrcParams,
-  GrcSkillsUninstallGrcParams,
-  GrcSkillsInstalledParams,
-  GrcSkillsRecommendedParams,
-  GrcSkillsPublishParams,
-  GrcSkillsRateParams,
 };

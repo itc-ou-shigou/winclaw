@@ -2,14 +2,14 @@
  * Twitch onboarding adapter for CLI setup wizard.
  */
 
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/twitch";
 import {
   formatDocsLink,
   promptChannelAccessConfig,
   type ChannelOnboardingAdapter,
   type ChannelOnboardingDmPolicy,
   type WizardPrompter,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/twitch";
 import { DEFAULT_ACCOUNT_ID, getAccountConfig } from "./config.js";
 import type { TwitchAccountConfig, TwitchRole } from "./types.js";
 import { isAccountConfigured } from "./utils/twitch.js";

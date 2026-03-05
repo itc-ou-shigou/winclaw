@@ -1,7 +1,6 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/bluebubbles";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/bluebubbles";
 import { bluebubblesPlugin } from "./src/channel.js";
-import { handleBlueBubblesWebhookRequest } from "./src/monitor.js";
 import { setBlueBubblesRuntime } from "./src/runtime.js";
 
 const plugin = {
@@ -12,7 +11,6 @@ const plugin = {
   register(api: WinClawPluginApi) {
     setBlueBubblesRuntime(api.runtime);
     api.registerChannel({ plugin: bluebubblesPlugin });
-    api.registerHttpHandler(handleBlueBubblesWebhookRequest);
   },
 };
 

@@ -1,4 +1,4 @@
-import WinClawKit
+import OpenClawKit
 import Foundation
 import Network
 import Observation
@@ -52,24 +52,18 @@ final class GatewayDiscoveryModel {
         if !self.browsers.isEmpty { return }
         self.appendDebugLog("start()")
 
-        for domain in WinClawBonjour.gatewayServiceDomains {
-            let params = NWParameters.tcp
-            params.includePeerToPeer = true
-            let browser = NWBrowser(
-                for: .bonjour(type: WinClawBonjour.gatewayServiceType, domain: domain),
-                using: params)
-
-            browser.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
+        for domain in OpenClawBonjour.gatewayServiceDomains {
+            let browser = GatewayDiscoveryBrowserSupport.makeBrowser(
+                serviceType: OpenClawBonjour.gatewayServiceType,
+                domain: domain,
+                queueLabelPrefix: "ai.openclaw.ios.gateway-discovery",
+                onState: { [weak self] state in
                     guard let self else { return }
                     self.statesByDomain[domain] = state
                     self.updateStatusText()
                     self.appendDebugLog("state[\(domain)]: \(Self.prettyState(state))")
-                }
-            }
-
-            browser.browseResultsChangedHandler = { [weak self] results, _ in
-                Task { @MainActor in
+                },
+                onResults: { [weak self] results in
                     guard let self else { return }
                     self.gatewaysByDomain[domain] = results.compactMap { result -> DiscoveredGateway? in
                         switch result.endpoint {
@@ -98,13 +92,10 @@ final class GatewayDiscoveryModel {
                         }
                     }
                     .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-
                     self.recomputeGateways()
-                }
-            }
+                })
 
             self.browsers[domain] = browser
-            browser.start(queue: DispatchQueue(label: "ai.openclaw.ios.gateway-discovery.\(domain)"))
         }
     }
 
@@ -168,7 +159,7 @@ final class GatewayDiscoveryModel {
 
     private static func prettifyInstanceName(_ decodedName: String) -> String {
         let normalized = decodedName.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        let stripped = normalized.replacingOccurrences(of: " (WinClaw)", with: "")
+        let stripped = normalized.replacingOccurrences(of: " (OpenClaw)", with: "")
             .replacingOccurrences(of: #"\s+\(\d+\)$"#, with: "", options: .regularExpression)
         return stripped.trimmingCharacters(in: .whitespacesAndNewlines)
     }

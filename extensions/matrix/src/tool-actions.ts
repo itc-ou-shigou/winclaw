@@ -5,7 +5,7 @@ import {
   readNumberParam,
   readReactionParams,
   readStringParam,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/matrix";
 import {
   deleteMatrixMessage,
   editMatrixMessage,

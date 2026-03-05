@@ -1,5 +1,9 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "winclaw/plugin-sdk/account-id";
+import {
+  DEFAULT_ACCOUNT_ID,
+  normalizeAccountId,
+  normalizeOptionalAccountId,
+} from "winclaw/plugin-sdk/account-id";
+import type { WinClawConfig } from "winclaw/plugin-sdk/zalo";
 import { resolveZaloToken } from "./token.js";
 import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
 
@@ -23,8 +27,12 @@ export function listZaloAccountIds(cfg: WinClawConfig): string[] {
 
 export function resolveDefaultZaloAccountId(cfg: WinClawConfig): string {
   const zaloConfig = cfg.channels?.zalo as ZaloConfig | undefined;
-  if (zaloConfig?.defaultAccount?.trim()) {
-    return zaloConfig.defaultAccount.trim();
+  const preferred = normalizeOptionalAccountId(zaloConfig?.defaultAccount);
+  if (
+    preferred &&
+    listZaloAccountIds(cfg).some((accountId) => normalizeAccountId(accountId) === preferred)
+  ) {
+    return preferred;
   }
   const ids = listZaloAccountIds(cfg);
   if (ids.includes(DEFAULT_ACCOUNT_ID)) {
@@ -54,6 +62,7 @@ function mergeZaloAccountConfig(cfg: WinClawConfig, accountId: string): ZaloAcco
 export function resolveZaloAccount(params: {
   cfg: WinClawConfig;
   accountId?: string | null;
+  allowUnresolvedSecretRef?: boolean;
 }): ResolvedZaloAccount {
   const accountId = normalizeAccountId(params.accountId);
   const baseEnabled = (params.cfg.channels?.zalo as ZaloConfig | undefined)?.enabled !== false;
@@ -63,6 +72,7 @@ export function resolveZaloAccount(params: {
   const tokenResolution = resolveZaloToken(
     params.cfg.channels?.zalo as ZaloConfig | undefined,
     accountId,
+    { allowUnresolvedSecretRef: params.allowUnresolvedSecretRef },
   );
 
   return {

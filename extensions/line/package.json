@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/line",
-  "version": "2026.2.26",
+  "version": "2026.3.2",
   "private": true,
   "description": "WinClaw LINE channel plugin",
   "type": "module",

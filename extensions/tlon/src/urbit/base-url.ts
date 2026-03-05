@@ -1,4 +1,4 @@
-import { isBlockedHostnameOrIp } from "winclaw/plugin-sdk";
+import { isBlockedHostnameOrIp } from "winclaw/plugin-sdk/tlon";
 
 export type UrbitBaseUrlValidation =
   | { ok: true; baseUrl: string; hostname: string }

@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/twitch";
 import { describe, expect, it } from "vitest";
 import { twitchPlugin } from "./plugin.js";
 

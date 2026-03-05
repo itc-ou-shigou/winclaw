@@ -1,6 +1,6 @@
-name: WinClaw
+name: OpenClaw
 options:
-  bundleIdPrefix: ai.winclaw
+  bundleIdPrefix: ai.openclaw
   deploymentTarget:
     iOS: "18.0"
   xcodeVersion: "16.0"
@@ -8,25 +8,26 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
+    ENABLE_APP_INTENTS_METADATA_GENERATION: NO
 
 packages:
-  WinClawKit:
-    path: ../shared/WinClawKit
+  OpenClawKit:
+    path: ../shared/OpenClawKit
   Swabble:
     path: ../../Swabble
 
 schemes:
-  WinClaw:
+  OpenClaw:
     shared: true
     build:
       targets:
-        WinClaw: all
+        OpenClaw: all
     test:
       targets:
-        - WinClawTests
+        - OpenClawTests
 
 targets:
-  WinClaw:
+  OpenClaw:
     type: application
     platform: iOS
     configFiles:
@@ -35,14 +36,16 @@ targets:
     sources:
       - path: Sources
     dependencies:
-      - target: WinClawShareExtension
+      - target: OpenClawShareExtension
         embed: true
-      - target: WinClawWatchApp
-      - package: WinClawKit
-      - package: WinClawKit
-        product: WinClawChatUI
-      - package: WinClawKit
-        product: WinClawProtocol
+      - target: OpenClawActivityWidget
+        embed: true
+      - target: OpenClawWatchApp
+      - package: OpenClawKit
+      - package: OpenClawKit
+        product: OpenClawChatUI
+      - package: OpenClawKit
+        product: OpenClawProtocol
       - package: Swabble
         product: SwabbleKit
       - sdk: AppIntents.framework
@@ -75,25 +78,28 @@ targets:
     settings:
       base:
         CODE_SIGN_IDENTITY: "Apple Development"
-        CODE_SIGN_ENTITLEMENTS: Sources/WinClaw.entitlements
-        CODE_SIGN_STYLE: "$(WINCLAW_CODE_SIGN_STYLE)"
-        DEVELOPMENT_TEAM: "$(WINCLAW_DEVELOPMENT_TEAM)"
-        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_APP_BUNDLE_ID)"
-        PROVISIONING_PROFILE_SPECIFIER: "$(WINCLAW_APP_PROFILE)"
+        CODE_SIGN_ENTITLEMENTS: Sources/OpenClaw.entitlements
+        CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(OPENCLAW_APP_PROFILE)"
+        TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
         ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
     info:
       path: Sources/Info.plist
       properties:
-        CFBundleDisplayName: WinClaw
+        CFBundleDisplayName: OpenClaw
         CFBundleIconName: AppIcon
         CFBundleURLTypes:
-          - CFBundleURLName: ai.winclaw.ios
+          - CFBundleURLName: ai.openclaw.ios
             CFBundleURLSchemes:
-              - winclaw
-        CFBundleShortVersionString: "2026.2.26"
-        CFBundleVersion: "20260226"
+              - openclaw
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
@@ -101,17 +107,18 @@ targets:
           - audio
           - remote-notification
         BGTaskSchedulerPermittedIdentifiers:
-          - ai.winclaw.ios.bgrefresh
-        NSLocalNetworkUsageDescription: WinClaw discovers and connects to your WinClaw gateway on the local network.
+          - ai.openclaw.ios.bgrefresh
+        NSLocalNetworkUsageDescription: OpenClaw discovers and connects to your OpenClaw gateway on the local network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
         NSBonjourServices:
-          - _winclaw-gw._tcp
-        NSCameraUsageDescription: WinClaw can capture photos or short video clips when requested via the gateway.
-        NSLocationWhenInUseUsageDescription: WinClaw uses your location when you allow location sharing.
-        NSLocationAlwaysAndWhenInUseUsageDescription: WinClaw can share your location in the background when you enable Always.
-        NSMicrophoneUsageDescription: WinClaw needs microphone access for voice wake.
-        NSSpeechRecognitionUsageDescription: WinClaw uses on-device speech recognition for voice wake.
+          - _openclaw-gw._tcp
+        NSCameraUsageDescription: OpenClaw can capture photos or short video clips when requested via the gateway.
+        NSLocationWhenInUseUsageDescription: OpenClaw uses your location when you allow location sharing.
+        NSLocationAlwaysAndWhenInUseUsageDescription: OpenClaw can share your location in the background when you enable Always.
+        NSMicrophoneUsageDescription: OpenClaw needs microphone access for voice wake.
+        NSSpeechRecognitionUsageDescription: OpenClaw uses on-device speech recognition for voice wake.
+        NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
@@ -123,7 +130,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
 
-  WinClawShareExtension:
+  OpenClawShareExtension:
     type: app-extension
     platform: iOS
     configFiles:
@@ -132,24 +139,25 @@ targets:
     sources:
       - path: ShareExtension
     dependencies:
-      - package: WinClawKit
+      - package: OpenClawKit
       - sdk: AppIntents.framework
     settings:
       base:
         CODE_SIGN_IDENTITY: "Apple Development"
-        CODE_SIGN_STYLE: "$(WINCLAW_CODE_SIGN_STYLE)"
-        DEVELOPMENT_TEAM: "$(WINCLAW_DEVELOPMENT_TEAM)"
+        CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
         ENABLE_APPINTENTS_METADATA: NO
-        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_SHARE_BUNDLE_ID)"
-        PROVISIONING_PROFILE_SPECIFIER: "$(WINCLAW_SHARE_PROFILE)"
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_SHARE_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(OPENCLAW_SHARE_PROFILE)"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
     info:
       path: ShareExtension/Info.plist
       properties:
-        CFBundleDisplayName: WinClaw Share
-        CFBundleShortVersionString: "2026.2.26"
-        CFBundleVersion: "20260226"
+        CFBundleDisplayName: OpenClaw Share
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
@@ -160,37 +168,70 @@ targets:
               NSExtensionActivationSupportsImageWithMaxCount: 10
               NSExtensionActivationSupportsMovieWithMaxCount: 1
 
-  WinClawWatchApp:
+  OpenClawActivityWidget:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ActivityWidget
+      - path: Sources/LiveActivity/OpenClawActivityAttributes.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+    info:
+      path: ActivityWidget/Info.plist
+      properties:
+        CFBundleDisplayName: OpenClaw Activity
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"
+        NSSupportsLiveActivities: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  OpenClawWatchApp:
     type: application.watchapp2
     platform: watchOS
     deploymentTarget: "11.0"
     sources:
       - path: WatchApp
     dependencies:
-      - target: WinClawWatchExtension
+      - target: OpenClawWatchExtension
     configFiles:
       Debug: Config/Signing.xcconfig
       Release: Config/Signing.xcconfig
     settings:
       base:
         ENABLE_APPINTENTS_METADATA: NO
-        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_WATCH_APP_BUNDLE_ID)"
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_WATCH_APP_BUNDLE_ID)"
     info:
       path: WatchApp/Info.plist
       properties:
-        CFBundleDisplayName: WinClaw
-        CFBundleShortVersionString: "2026.2.26"
-        CFBundleVersion: "20260226"
-        WKCompanionAppBundleIdentifier: "$(WINCLAW_APP_BUNDLE_ID)"
+        CFBundleDisplayName: OpenClaw
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"
+        WKCompanionAppBundleIdentifier: "$(OPENCLAW_APP_BUNDLE_ID)"
         WKWatchKitApp: true
 
-  WinClawWatchExtension:
+  OpenClawWatchExtension:
     type: watchkit2-extension
     platform: watchOS
     deploymentTarget: "11.0"
     sources:
       - path: WatchExtension/Sources
     dependencies:
+      - sdk: AppIntents.framework
       - sdk: WatchConnectivity.framework
       - sdk: UserNotifications.framework
     configFiles:
@@ -198,19 +239,19 @@ targets:
       Release: Config/Signing.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: "$(WINCLAW_WATCH_EXTENSION_BUNDLE_ID)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_WATCH_EXTENSION_BUNDLE_ID)"
     info:
       path: WatchExtension/Info.plist
       properties:
-        CFBundleDisplayName: WinClaw
-        CFBundleShortVersionString: "2026.2.26"
-        CFBundleVersion: "20260226"
+        CFBundleDisplayName: OpenClaw
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"
         NSExtension:
           NSExtensionAttributes:
-            WKAppBundleIdentifier: "$(WINCLAW_WATCH_APP_BUNDLE_ID)"
+            WKAppBundleIdentifier: "$(OPENCLAW_WATCH_APP_BUNDLE_ID)"
           NSExtensionPointIdentifier: com.apple.watchkit
 
-  WinClawTests:
+  OpenClawTests:
     type: bundle.unit-test
     platform: iOS
     configFiles:
@@ -219,23 +260,24 @@ targets:
     sources:
       - path: Tests
     dependencies:
-      - target: WinClaw
+      - target: OpenClaw
       - package: Swabble
         product: SwabbleKit
       - sdk: AppIntents.framework
     settings:
       base:
         CODE_SIGN_IDENTITY: "Apple Development"
-        CODE_SIGN_STYLE: "$(WINCLAW_CODE_SIGN_STYLE)"
-        DEVELOPMENT_TEAM: "$(WINCLAW_DEVELOPMENT_TEAM)"
-        PRODUCT_BUNDLE_IDENTIFIER: ai.winclaw.ios.tests
+        CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.openclaw.ios.tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WinClaw.app/WinClaw"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenClaw.app/OpenClaw"
         BUNDLE_LOADER: "$(TEST_HOST)"
     info:
       path: Tests/Info.plist
       properties:
-        CFBundleDisplayName: WinClawTests
-        CFBundleShortVersionString: "2026.2.26"
-        CFBundleVersion: "20260226"
+        CFBundleDisplayName: OpenClawTests
+        CFBundleShortVersionString: "2026.3.2"
+        CFBundleVersion: "20260301"

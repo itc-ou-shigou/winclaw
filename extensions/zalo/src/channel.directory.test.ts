@@ -1,4 +1,4 @@
-import type { WinClawConfig, RuntimeEnv } from "winclaw/plugin-sdk";
+import type { WinClawConfig, RuntimeEnv } from "winclaw/plugin-sdk/zalo";
 import { describe, expect, it } from "vitest";
 import { zaloPlugin } from "./channel.js";
 

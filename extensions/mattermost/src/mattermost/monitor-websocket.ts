@@ -1,4 +1,4 @@
-import type { ChannelAccountSnapshot, RuntimeEnv } from "winclaw/plugin-sdk";
+import type { ChannelAccountSnapshot, RuntimeEnv } from "winclaw/plugin-sdk/mattermost";
 import WebSocket from "ws";
 import type { MattermostPost } from "./client.js";
 import { rawDataToString } from "./monitor-helpers.js";

@@ -1,5 +1,5 @@
 import Foundation
-import WinClawKit
+import OpenClawKit
 
 @MainActor
 final class GatewayHealthMonitor {

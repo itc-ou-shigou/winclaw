@@ -3,7 +3,7 @@ import type {
   ChannelResolveKind,
   ChannelResolveResult,
   RuntimeEnv,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/matrix";
 import { listMatrixDirectoryGroupsLive, listMatrixDirectoryPeersLive } from "./directory-live.js";
 
 function findExactDirectoryMatches(

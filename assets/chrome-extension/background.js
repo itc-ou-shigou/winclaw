@@ -209,7 +209,7 @@ function onRelayClosed(reason) {
       setBadge(tabId, 'connecting')
       void chrome.action.setTitle({
         tabId,
-        title: 'WinClaw Browser Relay: relay reconnecting…',
+        title: 'OpenClaw Browser Relay: relay reconnecting…',
       })
     }
   }
@@ -271,18 +271,30 @@ async function reannounceAttachedTabs() {
       setBadge(tabId, 'off')
       void chrome.action.setTitle({
         tabId,
-        title: 'WinClaw Browser Relay (click to attach/detach)',
+        title: 'OpenClaw Browser Relay (click to attach/detach)',
       })
       continue
     }
 
     // Send fresh attach event to relay.
+    // Split into two try-catch blocks so debugger failures and relay send
+    // failures are handled independently. Previously, a relay send failure
+    // would fall into the outer catch and set the badge to 'on' even though
+    // the relay had no record of the tab — causing every subsequent browser
+    // tool call to fail with "no tab connected" until the next reconnect cycle.
+    let targetInfo
     try {
       const info = /** @type {any} */ (
         await chrome.debugger.sendCommand({ tabId }, 'Target.getTargetInfo')
       )
-      const targetInfo = info?.targetInfo
+      targetInfo = info?.targetInfo
+    } catch {
+      // Target.getTargetInfo failed. Preserve at least targetId from
+      // cached tab state so relay receives a stable identifier.
+      targetInfo = tab.targetId ? { targetId: tab.targetId } : undefined
+    }
 
+    try {
       sendToRelay({
         method: 'forwardCDPEvent',
         params: {
@@ -298,10 +310,18 @@ async function reannounceAttachedTabs() {
       setBadge(tabId, 'on')
       void chrome.action.setTitle({
         tabId,
-        title: 'WinClaw Browser Relay: attached (click to detach)',
+        title: 'OpenClaw Browser Relay: attached (click to detach)',
       })
     } catch {
-      setBadge(tabId, 'on')
+      // Relay send failed (e.g. WS closed in the gap between ensureRelayConnection
+      // resolving and this loop executing). The tab is still valid — leave badge
+      // as 'connecting' so the reconnect/keepalive cycle will retry rather than
+      // showing a false-positive 'on' that hides the broken state from the user.
+      setBadge(tabId, 'connecting')
+      void chrome.action.setTitle({
+        tabId,
+        title: 'OpenClaw Browser Relay: relay reconnecting…',
+      })
     }
   }
 
@@ -474,7 +494,7 @@ async function attachTab(tabId, opts = {}) {
   tabBySession.set(sessionId, tabId)
   void chrome.action.setTitle({
     tabId,
-    title: 'WinClaw Browser Relay: attached (click to detach)',
+    title: 'OpenClaw Browser Relay: attached (click to detach)',
   })
 
   if (!opts.skipAttachedEvent) {
@@ -545,7 +565,7 @@ async function detachTab(tabId, reason) {
   setBadge(tabId, 'off')
   void chrome.action.setTitle({
     tabId,
-    title: 'WinClaw Browser Relay (click to attach/detach)',
+    title: 'OpenClaw Browser Relay (click to attach/detach)',
   })
 
   await persistState()
@@ -566,7 +586,7 @@ async function connectOrToggleForActiveTab() {
       setBadge(tabId, 'off')
       void chrome.action.setTitle({
         tabId,
-        title: 'WinClaw Browser Relay (click to attach/detach)',
+        title: 'OpenClaw Browser Relay (click to attach/detach)',
       })
       return
     }
@@ -584,7 +604,7 @@ async function connectOrToggleForActiveTab() {
     setBadge(tabId, 'connecting')
     void chrome.action.setTitle({
       tabId,
-      title: 'WinClaw Browser Relay: connecting to local relay…',
+      title: 'OpenClaw Browser Relay: connecting to local relay…',
     })
 
     try {
@@ -595,7 +615,7 @@ async function connectOrToggleForActiveTab() {
       setBadge(tabId, 'error')
       void chrome.action.setTitle({
         tabId,
-        title: 'WinClaw Browser Relay: relay not running (open options for setup)',
+        title: 'OpenClaw Browser Relay: relay not running (open options for setup)',
       })
       void maybeOpenHelpOnce()
       const message = err instanceof Error ? err.message : String(err)
@@ -766,10 +786,14 @@ async function onDebuggerDetach(source, reason) {
   setBadge(tabId, 'connecting')
   void chrome.action.setTitle({
     tabId,
-    title: 'WinClaw Browser Relay: re-attaching after navigation…',
+    title: 'OpenClaw Browser Relay: re-attaching after navigation…',
   })
 
-  const delays = [300, 700, 1500]
+  // Extend re-attach window from 2.5 s to ~7.7 s (5 attempts).
+  // SPAs and pages with heavy JS can take >2.5 s before the Chrome debugger
+  // is attachable, causing all three original attempts to fail and leaving
+  // the badge permanently off after every navigation.
+  const delays = [200, 500, 1000, 2000, 4000]
   for (let attempt = 0; attempt < delays.length; attempt++) {
     await new Promise((r) => setTimeout(r, delays[attempt]))
 
@@ -783,19 +807,21 @@ async function onDebuggerDetach(source, reason) {
       return
     }
 
-    if (!relayWs || relayWs.readyState !== WebSocket.OPEN) {
-      reattachPending.delete(tabId)
-      setBadge(tabId, 'error')
-      void chrome.action.setTitle({
-        tabId,
-        title: 'WinClaw Browser Relay: relay disconnected during re-attach',
-      })
-      return
-    }
+    const relayUp = relayWs && relayWs.readyState === WebSocket.OPEN
 
     try {
-      await attachTab(tabId)
+      // When relay is down, still attach the debugger but skip sending the
+      // relay event. reannounceAttachedTabs() will notify the relay once it
+      // reconnects, so the tab stays tracked across transient relay drops.
+      await attachTab(tabId, { skipAttachedEvent: !relayUp })
       reattachPending.delete(tabId)
+      if (!relayUp) {
+        setBadge(tabId, 'connecting')
+        void chrome.action.setTitle({
+          tabId,
+          title: 'OpenClaw Browser Relay: attached, waiting for relay reconnect…',
+        })
+      }
       return
     } catch {
       // continue retries
@@ -806,7 +832,7 @@ async function onDebuggerDetach(source, reason) {
   setBadge(tabId, 'off')
   void chrome.action.setTitle({
     tabId,
-    title: 'WinClaw Browser Relay: re-attach failed (click to retry)',
+    title: 'OpenClaw Browser Relay: re-attach failed (click to retry)',
   })
 }
 
@@ -942,7 +968,7 @@ async function whenReady(fn) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== 'relayCheck') return false
   const { url, token } = msg
-  const headers = token ? { 'x-winclaw-relay-token': token } : {}
+  const headers = token ? { 'x-openclaw-relay-token': token } : {}
   fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(2000) })
     .then(async (res) => {
       const contentType = String(res.headers.get('content-type') || '')

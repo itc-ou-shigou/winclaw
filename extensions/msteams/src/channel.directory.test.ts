@@ -1,4 +1,4 @@
-import type { WinClawConfig, RuntimeEnv } from "winclaw/plugin-sdk";
+import type { WinClawConfig, RuntimeEnv } from "winclaw/plugin-sdk/msteams";
 import { describe, expect, it } from "vitest";
 import { msteamsPlugin } from "./channel.js";
 

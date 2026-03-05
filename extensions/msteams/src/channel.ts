@@ -1,4 +1,8 @@
-import type { ChannelMessageActionName, ChannelPlugin, WinClawConfig } from "winclaw/plugin-sdk";
+import type {
+  ChannelMessageActionName,
+  ChannelPlugin,
+  WinClawConfig,
+} from "winclaw/plugin-sdk/msteams";
 import {
   buildBaseChannelStatusSummary,
   buildChannelConfigSchema,
@@ -8,7 +12,7 @@ import {
   PAIRING_APPROVED_MESSAGE,
   resolveAllowlistProviderRuntimeGroupPolicy,
   resolveDefaultGroupPolicy,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/msteams";
 import { listMSTeamsDirectoryGroupsLive, listMSTeamsDirectoryPeersLive } from "./directory-live.js";
 import { msteamsOnboardingAdapter } from "./onboarding.js";
 import { msteamsOutbound } from "./outbound.js";

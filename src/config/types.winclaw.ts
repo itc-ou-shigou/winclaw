@@ -177,6 +177,8 @@ export type WinClawConfig = {
 export type ConfigValidationIssue = {
   path: string;
   message: string;
+  allowedValues?: string[];
+  allowedValuesHiddenCount?: number;
 };
 
 export type LegacyConfigIssue = {

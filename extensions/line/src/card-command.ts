@@ -1,4 +1,4 @@
-import type { LineChannelData, WinClawPluginApi, ReplyPayload } from "winclaw/plugin-sdk";
+import type { LineChannelData, WinClawPluginApi, ReplyPayload } from "winclaw/plugin-sdk/line";
 import {
   createActionCard,
   createImageCard,
@@ -7,7 +7,7 @@ import {
   createReceiptCard,
   type CardAction,
   type ListItem,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/line";
 
 const CARD_USAGE = `Usage: /card <type> "title" "body" [options]
 

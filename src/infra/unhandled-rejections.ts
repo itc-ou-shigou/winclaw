@@ -1,5 +1,10 @@
 import process from "node:process";
-import { extractErrorCode, formatUncaughtError, isEpipeError } from "./errors.js";
+import {
+  collectErrorGraphCandidates,
+  extractErrorCode,
+  formatUncaughtError,
+  readErrorName,
+} from "./errors.js";
 
 type UnhandledRejectionHandler = (reason: unknown) => boolean;
 
@@ -49,6 +54,7 @@ const TRANSIENT_NETWORK_MESSAGE_CODE_RE =
 const TRANSIENT_NETWORK_MESSAGE_SNIPPETS = [
   "getaddrinfo",
   "socket hang up",
+  "client network socket disconnected before secure tls connection was established",
   "network error",
   "network is unreachable",
   "temporary failure in name resolution",
@@ -59,14 +65,6 @@ function getErrorCause(err: unknown): unknown {
     return undefined;
   }
   return (err as { cause?: unknown }).cause;
-}
-
-function getErrorName(err: unknown): string {
-  if (!err || typeof err !== "object") {
-    return "";
-  }
-  const name = (err as { name?: unknown }).name;
-  return typeof name === "string" ? name : "";
 }
 
 function extractErrorCodeOrErrno(err: unknown): string | undefined {
@@ -93,44 +91,6 @@ function extractErrorCodeWithCause(err: unknown): string | undefined {
     return direct;
   }
   return extractErrorCode(getErrorCause(err));
-}
-
-function collectErrorCandidates(err: unknown): unknown[] {
-  const queue: unknown[] = [err];
-  const seen = new Set<unknown>();
-  const candidates: unknown[] = [];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (current == null || seen.has(current)) {
-      continue;
-    }
-    seen.add(current);
-    candidates.push(current);
-
-    if (!current || typeof current !== "object") {
-      continue;
-    }
-
-    const maybeNested: Array<unknown> = [
-      (current as { cause?: unknown }).cause,
-      (current as { reason?: unknown }).reason,
-      (current as { original?: unknown }).original,
-      (current as { error?: unknown }).error,
-      (current as { data?: unknown }).data,
-    ];
-    const errors = (current as { errors?: unknown }).errors;
-    if (Array.isArray(errors)) {
-      maybeNested.push(...errors);
-    }
-    for (const nested of maybeNested) {
-      if (nested != null && !seen.has(nested)) {
-        queue.push(nested);
-      }
-    }
-  }
-
-  return candidates;
 }
 
 /**
@@ -164,56 +124,6 @@ function isConfigError(err: unknown): boolean {
 }
 
 /**
- * Checks if an error is an internal Playwright/browser-automation error that shouldn't crash the gateway.
- *
- * Playwright-core can throw assertion errors during Chrome frame race conditions
- * (e.g., FrameManager.frameAttached) and other transient browser lifecycle events.
- * These are internal to the browser automation layer and do not affect gateway stability.
- */
-export function isPlaywrightInternalError(err: unknown): boolean {
-  if (!err || typeof err !== "object") {
-    return false;
-  }
-
-  const message = "message" in err && typeof err.message === "string" ? err.message : "";
-  const stack = "stack" in err && typeof err.stack === "string" ? err.stack : "";
-
-  // Playwright assertion errors from frame management race conditions
-  if (message === "Assertion error" || message.startsWith("Assertion error")) {
-    if (
-      stack.includes("playwright-core") ||
-      stack.includes("FrameManager") ||
-      stack.includes("frameAttached") ||
-      stack.includes("crPage")
-    ) {
-      return true;
-    }
-  }
-
-  // Other known Playwright internal errors that are non-fatal
-  const playwrightNonFatalPatterns = [
-    "Frame was detached",
-    "Execution context was destroyed",
-    "Target closed",
-    "Session closed",
-    "Browser has been closed",
-    "Protocol error",
-    "Navigation failed because page was closed",
-    "Connection closed",
-  ];
-
-  if (stack.includes("playwright-core") || stack.includes("playwright")) {
-    for (const pattern of playwrightNonFatalPatterns) {
-      if (message.includes(pattern)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
  * Checks if an error is a transient network error that shouldn't crash the gateway.
  * These are typically temporary connectivity issues that will resolve on their own.
  */
@@ -221,13 +131,25 @@ export function isTransientNetworkError(err: unknown): boolean {
   if (!err) {
     return false;
   }
-  for (const candidate of collectErrorCandidates(err)) {
+  for (const candidate of collectErrorGraphCandidates(err, (current) => {
+    const nested: Array<unknown> = [
+      current.cause,
+      current.reason,
+      current.original,
+      current.error,
+      current.data,
+    ];
+    if (Array.isArray(current.errors)) {
+      nested.push(...current.errors);
+    }
+    return nested;
+  })) {
     const code = extractErrorCodeOrErrno(candidate);
     if (code && TRANSIENT_NETWORK_CODES.has(code)) {
       return true;
     }
 
-    const name = getErrorName(candidate);
+    const name = readErrorName(candidate);
     if (name && TRANSIENT_NETWORK_ERROR_NAMES.has(name)) {
       return true;
     }
@@ -303,20 +225,6 @@ export function installUnhandledRejectionHandler(): void {
     if (isConfigError(reason)) {
       console.error("[winclaw] CONFIGURATION ERROR - requires fix:", formatUncaughtError(reason));
       process.exit(1);
-      return;
-    }
-
-    if (isPlaywrightInternalError(reason)) {
-      console.warn(
-        "[winclaw] Suppressed Playwright internal error (continuing):",
-        formatUncaughtError(reason),
-      );
-      return;
-    }
-
-    // EPIPE must be silently swallowed — logging it triggers another EPIPE,
-    // creating an infinite recursive loop that freezes the event loop.
-    if (isEpipeError(reason)) {
       return;
     }
 

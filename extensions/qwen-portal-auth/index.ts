@@ -2,7 +2,7 @@ import {
   emptyPluginConfigSchema,
   type WinClawPluginApi,
   type ProviderAuthContext,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/qwen-portal-auth";
 import { loginQwenPortalOAuth } from "./oauth.js";
 
 const PROVIDER_ID = "qwen-portal";

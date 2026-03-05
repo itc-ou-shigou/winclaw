@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/mattermost";
 import { resolveMattermostAccount } from "./accounts.js";
 import { createMattermostClient, fetchMattermostMe, type MattermostClient } from "./client.js";
 

@@ -1,4 +1,4 @@
-import { fetchWithSsrFGuard } from "winclaw/plugin-sdk";
+import { fetchWithSsrFGuard } from "winclaw/plugin-sdk/voice-call";
 
 type GuardedJsonApiRequestParams = {
   url: string;

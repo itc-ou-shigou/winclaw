@@ -1,4 +1,4 @@
-import { buildMediaPayload } from "winclaw/plugin-sdk";
+import { buildMediaPayload } from "winclaw/plugin-sdk/msteams";
 
 export function buildMSTeamsMediaPayload(
   mediaList: Array<{ path: string; contentType?: string }>,

@@ -12,7 +12,7 @@ The AI reads your source code, extracts business logic patterns, generates test 
 
 ## What is WinClaw?
 
-WinClaw is an open-source, Windows-native fork of Claude Code (now OpenClaw). It comes with 18 business automation plugins (88 commands + 90+ AI skills), but the standout feature is the **AI Dev System Testing** skill.
+WinClaw is an open-source, Windows-native fork of Claude Code (now WinClaw). It comes with 18 business automation plugins (88 commands + 90+ AI skills), but the standout feature is the **AI Dev System Testing** skill.
 
 ## How the Testing Works (Phase 2 through Phase 6)
 

@@ -1,4 +1,4 @@
-import type { MSTeamsConfig } from "winclaw/plugin-sdk";
+import type { MSTeamsConfig } from "winclaw/plugin-sdk/msteams";
 import { describe, expect, it } from "vitest";
 import {
   isMSTeamsGroupAllowed,

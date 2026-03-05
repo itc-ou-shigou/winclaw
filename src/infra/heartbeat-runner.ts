@@ -130,7 +130,10 @@ export function isHeartbeatEnabledForAgent(cfg: WinClawConfig, agentId?: string)
   return resolvedAgentId === resolveDefaultAgentId(cfg);
 }
 
-function resolveHeartbeatConfig(cfg: WinClawConfig, agentId?: string): HeartbeatConfig | undefined {
+function resolveHeartbeatConfig(
+  cfg: WinClawConfig,
+  agentId?: string,
+): HeartbeatConfig | undefined {
   const defaults = cfg.agents?.defaults?.heartbeat;
   if (!agentId) {
     return defaults;
@@ -740,9 +743,16 @@ export async function runHeartbeatOnce(opts: {
 
     const heartbeatModelOverride = heartbeat?.model?.trim() || undefined;
     const suppressToolErrorWarnings = heartbeat?.suppressToolErrorWarnings === true;
+    const bootstrapContextMode: "lightweight" | undefined =
+      heartbeat?.lightContext === true ? "lightweight" : undefined;
     const replyOpts = heartbeatModelOverride
-      ? { isHeartbeat: true, heartbeatModelOverride, suppressToolErrorWarnings }
-      : { isHeartbeat: true, suppressToolErrorWarnings };
+      ? {
+          isHeartbeat: true,
+          heartbeatModelOverride,
+          suppressToolErrorWarnings,
+          bootstrapContextMode,
+        }
+      : { isHeartbeat: true, suppressToolErrorWarnings, bootstrapContextMode };
     const replyResult = await getReplyFromConfig(ctx, replyOpts, cfg);
     const replyPayload = resolveHeartbeatReplyPayload(replyResult);
     const includeReasoning = heartbeat?.includeReasoning === true;

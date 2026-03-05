@@ -1,4 +1,4 @@
-import type { ChannelGroupContext } from "winclaw/plugin-sdk";
+import type { ChannelGroupContext } from "winclaw/plugin-sdk/mattermost";
 import { resolveMattermostAccount } from "./mattermost/accounts.js";
 
 export function resolveMattermostGroupRequireMention(

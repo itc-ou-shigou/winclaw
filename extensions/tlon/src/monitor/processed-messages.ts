@@ -1,4 +1,4 @@
-import { createDedupeCache } from "winclaw/plugin-sdk";
+import { createDedupeCache } from "winclaw/plugin-sdk/tlon";
 
 export type ProcessedMessageTracker = {
   mark: (id?: string | null) => boolean;

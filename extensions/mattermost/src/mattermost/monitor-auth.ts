@@ -1,4 +1,7 @@
-import { resolveAllowlistMatchSimple, resolveEffectiveAllowFromLists } from "winclaw/plugin-sdk";
+import {
+  resolveAllowlistMatchSimple,
+  resolveEffectiveAllowFromLists,
+} from "winclaw/plugin-sdk/mattermost";
 
 export function normalizeMattermostAllowEntry(entry: string): string {
   const trimmed = entry.trim();

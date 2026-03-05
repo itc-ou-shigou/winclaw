@@ -226,11 +226,11 @@
   </head>
   <body>
     <canvas id="winclaw-canvas"></canvas>
-    <div id="winclaw-status">
-      <div class="card">
+    <div id="winclaw-status" role="status" aria-live="polite">
+      <section class="card">
         <div class="title" id="winclaw-status-title">Ready</div>
         <div class="subtitle" id="winclaw-status-subtitle">Waiting for agent</div>
-      </div>
+      </section>
     </div>
     <winclaw-a2ui-host></winclaw-a2ui-host>
     <script src="a2ui.bundle.js"></script>

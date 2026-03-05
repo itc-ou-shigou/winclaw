@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/synology-chat";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/synology-chat";
 import { createSynologyChatPlugin } from "./src/channel.js";
 import { setSynologyRuntime } from "./src/runtime.js";
 

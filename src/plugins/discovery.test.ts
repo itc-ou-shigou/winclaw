@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { withEnvAsync } from "../test-utils/env.js";
-import { discoverWinClawPlugins } from "./discovery.js";
+import { clearPluginDiscoveryCache, discoverWinClawPlugins } from "./discovery.js";
 
 const tempDirs: string[] = [];
 
@@ -26,7 +26,38 @@ async function withStateDir<T>(stateDir: string, fn: () => Promise<T>) {
   );
 }
 
+async function discoverWithStateDir(
+  stateDir: string,
+  params: Parameters<typeof discoverWinClawPlugins>[0],
+) {
+  return await withStateDir(stateDir, async () => {
+    return discoverWinClawPlugins(params);
+  });
+}
+
+function writePluginPackageManifest(params: {
+  packageDir: string;
+  packageName: string;
+  extensions: string[];
+}) {
+  fs.writeFileSync(
+    path.join(params.packageDir, "package.json"),
+    JSON.stringify({
+      name: params.packageName,
+      winclaw: { extensions: params.extensions },
+    }),
+    "utf-8",
+  );
+}
+
+function expectEscapesPackageDiagnostic(diagnostics: Array<{ message: string }>) {
+  expect(diagnostics.some((entry) => entry.message.includes("escapes package directory"))).toBe(
+    true,
+  );
+}
+
 afterEach(() => {
+  clearPluginDiscoveryCache();
   for (const dir of tempDirs.splice(0)) {
     try {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -95,14 +126,11 @@ describe("discoverWinClawPlugins", () => {
     const globalExt = path.join(stateDir, "extensions", "pack");
     fs.mkdirSync(path.join(globalExt, "src"), { recursive: true });
 
-    fs.writeFileSync(
-      path.join(globalExt, "package.json"),
-      JSON.stringify({
-        name: "pack",
-        winclaw: { extensions: ["./src/one.ts", "./src/two.ts"] },
-      }),
-      "utf-8",
-    );
+    writePluginPackageManifest({
+      packageDir: globalExt,
+      packageName: "pack",
+      extensions: ["./src/one.ts", "./src/two.ts"],
+    });
     fs.writeFileSync(
       path.join(globalExt, "src", "one.ts"),
       "export default function () {}",
@@ -128,14 +156,11 @@ describe("discoverWinClawPlugins", () => {
     const globalExt = path.join(stateDir, "extensions", "voice-call-pack");
     fs.mkdirSync(path.join(globalExt, "src"), { recursive: true });
 
-    fs.writeFileSync(
-      path.join(globalExt, "package.json"),
-      JSON.stringify({
-        name: "@winclaw/voice-call",
-        winclaw: { extensions: ["./src/index.ts"] },
-      }),
-      "utf-8",
-    );
+    writePluginPackageManifest({
+      packageDir: globalExt,
+      packageName: "@winclaw/voice-call",
+      extensions: ["./src/index.ts"],
+    });
     fs.writeFileSync(
       path.join(globalExt, "src", "index.ts"),
       "export default function () {}",
@@ -155,14 +180,11 @@ describe("discoverWinClawPlugins", () => {
     const packDir = path.join(stateDir, "packs", "demo-plugin-dir");
     fs.mkdirSync(packDir, { recursive: true });
 
-    fs.writeFileSync(
-      path.join(packDir, "package.json"),
-      JSON.stringify({
-        name: "@winclaw/demo-plugin-dir",
-        winclaw: { extensions: ["./index.js"] },
-      }),
-      "utf-8",
-    );
+    writePluginPackageManifest({
+      packageDir: packDir,
+      packageName: "@winclaw/demo-plugin-dir",
+      extensions: ["./index.js"],
+    });
     fs.writeFileSync(path.join(packDir, "index.js"), "module.exports = {}", "utf-8");
 
     const { candidates } = await withStateDir(stateDir, async () => {
@@ -178,24 +200,17 @@ describe("discoverWinClawPlugins", () => {
     const outside = path.join(stateDir, "outside.js");
     fs.mkdirSync(globalExt, { recursive: true });
 
-    fs.writeFileSync(
-      path.join(globalExt, "package.json"),
-      JSON.stringify({
-        name: "@winclaw/escape-pack",
-        winclaw: { extensions: ["../../outside.js"] },
-      }),
-      "utf-8",
-    );
+    writePluginPackageManifest({
+      packageDir: globalExt,
+      packageName: "@winclaw/escape-pack",
+      extensions: ["../../outside.js"],
+    });
     fs.writeFileSync(outside, "export default function () {}", "utf-8");
 
-    const result = await withStateDir(stateDir, async () => {
-      return discoverWinClawPlugins({});
-    });
+    const result = await discoverWithStateDir(stateDir, {});
 
     expect(result.candidates).toHaveLength(0);
-    expect(
-      result.diagnostics.some((diag) => diag.message.includes("escapes package directory")),
-    ).toBe(true);
+    expectEscapesPackageDiagnostic(result.diagnostics);
   });
 
   it("rejects package extension entries that escape via symlink", async () => {
@@ -212,23 +227,16 @@ describe("discoverWinClawPlugins", () => {
       return;
     }
 
-    fs.writeFileSync(
-      path.join(globalExt, "package.json"),
-      JSON.stringify({
-        name: "@winclaw/pack",
-        winclaw: { extensions: ["./linked/escape.ts"] },
-      }),
-      "utf-8",
-    );
-
-    const { candidates, diagnostics } = await withStateDir(stateDir, async () => {
-      return discoverWinClawPlugins({});
+    writePluginPackageManifest({
+      packageDir: globalExt,
+      packageName: "@winclaw/pack",
+      extensions: ["./linked/escape.ts"],
     });
 
+    const { candidates, diagnostics } = await discoverWithStateDir(stateDir, {});
+
     expect(candidates.some((candidate) => candidate.idHint === "pack")).toBe(false);
-    expect(diagnostics.some((entry) => entry.message.includes("escapes package directory"))).toBe(
-      true,
-    );
+    expectEscapesPackageDiagnostic(diagnostics);
   });
 
   it("rejects package extension entries that are hardlinked aliases", async () => {
@@ -252,23 +260,18 @@ describe("discoverWinClawPlugins", () => {
       throw err;
     }
 
-    fs.writeFileSync(
-      path.join(globalExt, "package.json"),
-      JSON.stringify({
-        name: "@winclaw/pack",
-        winclaw: { extensions: ["./escape.ts"] },
-      }),
-      "utf-8",
-    );
+    writePluginPackageManifest({
+      packageDir: globalExt,
+      packageName: "@winclaw/pack",
+      extensions: ["./escape.ts"],
+    });
 
     const { candidates, diagnostics } = await withStateDir(stateDir, async () => {
       return discoverWinClawPlugins({});
     });
 
     expect(candidates.some((candidate) => candidate.idHint === "pack")).toBe(false);
-    expect(diagnostics.some((entry) => entry.message.includes("escapes package directory"))).toBe(
-      true,
-    );
+    expectEscapesPackageDiagnostic(diagnostics);
   });
 
   it("ignores package manifests that are hardlinked aliases", async () => {
@@ -341,10 +344,47 @@ describe("discoverWinClawPlugins", () => {
       const result = await withStateDir(stateDir, async () => {
         return discoverWinClawPlugins({ ownershipUid: actualUid + 1 });
       });
-      expect(result.candidates).toHaveLength(0);
+      const shouldBlockForMismatch = actualUid !== 0;
+      expect(result.candidates).toHaveLength(shouldBlockForMismatch ? 0 : 1);
       expect(result.diagnostics.some((diag) => diag.message.includes("suspicious ownership"))).toBe(
-        true,
+        shouldBlockForMismatch,
       );
     },
   );
+
+  it("reuses discovery results from cache until cleared", async () => {
+    const stateDir = makeTempDir();
+    const globalExt = path.join(stateDir, "extensions");
+    fs.mkdirSync(globalExt, { recursive: true });
+    const pluginPath = path.join(globalExt, "cached.ts");
+    fs.writeFileSync(pluginPath, "export default function () {}", "utf-8");
+
+    const first = await withEnvAsync(
+      {
+        WINCLAW_PLUGIN_DISCOVERY_CACHE_MS: "5000",
+      },
+      async () => withStateDir(stateDir, async () => discoverWinClawPlugins({})),
+    );
+    expect(first.candidates.some((candidate) => candidate.idHint === "cached")).toBe(true);
+
+    fs.rmSync(pluginPath, { force: true });
+
+    const second = await withEnvAsync(
+      {
+        WINCLAW_PLUGIN_DISCOVERY_CACHE_MS: "5000",
+      },
+      async () => withStateDir(stateDir, async () => discoverWinClawPlugins({})),
+    );
+    expect(second.candidates.some((candidate) => candidate.idHint === "cached")).toBe(true);
+
+    clearPluginDiscoveryCache();
+
+    const third = await withEnvAsync(
+      {
+        WINCLAW_PLUGIN_DISCOVERY_CACHE_MS: "5000",
+      },
+      async () => withStateDir(stateDir, async () => discoverWinClawPlugins({})),
+    );
+    expect(third.candidates.some((candidate) => candidate.idHint === "cached")).toBe(false);
+  });
 });

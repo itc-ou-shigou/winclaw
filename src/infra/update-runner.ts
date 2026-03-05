@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +8,9 @@ import {
 } from "./control-ui-assets.js";
 import { detectPackageManager as detectPackageManagerImpl } from "./detect-package-manager.js";
 import { readPackageName, readPackageVersion } from "./package-json.js";
+import { normalizePackageTagInput } from "./package-tag.js";
 import { trimLogTail } from "./restart-sentinel.js";
+import { resolveStableNodePath } from "./stable-node-path.js";
 import {
   channelToNpmTag,
   DEFAULT_PACKAGE_CHANNEL,
@@ -21,14 +22,10 @@ import {
 import { compareSemverStrings } from "./update-check.js";
 import {
   cleanupGlobalRenameDirs,
-  detectGlobalInstallManagerByPresence,
   detectGlobalInstallManagerForRoot,
   globalInstallArgs,
+  globalInstallFallbackArgs,
 } from "./update-global.js";
-import { GrcClient, type UpdateCheckResult as GrcUpdateCheckResult } from "./grc-client.js";
-import { createSubsystemLogger } from "../logging/subsystem.js";
-
-const grcLog = createSubsystemLogger("infra/update-runner/grc");
 
 export type UpdateStepResult = {
   name: string;
@@ -42,15 +39,13 @@ export type UpdateStepResult = {
 
 export type UpdateRunResult = {
   status: "ok" | "error" | "skipped";
-  mode: "git" | "grc" | "pnpm" | "bun" | "npm" | "unknown";
+  mode: "git" | "pnpm" | "bun" | "npm" | "unknown";
   root?: string;
   reason?: string;
   before?: { sha?: string | null; version?: string | null };
   after?: { sha?: string | null; version?: string | null };
   steps: UpdateStepResult[];
   durationMs: number;
-  /** Present only when mode === "grc" and an update was found. */
-  grcManifest?: GrcUpdateCheckResult;
 };
 
 type CommandRunner = (
@@ -319,17 +314,7 @@ function managerInstallArgs(manager: "pnpm" | "bun" | "npm") {
 }
 
 function normalizeTag(tag?: string) {
-  const trimmed = tag?.trim();
-  if (!trimmed) {
-    return "latest";
-  }
-  if (trimmed.startsWith("winclaw@")) {
-    return trimmed.slice("winclaw@".length);
-  }
-  if (trimmed.startsWith(`${DEFAULT_PACKAGE_NAME}@`)) {
-    return trimmed.slice(`${DEFAULT_PACKAGE_NAME}@`.length);
-  }
-  return trimmed;
+  return normalizePackageTagInput(tag, ["winclaw", DEFAULT_PACKAGE_NAME]) ?? "latest";
 }
 
 export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<UpdateRunResult> {
@@ -782,7 +767,8 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
 
     // Use --fix so that doctor auto-strips unknown config keys introduced by
     // schema changes between versions, preventing a startup validation crash.
-    const doctorArgv = [process.execPath, doctorEntry, "doctor", "--non-interactive", "--fix"];
+    const doctorNodePath = await resolveStableNodePath(process.execPath);
+    const doctorArgv = [doctorNodePath, doctorEntry, "doctor", "--non-interactive", "--fix"];
     const doctorStep = await runStep(
       step("winclaw doctor", doctorArgv, gitRoot, { WINCLAW_UPDATE_IN_PROGRESS: "1" }),
     );
@@ -883,6 +869,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
     const channel = opts.channel ?? DEFAULT_PACKAGE_CHANNEL;
     const tag = normalizeTag(opts.tag ?? channelToNpmTag(channel));
     const spec = `${packageName}@${tag}`;
+    const steps: UpdateStepResult[] = [];
     const updateStep = await runStep({
       runCommand,
       name: "global update",
@@ -893,13 +880,33 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
       stepIndex: 0,
       totalSteps: 1,
     });
-    const steps = [updateStep];
+    steps.push(updateStep);
+
+    let finalStep = updateStep;
+    if (updateStep.exitCode !== 0) {
+      const fallbackArgv = globalInstallFallbackArgs(globalManager, spec);
+      if (fallbackArgv) {
+        const fallbackStep = await runStep({
+          runCommand,
+          name: "global update (omit optional)",
+          argv: fallbackArgv,
+          cwd: pkgRoot,
+          timeoutMs,
+          progress,
+          stepIndex: 0,
+          totalSteps: 1,
+        });
+        steps.push(fallbackStep);
+        finalStep = fallbackStep;
+      }
+    }
+
     const afterVersion = await readPackageVersion(pkgRoot);
     return {
-      status: updateStep.exitCode === 0 ? "ok" : "error",
+      status: finalStep.exitCode === 0 ? "ok" : "error",
       mode: globalManager,
       root: pkgRoot,
-      reason: updateStep.exitCode === 0 ? undefined : updateStep.name,
+      reason: finalStep.exitCode === 0 ? undefined : finalStep.name,
       before: { version: beforeVersion },
       after: { version: afterVersion },
       steps,
@@ -916,543 +923,4 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
     steps: [],
     durationMs: Date.now() - startedAt,
   };
-}
-
-// ---------------------------------------------------------------------------
-// GRC-based update flow
-// ---------------------------------------------------------------------------
-
-export type GrcUpdateOptions = {
-  /** GRC server base URL. */
-  grcUrl: string;
-  /** Bearer token for authenticated endpoints. */
-  authToken?: string;
-  /** Current WinClaw version string (e.g. "2026.3.2"). */
-  currentVersion: string;
-  /** Update channel ("stable" | "beta" | "dev"). */
-  channel?: UpdateChannel;
-  /** Timeout per HTTP request in ms. Default: 15 000. */
-  timeoutMs?: number;
-  /** Abort signal for cooperative cancellation. */
-  abortSignal?: AbortSignal;
-};
-
-/**
- * Check for updates via the GRC server and return the manifest if one is
- * available.  This function intentionally does NOT download or install the
- * update -- that responsibility stays with the existing `runGatewayUpdate`
- * flow.  The caller (e.g. `GrcSyncService`) can inspect `grcManifest` and
- * decide whether to proceed.
- *
- * The returned `UpdateRunResult.mode` is always `"grc"`.  When no update is
- * available the status will be `"skipped"` with reason `"up-to-date"`.
- */
-export async function runGrcUpdateCheck(
-  opts: GrcUpdateOptions,
-): Promise<UpdateRunResult> {
-  const startedAt = Date.now();
-  const platform = os.platform();
-  const channel = opts.channel ?? "stable";
-  const steps: UpdateStepResult[] = [];
-
-  const client = new GrcClient({
-    baseUrl: opts.grcUrl,
-    authToken: opts.authToken,
-    timeout: opts.timeoutMs,
-  });
-
-  // Step 1: connectivity check
-  const pingStarted = Date.now();
-  let reachable: boolean;
-  try {
-    reachable = await client.ping(opts.abortSignal);
-  } catch {
-    reachable = false;
-  }
-  steps.push({
-    name: "grc ping",
-    command: `GET ${opts.grcUrl}/health`,
-    cwd: ".",
-    durationMs: Date.now() - pingStarted,
-    exitCode: reachable ? 0 : 1,
-  });
-
-  if (!reachable) {
-    grcLog.warn("GRC server unreachable, skipping update check", { url: opts.grcUrl });
-    return {
-      status: "skipped",
-      mode: "grc",
-      reason: "grc-unreachable",
-      before: { version: opts.currentVersion },
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  // Step 2: query the update endpoint
-  const checkStarted = Date.now();
-  let manifest: GrcUpdateCheckResult;
-  try {
-    manifest = await client.checkUpdate(
-      opts.currentVersion,
-      platform,
-      channel,
-      opts.abortSignal,
-    );
-    steps.push({
-      name: "grc update check",
-      command: `GET ${opts.grcUrl}/api/v1/update/check`,
-      cwd: ".",
-      durationMs: Date.now() - checkStarted,
-      exitCode: 0,
-      stdoutTail: JSON.stringify(manifest).slice(0, MAX_LOG_CHARS),
-    });
-  } catch (err) {
-    const msg = (err as Error).message;
-    grcLog.error(`GRC update check failed: ${msg}`);
-    steps.push({
-      name: "grc update check",
-      command: `GET ${opts.grcUrl}/api/v1/update/check`,
-      cwd: ".",
-      durationMs: Date.now() - checkStarted,
-      exitCode: 1,
-      stderrTail: msg,
-    });
-    return {
-      status: "error",
-      mode: "grc",
-      reason: "grc-check-failed",
-      before: { version: opts.currentVersion },
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  if (!manifest.available) {
-    grcLog.info("WinClaw is up to date via GRC", { version: opts.currentVersion });
-    return {
-      status: "skipped",
-      mode: "grc",
-      reason: "up-to-date",
-      before: { version: opts.currentVersion },
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  // Step 3: verify the checksum field exists if a download URL is provided
-  if (manifest.downloadUrl && !manifest.checksumSha256) {
-    grcLog.warn("GRC manifest has downloadUrl but missing checksumSha256, refusing to proceed");
-    return {
-      status: "error",
-      mode: "grc",
-      reason: "grc-missing-checksum",
-      before: { version: opts.currentVersion },
-      after: { version: manifest.version },
-      grcManifest: manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  grcLog.info("GRC update available", {
-    currentVersion: opts.currentVersion,
-    newVersion: manifest.version,
-    critical: manifest.isCritical,
-    channel: manifest.channel,
-  });
-
-  return {
-    status: "ok",
-    mode: "grc",
-    reason: manifest.isCritical ? "critical-update" : undefined,
-    before: { version: opts.currentVersion },
-    after: { version: manifest.version },
-    grcManifest: manifest,
-    steps,
-    durationMs: Date.now() - startedAt,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// GRC-based download + install flow
-// ---------------------------------------------------------------------------
-
-export type GrcInstallOptions = {
-  /** GRC server base URL. */
-  grcUrl: string;
-  /** Bearer token for authenticated endpoints. */
-  authToken?: string;
-  /** The update manifest returned by `runGrcUpdateCheck()` → `grcManifest`. */
-  manifest: GrcUpdateCheckResult;
-  /** Current WinClaw version string (e.g. "2026.3.2"). */
-  currentVersion: string;
-  /** Node ID for GRC report. */
-  nodeId?: string;
-  /** Progress callbacks. */
-  progress?: UpdateStepProgress;
-  /** Overall timeout in ms. Default: 900 000 (15 min). */
-  timeoutMs?: number;
-  /** Abort signal for cooperative cancellation. */
-  abortSignal?: AbortSignal;
-};
-
-/**
- * Download, verify, and install a WinClaw update from the GRC manifest.
- *
- * - **Windows**: Downloads the EXE installer from `manifest.downloadUrl`,
- *   verifies SHA-256 checksum, then launches via PowerShell `Start-Process
- *   -Verb RunAs` for UAC elevation with `/SILENT /NORESTART` flags.
- *
- * - **Linux / macOS**: Uses the existing global install manager (npm / pnpm /
- *   bun) to install the specific version via `winclaw@<version>`.
- *
- * Reports the outcome to GRC via `POST /api/v1/update/report`.
- */
-export async function runGrcDownloadAndInstall(
-  opts: GrcInstallOptions,
-): Promise<UpdateRunResult> {
-  const startedAt = Date.now();
-  const platform = os.platform();
-  const steps: UpdateStepResult[] = [];
-  const version = opts.manifest.version ?? opts.manifest.latest ?? "unknown";
-  const runCommand: CommandRunner = runCommandWithTimeout;
-
-  const client = new GrcClient({
-    baseUrl: opts.grcUrl,
-    authToken: opts.authToken,
-    timeout: opts.timeoutMs ?? 900_000,
-  });
-
-  let result: UpdateRunResult;
-
-  try {
-    if (platform === "win32") {
-      result = await installWindows({
-        client,
-        manifest: opts.manifest,
-        currentVersion: opts.currentVersion,
-        version,
-        steps,
-        progress: opts.progress,
-        timeoutMs: opts.timeoutMs ?? 900_000,
-        abortSignal: opts.abortSignal,
-        startedAt,
-        runCommand,
-      });
-    } else {
-      result = await installUnix({
-        manifest: opts.manifest,
-        currentVersion: opts.currentVersion,
-        version,
-        steps,
-        progress: opts.progress,
-        timeoutMs: opts.timeoutMs ?? 900_000,
-        abortSignal: opts.abortSignal,
-        startedAt,
-        runCommand,
-      });
-    }
-  } catch (err) {
-    const msg = (err as Error).message;
-    grcLog.error(`GRC install failed: ${msg}`);
-    result = {
-      status: "error",
-      mode: "grc",
-      reason: msg,
-      before: { version: opts.currentVersion },
-      after: { version },
-      grcManifest: opts.manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  // Report outcome to GRC (best-effort, never throw)
-  if (opts.nodeId) {
-    try {
-      await client.reportUpdate(
-        {
-          nodeId: opts.nodeId,
-          fromVersion: opts.currentVersion,
-          toVersion: version,
-          platform,
-          success: result.status === "ok",
-          errorMessage: result.status !== "ok" ? result.reason : undefined,
-          durationMs: result.durationMs,
-        },
-        opts.abortSignal,
-      );
-      grcLog.info("Update result reported to GRC", {
-        success: result.status === "ok",
-        version,
-      });
-    } catch (reportErr) {
-      grcLog.warn(`Failed to report update to GRC: ${(reportErr as Error).message}`);
-    }
-  }
-
-  return result;
-}
-
-// -- Windows installer (EXE download + UAC) ----------------------------------
-
-async function installWindows(ctx: {
-  client: GrcClient;
-  manifest: GrcUpdateCheckResult;
-  currentVersion: string;
-  version: string;
-  steps: UpdateStepResult[];
-  progress?: UpdateStepProgress;
-  timeoutMs: number;
-  abortSignal?: AbortSignal;
-  startedAt: number;
-  runCommand: CommandRunner;
-}): Promise<UpdateRunResult> {
-  const { client, manifest, steps, progress, abortSignal, startedAt, runCommand } = ctx;
-  const totalSteps = 3; // download, verify, install
-
-  if (!manifest.downloadUrl) {
-    return {
-      status: "error",
-      mode: "grc",
-      reason: "no-download-url",
-      before: { version: ctx.currentVersion },
-      after: { version: ctx.version },
-      grcManifest: manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  // 1. Download EXE to temp directory
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "winclaw-update-"));
-  const exePath = path.join(tmpDir, `winclaw-${ctx.version}-setup.exe`);
-
-  const dlStarted = Date.now();
-  const dlStepInfo: UpdateStepInfo = {
-    name: "download installer",
-    command: `GET ${manifest.downloadUrl}`,
-    index: 0,
-    total: totalSteps,
-  };
-  progress?.onStepStart?.(dlStepInfo);
-
-  try {
-    await client.downloadExternalBinary(
-      manifest.downloadUrl,
-      exePath,
-      ctx.timeoutMs,
-      abortSignal,
-    );
-  } catch (err) {
-    const msg = (err as Error).message;
-    const dlDuration = Date.now() - dlStarted;
-    progress?.onStepComplete?.({ ...dlStepInfo, durationMs: dlDuration, exitCode: 1, stderrTail: msg });
-    steps.push({
-      name: "download installer",
-      command: `GET ${manifest.downloadUrl}`,
-      cwd: tmpDir,
-      durationMs: dlDuration,
-      exitCode: 1,
-      stderrTail: msg,
-    });
-    await cleanupTmpDir(tmpDir);
-    return {
-      status: "error",
-      mode: "grc",
-      reason: `download-failed: ${msg}`,
-      before: { version: ctx.currentVersion },
-      after: { version: ctx.version },
-      grcManifest: manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  const dlDuration = Date.now() - dlStarted;
-  progress?.onStepComplete?.({ ...dlStepInfo, durationMs: dlDuration, exitCode: 0 });
-  steps.push({
-    name: "download installer",
-    command: `GET ${manifest.downloadUrl}`,
-    cwd: tmpDir,
-    durationMs: dlDuration,
-    exitCode: 0,
-  });
-
-  // 2. SHA-256 verification
-  const verifyStarted = Date.now();
-  const verifyStepInfo: UpdateStepInfo = {
-    name: "verify checksum",
-    command: `sha256sum ${exePath}`,
-    index: 1,
-    total: totalSteps,
-  };
-  progress?.onStepStart?.(verifyStepInfo);
-
-  if (manifest.checksumSha256) {
-    const fileBuffer = await fs.readFile(exePath);
-    const actualHash = createHash("sha256").update(fileBuffer).digest("hex");
-    const expectedHash = manifest.checksumSha256.toLowerCase();
-
-    if (actualHash !== expectedHash) {
-      const verifyDuration = Date.now() - verifyStarted;
-      const mismatchMsg = `SHA-256 mismatch: expected ${expectedHash}, got ${actualHash}`;
-      progress?.onStepComplete?.({ ...verifyStepInfo, durationMs: verifyDuration, exitCode: 1, stderrTail: mismatchMsg });
-      steps.push({
-        name: "verify checksum",
-        command: `sha256sum ${exePath}`,
-        cwd: tmpDir,
-        durationMs: verifyDuration,
-        exitCode: 1,
-        stderrTail: mismatchMsg,
-      });
-      await cleanupTmpDir(tmpDir);
-      return {
-        status: "error",
-        mode: "grc",
-        reason: mismatchMsg,
-        before: { version: ctx.currentVersion },
-        after: { version: ctx.version },
-        grcManifest: manifest,
-        steps,
-        durationMs: Date.now() - startedAt,
-      };
-    }
-
-    grcLog.info("Checksum verified", { expected: expectedHash, actual: actualHash });
-  } else {
-    grcLog.warn("No checksum provided, skipping verification");
-  }
-
-  const verifyDuration = Date.now() - verifyStarted;
-  progress?.onStepComplete?.({ ...verifyStepInfo, durationMs: verifyDuration, exitCode: 0 });
-  steps.push({
-    name: "verify checksum",
-    command: `sha256sum ${exePath}`,
-    cwd: tmpDir,
-    durationMs: verifyDuration,
-    exitCode: 0,
-    stdoutTail: manifest.checksumSha256 ? "checksum OK" : "no checksum, skipped",
-  });
-
-  // 3. Launch installer with UAC elevation via PowerShell
-  const psCommand = [
-    "powershell.exe",
-    "-NoProfile",
-    "-NonInteractive",
-    "-Command",
-    `$p = Start-Process -FilePath '${exePath.replace(/'/g, "''")}' -ArgumentList '/SILENT','/NORESTART' -Verb RunAs -Wait -PassThru; exit $p.ExitCode`,
-  ];
-
-  const installStep = await runStep({
-    runCommand,
-    name: "install (UAC elevated)",
-    argv: psCommand,
-    cwd: tmpDir,
-    timeoutMs: ctx.timeoutMs,
-    progress,
-    stepIndex: 2,
-    totalSteps,
-  });
-  steps.push(installStep);
-
-  // Cleanup temp directory (best-effort)
-  await cleanupTmpDir(tmpDir);
-
-  if (installStep.exitCode !== 0) {
-    return {
-      status: "error",
-      mode: "grc",
-      reason: `installer-exit-code-${installStep.exitCode}`,
-      before: { version: ctx.currentVersion },
-      after: { version: ctx.version },
-      grcManifest: manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  grcLog.info("Windows installer completed successfully", { version: ctx.version });
-  return {
-    status: "ok",
-    mode: "grc",
-    before: { version: ctx.currentVersion },
-    after: { version: ctx.version },
-    grcManifest: manifest,
-    steps,
-    durationMs: Date.now() - startedAt,
-  };
-}
-
-// -- Linux / macOS installer (npm/pnpm/bun global) ---------------------------
-
-async function installUnix(ctx: {
-  manifest: GrcUpdateCheckResult;
-  currentVersion: string;
-  version: string;
-  steps: UpdateStepResult[];
-  progress?: UpdateStepProgress;
-  timeoutMs: number;
-  abortSignal?: AbortSignal;
-  startedAt: number;
-  runCommand: CommandRunner;
-}): Promise<UpdateRunResult> {
-  const { manifest, steps, progress, startedAt, runCommand } = ctx;
-  const totalSteps = 1;
-  const spec = `winclaw@${ctx.version}`;
-
-  // Detect global install manager by checking which package manager has winclaw installed
-  const manager = await detectGlobalInstallManagerByPresence(
-    runCommand,
-    30_000,
-  ).catch(() => null) ?? "npm";
-
-  const installArgv = globalInstallArgs(manager, spec);
-
-  const installStep = await runStep({
-    runCommand,
-    name: `global install via ${manager}`,
-    argv: installArgv,
-    cwd: os.homedir(),
-    timeoutMs: ctx.timeoutMs,
-    progress,
-    stepIndex: 0,
-    totalSteps,
-  });
-  steps.push(installStep);
-
-  if (installStep.exitCode !== 0) {
-    return {
-      status: "error",
-      mode: "grc",
-      reason: `${manager}-install-exit-code-${installStep.exitCode}`,
-      before: { version: ctx.currentVersion },
-      after: { version: ctx.version },
-      grcManifest: manifest,
-      steps,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
-  grcLog.info(`Unix install completed successfully via ${manager}`, { version: ctx.version, spec });
-  return {
-    status: "ok",
-    mode: "grc",
-    before: { version: ctx.currentVersion },
-    after: { version: ctx.version },
-    grcManifest: manifest,
-    steps,
-    durationMs: Date.now() - startedAt,
-  };
-}
-
-// -- Helpers ------------------------------------------------------------------
-
-async function cleanupTmpDir(dirPath: string): Promise<void> {
-  try {
-    await fs.rm(dirPath, { recursive: true, force: true });
-  } catch {
-    grcLog.debug(`Failed to cleanup temp dir: ${dirPath}`);
-  }
 }

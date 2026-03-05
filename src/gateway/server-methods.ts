@@ -14,7 +14,6 @@ import { cronHandlers } from "./server-methods/cron.js";
 import { deviceHandlers } from "./server-methods/devices.js";
 import { doctorHandlers } from "./server-methods/doctor.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
-import { createGrcHandlers } from "./server-methods/grc.js";
 import { healthHandlers } from "./server-methods/health.js";
 import { logsHandlers } from "./server-methods/logs.js";
 import { modelsHandlers } from "./server-methods/models.js";
@@ -27,30 +26,12 @@ import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { toolsCatalogHandlers } from "./server-methods/tools-catalog.js";
 import { ttsHandlers } from "./server-methods/tts.js";
-import type { GrcConnectionManager } from "../infra/grc-connection.js";
 import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { updateHandlers } from "./server-methods/update.js";
 import { usageHandlers } from "./server-methods/usage.js";
 import { voicewakeHandlers } from "./server-methods/voicewake.js";
 import { webHandlers } from "./server-methods/web.js";
 import { wizardHandlers } from "./server-methods/wizard.js";
-
-/**
- * Module-level getter for GrcConnectionManager. Starts as a null-returning
- * stub and is replaced once the connection manager is available at runtime via
- * {@link initGrcConnectionGetter}. The GRC handlers close over this reference
- * so they always invoke the live getter without requiring the handlers object
- * to be rebuilt.
- */
-let _grcConnectionGetter: () => GrcConnectionManager | null = () => null;
-
-/**
- * Called once during gateway startup (after sidecars are initialised) to wire
- * the live GrcConnectionManager getter into the pre-built handler table.
- */
-export function initGrcConnectionGetter(getter: () => GrcConnectionManager | null): void {
-  _grcConnectionGetter = getter;
-}
 
 const CONTROL_PLANE_WRITE_METHODS = new Set(["config.apply", "config.patch", "update.run"]);
 function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["client"]) {
@@ -111,9 +92,6 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...agentHandlers,
   ...agentsHandlers,
   ...browserHandlers,
-  // GRC handlers close over _grcConnectionGetter, which is replaced at runtime
-  // by initGrcConnectionGetter() once the GrcConnectionManager is available.
-  ...createGrcHandlers(() => _grcConnectionGetter()),
 };
 
 export async function handleGatewayRequest(

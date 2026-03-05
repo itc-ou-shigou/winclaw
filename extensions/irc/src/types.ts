@@ -1,4 +1,4 @@
-import type { BaseProbeResult } from "winclaw/plugin-sdk";
+import type { BaseProbeResult } from "winclaw/plugin-sdk/irc";
 import type {
   BlockStreamingCoalesceConfig,
   DmConfig,
@@ -8,7 +8,7 @@ import type {
   GroupToolPolicyConfig,
   MarkdownConfig,
   WinClawConfig,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/irc";
 
 export type IrcChannelConfig = {
   requireMention?: boolean;
@@ -68,6 +68,7 @@ export type IrcAccountConfig = {
 
 export type IrcConfig = IrcAccountConfig & {
   accounts?: Record<string, IrcAccountConfig>;
+  defaultAccount?: string;
 };
 
 export type CoreConfig = WinClawConfig & {

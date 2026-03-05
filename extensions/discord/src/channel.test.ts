@@ -1,4 +1,4 @@
-import type { WinClawConfig, PluginRuntime } from "winclaw/plugin-sdk";
+import type { WinClawConfig, PluginRuntime } from "winclaw/plugin-sdk/discord";
 import { describe, expect, it, vi } from "vitest";
 import { discordPlugin } from "./channel.js";
 import { setDiscordRuntime } from "./runtime.js";

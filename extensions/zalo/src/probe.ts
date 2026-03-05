@@ -1,4 +1,4 @@
-import type { BaseProbeResult } from "winclaw/plugin-sdk";
+import type { BaseProbeResult } from "winclaw/plugin-sdk/zalo";
 import { getMe, ZaloApiError, type ZaloBotInfo, type ZaloFetch } from "./api.js";
 
 export type ZaloProbeResult = BaseProbeResult<string> & {

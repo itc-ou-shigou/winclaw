@@ -8,7 +8,7 @@ import {
   type ChannelOnboardingDmPolicy,
   type DmPolicy,
   type WizardPrompter,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/irc";
 import { listIrcAccountIds, resolveDefaultIrcAccountId, resolveIrcAccount } from "./accounts.js";
 import {
   isChannelTarget,

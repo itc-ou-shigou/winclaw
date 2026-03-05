@@ -1,4 +1,4 @@
-import { buildChannelKeyCandidates, resolveChannelEntryMatch } from "winclaw/plugin-sdk";
+import { buildChannelKeyCandidates, resolveChannelEntryMatch } from "winclaw/plugin-sdk/matrix";
 import type { MatrixRoomConfig } from "../../types.js";
 
 export type MatrixRoomConfigResolved = {

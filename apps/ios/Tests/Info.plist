@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>WinClawTests</string>
+	<string>OpenClawTests</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -17,8 +17,8 @@
 	<key>CFBundlePackageType</key>
 			<string>BNDL</string>
 			<key>CFBundleShortVersionString</key>
-			<string>2026.2.26</string>
+			<string>2026.3.2</string>
 			<key>CFBundleVersion</key>
-			<string>20260226</string>
+			<string>20260301</string>
 		</dict>
 	</plist>

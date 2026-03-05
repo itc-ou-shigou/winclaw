@@ -25,6 +25,16 @@ type BuildServicePathOptions = MinimalServicePathOptions & {
   env?: Record<string, string | undefined>;
 };
 
+type SharedServiceEnvironmentFields = {
+  stateDir: string | undefined;
+  configPath: string | undefined;
+  tmpDir: string;
+  minimalPath: string;
+  proxyEnv: Record<string, string | undefined>;
+  nodeCaCerts: string | undefined;
+  nodeUseSystemCa: string | undefined;
+};
+
 const SERVICE_PROXY_ENV_KEYS = [
   "HTTP_PROXY",
   "HTTPS_PROXY",
@@ -236,26 +246,18 @@ export function buildServiceEnvironment(params: {
   port: number;
   token?: string;
   launchdLabel?: string;
+  platform?: NodeJS.Platform;
 }): Record<string, string | undefined> {
   const { env, port, token, launchdLabel } = params;
+  const platform = params.platform ?? process.platform;
+  const sharedEnv = resolveSharedServiceEnvironmentFields(env, platform);
   const profile = env.WINCLAW_PROFILE;
   const resolvedLaunchdLabel =
-    launchdLabel ||
-    (process.platform === "darwin" ? resolveGatewayLaunchAgentLabel(profile) : undefined);
+    launchdLabel || (platform === "darwin" ? resolveGatewayLaunchAgentLabel(profile) : undefined);
   const systemdUnit = `${resolveGatewaySystemdServiceName(profile)}.service`;
-  const stateDir = env.WINCLAW_STATE_DIR;
-  const configPath = env.WINCLAW_CONFIG_PATH;
-  // Keep a usable temp directory for supervised services even when the host env omits TMPDIR.
-  const tmpDir = env.TMPDIR?.trim() || os.tmpdir();
-  const proxyEnv = readServiceProxyEnvironment(env);
   return {
-    HOME: env.HOME,
-    TMPDIR: tmpDir,
-    PATH: buildMinimalServicePath({ env }),
-    ...proxyEnv,
+    ...buildCommonServiceEnvironment(env, sharedEnv),
     WINCLAW_PROFILE: profile,
-    WINCLAW_STATE_DIR: stateDir,
-    WINCLAW_CONFIG_PATH: configPath,
     WINCLAW_GATEWAY_PORT: String(port),
     WINCLAW_GATEWAY_TOKEN: token,
     WINCLAW_LAUNCHD_LABEL: resolvedLaunchdLabel,
@@ -268,19 +270,16 @@ export function buildServiceEnvironment(params: {
 
 export function buildNodeServiceEnvironment(params: {
   env: Record<string, string | undefined>;
+  platform?: NodeJS.Platform;
 }): Record<string, string | undefined> {
   const { env } = params;
-  const stateDir = env.WINCLAW_STATE_DIR;
-  const configPath = env.WINCLAW_CONFIG_PATH;
-  const tmpDir = env.TMPDIR?.trim() || os.tmpdir();
-  const proxyEnv = readServiceProxyEnvironment(env);
+  const platform = params.platform ?? process.platform;
+  const sharedEnv = resolveSharedServiceEnvironmentFields(env, platform);
+  const gatewayToken =
+    env.WINCLAW_GATEWAY_TOKEN?.trim() || env.CLAWDBOT_GATEWAY_TOKEN?.trim() || undefined;
   return {
-    HOME: env.HOME,
-    TMPDIR: tmpDir,
-    PATH: buildMinimalServicePath({ env }),
-    ...proxyEnv,
-    WINCLAW_STATE_DIR: stateDir,
-    WINCLAW_CONFIG_PATH: configPath,
+    ...buildCommonServiceEnvironment(env, sharedEnv),
+    WINCLAW_GATEWAY_TOKEN: gatewayToken,
     WINCLAW_LAUNCHD_LABEL: resolveNodeLaunchAgentLabel(),
     WINCLAW_SYSTEMD_UNIT: resolveNodeSystemdServiceName(),
     WINCLAW_WINDOWS_TASK_NAME: resolveNodeWindowsTaskName(),
@@ -289,5 +288,47 @@ export function buildNodeServiceEnvironment(params: {
     WINCLAW_SERVICE_MARKER: NODE_SERVICE_MARKER,
     WINCLAW_SERVICE_KIND: NODE_SERVICE_KIND,
     WINCLAW_SERVICE_VERSION: VERSION,
+  };
+}
+
+function buildCommonServiceEnvironment(
+  env: Record<string, string | undefined>,
+  sharedEnv: SharedServiceEnvironmentFields,
+): Record<string, string | undefined> {
+  return {
+    HOME: env.HOME,
+    TMPDIR: sharedEnv.tmpDir,
+    PATH: sharedEnv.minimalPath,
+    ...sharedEnv.proxyEnv,
+    NODE_EXTRA_CA_CERTS: sharedEnv.nodeCaCerts,
+    NODE_USE_SYSTEM_CA: sharedEnv.nodeUseSystemCa,
+    WINCLAW_STATE_DIR: sharedEnv.stateDir,
+    WINCLAW_CONFIG_PATH: sharedEnv.configPath,
+  };
+}
+
+function resolveSharedServiceEnvironmentFields(
+  env: Record<string, string | undefined>,
+  platform: NodeJS.Platform,
+): SharedServiceEnvironmentFields {
+  const stateDir = env.WINCLAW_STATE_DIR;
+  const configPath = env.WINCLAW_CONFIG_PATH;
+  // Keep a usable temp directory for supervised services even when the host env omits TMPDIR.
+  const tmpDir = env.TMPDIR?.trim() || os.tmpdir();
+  const proxyEnv = readServiceProxyEnvironment(env);
+  // On macOS, launchd services don't inherit the shell environment, so Node's undici/fetch
+  // cannot locate the system CA bundle. Default to /etc/ssl/cert.pem so TLS verification
+  // works correctly when running as a LaunchAgent without extra user configuration.
+  const nodeCaCerts =
+    env.NODE_EXTRA_CA_CERTS ?? (platform === "darwin" ? "/etc/ssl/cert.pem" : undefined);
+  const nodeUseSystemCa = env.NODE_USE_SYSTEM_CA ?? (platform === "darwin" ? "1" : undefined);
+  return {
+    stateDir,
+    configPath,
+    tmpDir,
+    minimalPath: buildMinimalServicePath({ env }),
+    proxyEnv,
+    nodeCaCerts,
+    nodeUseSystemCa,
   };
 }

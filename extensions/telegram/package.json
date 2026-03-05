@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/telegram",
-  "version": "2026.2.26",
+  "version": "2026.3.2",
   "private": true,
   "description": "WinClaw Telegram channel plugin",
   "type": "module",

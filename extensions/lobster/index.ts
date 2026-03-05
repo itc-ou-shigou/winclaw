@@ -2,7 +2,7 @@ import type {
   AnyAgentTool,
   WinClawPluginApi,
   WinClawPluginToolFactory,
-} from "../../src/plugins/types.js";
+} from "winclaw/plugin-sdk/lobster";
 import { createLobsterTool } from "./src/lobster-tool.js";
 
 export default function register(api: WinClawPluginApi) {

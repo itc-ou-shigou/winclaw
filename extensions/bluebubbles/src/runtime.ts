@@ -1,4 +1,4 @@
-import type { PluginRuntime } from "winclaw/plugin-sdk";
+import type { PluginRuntime } from "winclaw/plugin-sdk/bluebubbles";
 
 let runtime: PluginRuntime | null = null;
 type LegacyRuntimeLogShape = { log?: (message: string) => void };

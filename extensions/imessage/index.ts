@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/imessage";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/imessage";
 import { imessagePlugin } from "./src/channel.js";
 import { setIMessageRuntime } from "./src/runtime.js";
 

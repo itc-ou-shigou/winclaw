@@ -32,6 +32,7 @@ export function listSlackMessageActions(cfg: WinClawConfig): ChannelMessageActio
     actions.add("read");
     actions.add("edit");
     actions.add("delete");
+    actions.add("download-file");
   }
   if (isActionEnabled("pins")) {
     actions.add("pin");

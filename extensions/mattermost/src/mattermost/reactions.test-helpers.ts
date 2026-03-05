@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/mattermost";
 import { expect, vi } from "vitest";
 
 export function createMattermostTestConfig(): WinClawConfig {

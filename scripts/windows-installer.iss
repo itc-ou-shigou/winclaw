@@ -167,7 +167,7 @@ begin
   Result := Pos(';' + Uppercase(Param) + ';', ';' + Uppercase(OrigPath) + ';') = 0;
 end;
 
-// Migrate .openclaw -> .winclaw config on post-install
+// Migrate .winclaw -> .winclaw config on post-install
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
@@ -187,12 +187,12 @@ begin
     if UserHome = '' then
       exit;
 
-    OldStateDir := UserHome + '\.openclaw';
+    OldStateDir := UserHome + '\.winclaw';
     NewStateDir := UserHome + '\.winclaw';
-    OldConfig := OldStateDir + '\openclaw.json';
+    OldConfig := OldStateDir + '\winclaw.json';
     NewConfig := NewStateDir + '\winclaw.json';
 
-    // Step 1: If .winclaw does not exist but .openclaw does, copy the whole dir
+    // Step 1: If .winclaw does not exist but .winclaw does, copy the whole dir
     if not DirExists(NewStateDir) and DirExists(OldStateDir) then
     begin
       Exec(ExpandConstant('{sys}\cmd.exe'),
@@ -200,12 +200,12 @@ begin
         '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     end;
 
-    // Step 2: If .winclaw exists but winclaw.json is missing, copy from openclaw.json
+    // Step 2: If .winclaw exists but winclaw.json is missing, copy from winclaw.json
     if DirExists(NewStateDir) and not FileExists(NewConfig) then
     begin
-      if FileExists(NewStateDir + '\openclaw.json') then
+      if FileExists(NewStateDir + '\winclaw.json') then
       begin
-        CopyFile(NewStateDir + '\openclaw.json', NewConfig, False);
+        CopyFile(NewStateDir + '\winclaw.json', NewConfig, False);
       end
       else if FileExists(OldConfig) then
       begin
@@ -213,7 +213,7 @@ begin
       end;
     end;
 
-    // Step 3: If .winclaw exists but key subdirs are missing, copy them from .openclaw
+    // Step 3: If .winclaw exists but key subdirs are missing, copy them from .winclaw
     if DirExists(NewStateDir) and DirExists(OldStateDir) then
     begin
       if not DirExists(NewStateDir + '\credentials') and DirExists(OldStateDir + '\credentials') then

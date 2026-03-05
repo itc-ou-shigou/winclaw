@@ -14,7 +14,7 @@ import {
   type OutboundReplyPayload,
   type WinClawConfig,
   type RuntimeEnv,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/nextcloud-talk";
 import type { ResolvedNextcloudTalkAccount } from "./accounts.js";
 import {
   normalizeNextcloudTalkAllowlist,

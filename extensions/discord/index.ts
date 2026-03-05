@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/discord";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/discord";
 import { discordPlugin } from "./src/channel.js";
 import { setDiscordRuntime } from "./src/runtime.js";
 import { registerDiscordSubagentHooks } from "./src/subagent-hooks.js";

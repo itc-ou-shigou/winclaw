@@ -145,27 +145,6 @@ function buildInstallCommand(
       }
       return { argv: ["uv", "tool", "install", spec.package] };
     }
-    case "winget": {
-      const id = spec.wingetId?.trim();
-      if (!id) return { argv: null, error: "missing winget id" };
-      return { argv: ["winget", "install", "--id", id, "-e", "--accept-source-agreements"] };
-    }
-    case "scoop": {
-      const pkg = spec.scoopPackage?.trim();
-      if (!pkg) return { argv: null, error: "missing scoop package" };
-      return { argv: ["scoop", "install", pkg] };
-    }
-    case "choco": {
-      const pkg = spec.package?.trim();
-      if (!pkg) return { argv: null, error: "missing choco package" };
-      return { argv: ["choco", "install", pkg, "-y", "--no-progress"] };
-    }
-    case "pip": {
-      const pkg = spec.package?.trim();
-      if (!pkg) return { argv: null, error: "missing pip package" };
-      const pipBin = hasBinary("pip") ? "pip" : "pip3";
-      return { argv: [pipBin, "install", pkg] };
-    }
     case "download": {
       return { argv: null, error: "download install handled separately" };
     }
@@ -442,64 +421,6 @@ export async function installSkill(params: SkillInstallRequest): Promise<SkillIn
   if (spec.kind === "download") {
     const downloadResult = await installDownloadSpec({ entry, spec, timeoutMs });
     return withWarnings(downloadResult, warnings);
-  }
-
-  // Windows package manager pre-checks
-  if (spec.kind === "winget" && !hasBinary("winget")) {
-    return withWarnings(
-      {
-        ok: false,
-        message: "winget not available (requires Windows 10 1709+)",
-        stdout: "",
-        stderr: "",
-        code: null,
-      },
-      warnings,
-    );
-  }
-  if (spec.kind === "scoop") {
-    if (!hasBinary("scoop")) {
-      return withWarnings(
-        {
-          ok: false,
-          message: "scoop not installed (see https://scoop.sh)",
-          stdout: "",
-          stderr: "",
-          code: null,
-        },
-        warnings,
-      );
-    }
-    // Add scoop bucket if specified
-    if (spec.scoopBucket) {
-      await runCommandWithTimeout(["scoop", "bucket", "add", spec.scoopBucket], {
-        timeoutMs: Math.min(timeoutMs, 30_000),
-      });
-    }
-  }
-  if (spec.kind === "choco" && !hasBinary("choco")) {
-    return withWarnings(
-      {
-        ok: false,
-        message: "choco not installed (see https://chocolatey.org)",
-        stdout: "",
-        stderr: "",
-        code: null,
-      },
-      warnings,
-    );
-  }
-  if (spec.kind === "pip" && !hasBinary("pip") && !hasBinary("pip3")) {
-    return withWarnings(
-      {
-        ok: false,
-        message: "pip not installed",
-        stdout: "",
-        stderr: "",
-        code: null,
-      },
-      warnings,
-    );
   }
 
   const prefs = resolveSkillsInstallPreferences(params.config);

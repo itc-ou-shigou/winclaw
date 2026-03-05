@@ -1,1 +1,1 @@
-export { withFileLock } from "winclaw/plugin-sdk";
+export { withFileLock } from "winclaw/plugin-sdk/msteams";

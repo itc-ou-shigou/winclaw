@@ -9,7 +9,6 @@ import {
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
 } from "./subagent-registry.js";
-import { createWinClawTools } from "./winclaw-tools.js";
 
 describe("sessions_spawn requesterOrigin threading", () => {
   const spawnAndReadRequesterRun = async (opts?: { agentThreadId?: number }) => {

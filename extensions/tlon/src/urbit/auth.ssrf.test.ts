@@ -1,5 +1,5 @@
-import type { LookupFn } from "winclaw/plugin-sdk";
-import { SsrFBlockedError } from "winclaw/plugin-sdk";
+import type { LookupFn } from "winclaw/plugin-sdk/tlon";
+import { SsrFBlockedError } from "winclaw/plugin-sdk/tlon";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { authenticate } from "./auth.js";
 

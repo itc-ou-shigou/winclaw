@@ -1,4 +1,4 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/discord";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerDiscordSubagentHooks } from "./subagent-hooks.js";
 
@@ -35,7 +35,7 @@ const hookMocks = vi.hoisted(() => ({
   unbindThreadBindingsBySessionKey: vi.fn(() => []),
 }));
 
-vi.mock("winclaw/plugin-sdk", () => ({
+vi.mock("winclaw/plugin-sdk/discord", () => ({
   resolveDiscordAccount: hookMocks.resolveDiscordAccount,
   autoBindSpawnedDiscordSubagent: hookMocks.autoBindSpawnedDiscordSubagent,
   listThreadBindingsBySessionKey: hookMocks.listThreadBindingsBySessionKey,

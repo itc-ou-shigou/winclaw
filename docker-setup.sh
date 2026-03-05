@@ -7,6 +7,9 @@ EXTRA_COMPOSE_FILE="$ROOT_DIR/docker-compose.extra.yml"
 IMAGE_NAME="${WINCLAW_IMAGE:-winclaw:local}"
 EXTRA_MOUNTS="${WINCLAW_EXTRA_MOUNTS:-}"
 HOME_VOLUME_NAME="${WINCLAW_HOME_VOLUME:-}"
+RAW_SANDBOX_SETTING="${WINCLAW_SANDBOX:-}"
+SANDBOX_ENABLED=""
+DOCKER_SOCKET_PATH="${WINCLAW_DOCKER_SOCKET:-}"
 
 fail() {
   echo "ERROR: $*" >&2
@@ -18,6 +21,15 @@ require_cmd() {
     echo "Missing dependency: $1" >&2
     exit 1
   fi
+}
+
+is_truthy_value() {
+  local raw="${1:-}"
+  raw="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$raw" in
+    1 | true | yes | on) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 read_config_gateway_token() {
@@ -92,6 +104,14 @@ ensure_control_ui_allowed_origins() {
   echo "Set gateway.controlUi.allowedOrigins to $allowed_origin_json for non-loopback bind."
 }
 
+sync_gateway_mode_and_bind() {
+  docker compose "${COMPOSE_ARGS[@]}" run --rm winclaw-cli \
+    config set gateway.mode local >/dev/null
+  docker compose "${COMPOSE_ARGS[@]}" run --rm winclaw-cli \
+    config set gateway.bind "$WINCLAW_GATEWAY_BIND" >/dev/null
+  echo "Pinned gateway.mode=local and gateway.bind=$WINCLAW_GATEWAY_BIND for Docker setup."
+}
+
 contains_disallowed_chars() {
   local value="$1"
   [[ "$value" == *$'\n'* || "$value" == *$'\r'* || "$value" == *$'\t'* ]]
@@ -136,6 +156,16 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ -z "$DOCKER_SOCKET_PATH" && "${DOCKER_HOST:-}" == unix://* ]]; then
+  DOCKER_SOCKET_PATH="${DOCKER_HOST#unix://}"
+fi
+if [[ -z "$DOCKER_SOCKET_PATH" ]]; then
+  DOCKER_SOCKET_PATH="/var/run/docker.sock"
+fi
+if is_truthy_value "$RAW_SANDBOX_SETTING"; then
+  SANDBOX_ENABLED="1"
+fi
+
 WINCLAW_CONFIG_DIR="${WINCLAW_CONFIG_DIR:-$HOME/.winclaw}"
 WINCLAW_WORKSPACE_DIR="${WINCLAW_WORKSPACE_DIR:-$HOME/.winclaw/workspace}"
 
@@ -151,12 +181,17 @@ fi
 if contains_disallowed_chars "$EXTRA_MOUNTS"; then
   fail "WINCLAW_EXTRA_MOUNTS cannot contain control characters."
 fi
+if [[ -n "$SANDBOX_ENABLED" ]]; then
+  validate_mount_path_value "WINCLAW_DOCKER_SOCKET" "$DOCKER_SOCKET_PATH"
+fi
 
 mkdir -p "$WINCLAW_CONFIG_DIR"
 mkdir -p "$WINCLAW_WORKSPACE_DIR"
-# Seed device-identity parent eagerly for Docker Desktop/Windows bind mounts
-# that reject creating new subdirectories from inside the container.
+# Seed directory tree eagerly so bind mounts work even on Docker Desktop/Windows
+# where the container (even as root) cannot create new host subdirectories.
 mkdir -p "$WINCLAW_CONFIG_DIR/identity"
+mkdir -p "$WINCLAW_CONFIG_DIR/agents/main/agent"
+mkdir -p "$WINCLAW_CONFIG_DIR/agents/main/sessions"
 
 export WINCLAW_CONFIG_DIR
 export WINCLAW_WORKSPACE_DIR
@@ -167,6 +202,16 @@ export WINCLAW_IMAGE="$IMAGE_NAME"
 export WINCLAW_DOCKER_APT_PACKAGES="${WINCLAW_DOCKER_APT_PACKAGES:-}"
 export WINCLAW_EXTRA_MOUNTS="$EXTRA_MOUNTS"
 export WINCLAW_HOME_VOLUME="$HOME_VOLUME_NAME"
+export WINCLAW_ALLOW_INSECURE_PRIVATE_WS="${WINCLAW_ALLOW_INSECURE_PRIVATE_WS:-}"
+export WINCLAW_SANDBOX="$SANDBOX_ENABLED"
+export WINCLAW_DOCKER_SOCKET="$DOCKER_SOCKET_PATH"
+
+# Detect Docker socket GID for sandbox group_add.
+DOCKER_GID=""
+if [[ -n "$SANDBOX_ENABLED" && -S "$DOCKER_SOCKET_PATH" ]]; then
+  DOCKER_GID="$(stat -c '%g' "$DOCKER_SOCKET_PATH" 2>/dev/null || stat -f '%g' "$DOCKER_SOCKET_PATH" 2>/dev/null || echo "")"
+fi
+export DOCKER_GID
 
 if [[ -z "${WINCLAW_GATEWAY_TOKEN:-}" ]]; then
   EXISTING_CONFIG_TOKEN="$(read_config_gateway_token || true)"
@@ -244,6 +289,14 @@ YAML
   fi
 }
 
+# When sandbox is requested, ensure Docker CLI build arg is set for local builds.
+# Docker socket mount is deferred until sandbox prerequisites are verified.
+if [[ -n "$SANDBOX_ENABLED" ]]; then
+  if [[ -z "${WINCLAW_INSTALL_DOCKER_CLI:-}" ]]; then
+    export WINCLAW_INSTALL_DOCKER_CLI=1
+  fi
+fi
+
 VALID_MOUNTS=()
 if [[ -n "$EXTRA_MOUNTS" ]]; then
   IFS=',' read -r -a mounts <<<"$EXTRA_MOUNTS"
@@ -268,6 +321,9 @@ fi
 for compose_file in "${COMPOSE_FILES[@]}"; do
   COMPOSE_ARGS+=("-f" "$compose_file")
 done
+# Keep a base compose arg set without sandbox overlay so rollback paths can
+# force a known-safe gateway service definition (no docker.sock mount).
+BASE_COMPOSE_ARGS=("${COMPOSE_ARGS[@]}")
 COMPOSE_HINT="docker compose"
 for compose_file in "${COMPOSE_FILES[@]}"; do
   COMPOSE_HINT+=" -f ${compose_file}"
@@ -321,12 +377,18 @@ upsert_env "$ENV_FILE" \
   WINCLAW_IMAGE \
   WINCLAW_EXTRA_MOUNTS \
   WINCLAW_HOME_VOLUME \
-  WINCLAW_DOCKER_APT_PACKAGES
+  WINCLAW_DOCKER_APT_PACKAGES \
+  WINCLAW_SANDBOX \
+  WINCLAW_DOCKER_SOCKET \
+  DOCKER_GID \
+  WINCLAW_INSTALL_DOCKER_CLI \
+  WINCLAW_ALLOW_INSECURE_PRIVATE_WS
 
 if [[ "$IMAGE_NAME" == "winclaw:local" ]]; then
   echo "==> Building Docker image: $IMAGE_NAME"
   docker build \
     --build-arg "WINCLAW_DOCKER_APT_PACKAGES=${WINCLAW_DOCKER_APT_PACKAGES}" \
+    --build-arg "WINCLAW_INSTALL_DOCKER_CLI=${WINCLAW_INSTALL_DOCKER_CLI:-}" \
     -t "$IMAGE_NAME" \
     -f "$ROOT_DIR/Dockerfile" \
     "$ROOT_DIR"
@@ -338,16 +400,36 @@ else
   fi
 fi
 
+# Ensure bind-mounted data directories are writable by the container's `node`
+# user (uid 1000). Host-created dirs inherit the host user's uid which may
+# differ, causing EACCES when the container tries to mkdir/write.
+# Running a brief root container to chown is the portable Docker idiom --
+# it works regardless of the host uid and doesn't require host-side root.
+echo ""
+echo "==> Fixing data-directory permissions"
+# Use -xdev to restrict chown to the config-dir mount only — without it,
+# the recursive chown would cross into the workspace bind mount and rewrite
+# ownership of all user project files on Linux hosts.
+# After fixing the config dir, only the WinClaw metadata subdirectory
+# (.winclaw/) inside the workspace gets chowned, not the user's project files.
+docker compose "${COMPOSE_ARGS[@]}" run --rm --user root --entrypoint sh winclaw-cli -c \
+  'find /home/node/.winclaw -xdev -exec chown node:node {} +; \
+   [ -d /home/node/.winclaw/workspace/.winclaw ] && chown -R node:node /home/node/.winclaw/workspace/.winclaw || true'
+
 echo ""
 echo "==> Onboarding (interactive)"
-echo "When prompted:"
-echo "  - Gateway bind: lan"
-echo "  - Gateway auth: token"
-echo "  - Gateway token: $WINCLAW_GATEWAY_TOKEN"
-echo "  - Tailscale exposure: Off"
-echo "  - Install Gateway daemon: No"
+echo "Docker setup pins Gateway mode to local."
+echo "Gateway runtime bind comes from WINCLAW_GATEWAY_BIND (default: lan)."
+echo "Current runtime bind: $WINCLAW_GATEWAY_BIND"
+echo "Gateway token: $WINCLAW_GATEWAY_TOKEN"
+echo "Tailscale exposure: Off (use host-level tailnet/Tailscale setup separately)."
+echo "Install Gateway daemon: No (managed by Docker Compose)"
 echo ""
-docker compose "${COMPOSE_ARGS[@]}" run --rm winclaw-cli onboard --no-install-daemon
+docker compose "${COMPOSE_ARGS[@]}" run --rm winclaw-cli onboard --mode local --no-install-daemon
+
+echo ""
+echo "==> Docker gateway defaults"
+sync_gateway_mode_and_bind
 
 echo ""
 echo "==> Control UI origin allowlist"
@@ -366,6 +448,115 @@ echo "Docs: https://docs.winclaw.ai/channels"
 echo ""
 echo "==> Starting gateway"
 docker compose "${COMPOSE_ARGS[@]}" up -d winclaw-gateway
+
+# --- Sandbox setup (opt-in via WINCLAW_SANDBOX=1) ---
+if [[ -n "$SANDBOX_ENABLED" ]]; then
+  echo ""
+  echo "==> Sandbox setup"
+
+  # Build sandbox image if Dockerfile.sandbox exists.
+  if [[ -f "$ROOT_DIR/Dockerfile.sandbox" ]]; then
+    echo "Building sandbox image: winclaw-sandbox:bookworm-slim"
+    docker build \
+      -t "winclaw-sandbox:bookworm-slim" \
+      -f "$ROOT_DIR/Dockerfile.sandbox" \
+      "$ROOT_DIR"
+  else
+    echo "WARNING: Dockerfile.sandbox not found in $ROOT_DIR" >&2
+    echo "  Sandbox config will be applied but no sandbox image will be built." >&2
+    echo "  Agent exec may fail if the configured sandbox image does not exist." >&2
+  fi
+
+  # Defense-in-depth: verify Docker CLI in the running image before enabling
+  # sandbox. This avoids claiming sandbox is enabled when the image cannot
+  # launch sandbox containers.
+  if ! docker compose "${COMPOSE_ARGS[@]}" run --rm --entrypoint docker winclaw-gateway --version >/dev/null 2>&1; then
+    echo "WARNING: Docker CLI not found inside the container image." >&2
+    echo "  Sandbox requires Docker CLI. Rebuild with --build-arg WINCLAW_INSTALL_DOCKER_CLI=1" >&2
+    echo "  or use a local build (WINCLAW_IMAGE=winclaw:local). Skipping sandbox setup." >&2
+    SANDBOX_ENABLED=""
+  fi
+fi
+
+# Apply sandbox config only if prerequisites are met.
+if [[ -n "$SANDBOX_ENABLED" ]]; then
+  # Mount Docker socket via a dedicated compose overlay. This overlay is
+  # created only after sandbox prerequisites pass, so the socket is never
+  # exposed when sandbox cannot actually run.
+  if [[ -S "$DOCKER_SOCKET_PATH" ]]; then
+    SANDBOX_COMPOSE_FILE="$ROOT_DIR/docker-compose.sandbox.yml"
+    cat >"$SANDBOX_COMPOSE_FILE" <<YAML
+services:
+  winclaw-gateway:
+    volumes:
+      - ${DOCKER_SOCKET_PATH}:/var/run/docker.sock
+YAML
+    if [[ -n "${DOCKER_GID:-}" ]]; then
+      cat >>"$SANDBOX_COMPOSE_FILE" <<YAML
+    group_add:
+      - "${DOCKER_GID}"
+YAML
+    fi
+    COMPOSE_ARGS+=("-f" "$SANDBOX_COMPOSE_FILE")
+    echo "==> Sandbox: added Docker socket mount"
+  else
+    echo "WARNING: WINCLAW_SANDBOX enabled but Docker socket not found at $DOCKER_SOCKET_PATH." >&2
+    echo "  Sandbox requires Docker socket access. Skipping sandbox setup." >&2
+    SANDBOX_ENABLED=""
+  fi
+fi
+
+if [[ -n "$SANDBOX_ENABLED" ]]; then
+  # Enable sandbox in WinClaw config.
+  sandbox_config_ok=true
+  if ! docker compose "${COMPOSE_ARGS[@]}" run --rm --no-deps winclaw-cli \
+    config set agents.defaults.sandbox.mode "non-main" >/dev/null; then
+    echo "WARNING: Failed to set agents.defaults.sandbox.mode" >&2
+    sandbox_config_ok=false
+  fi
+  if ! docker compose "${COMPOSE_ARGS[@]}" run --rm --no-deps winclaw-cli \
+    config set agents.defaults.sandbox.scope "agent" >/dev/null; then
+    echo "WARNING: Failed to set agents.defaults.sandbox.scope" >&2
+    sandbox_config_ok=false
+  fi
+  if ! docker compose "${COMPOSE_ARGS[@]}" run --rm --no-deps winclaw-cli \
+    config set agents.defaults.sandbox.workspaceAccess "none" >/dev/null; then
+    echo "WARNING: Failed to set agents.defaults.sandbox.workspaceAccess" >&2
+    sandbox_config_ok=false
+  fi
+
+  if [[ "$sandbox_config_ok" == true ]]; then
+    echo "Sandbox enabled: mode=non-main, scope=agent, workspaceAccess=none"
+    echo "Docs: https://docs.winclaw.ai/gateway/sandboxing"
+    # Restart gateway with sandbox compose overlay to pick up socket mount + config.
+    docker compose "${COMPOSE_ARGS[@]}" up -d winclaw-gateway
+  else
+    echo "WARNING: Sandbox config was partially applied. Check errors above." >&2
+    echo "  Skipping gateway restart to avoid exposing Docker socket without a full sandbox policy." >&2
+    if ! docker compose "${BASE_COMPOSE_ARGS[@]}" run --rm --no-deps winclaw-cli \
+      config set agents.defaults.sandbox.mode "off" >/dev/null; then
+      echo "WARNING: Failed to roll back agents.defaults.sandbox.mode to off" >&2
+    else
+      echo "Sandbox mode rolled back to off due to partial sandbox config failure."
+    fi
+    if [[ -n "${SANDBOX_COMPOSE_FILE:-}" ]]; then
+      rm -f "$SANDBOX_COMPOSE_FILE"
+    fi
+    # Ensure gateway service definition is reset without sandbox overlay mount.
+    docker compose "${BASE_COMPOSE_ARGS[@]}" up -d --force-recreate winclaw-gateway
+  fi
+else
+  # Keep reruns deterministic: if sandbox is not active for this run, reset
+  # persisted sandbox mode so future execs do not require docker.sock by stale
+  # config alone.
+  if ! docker compose "${COMPOSE_ARGS[@]}" run --rm winclaw-cli \
+    config set agents.defaults.sandbox.mode "off" >/dev/null; then
+    echo "WARNING: Failed to reset agents.defaults.sandbox.mode to off" >&2
+  fi
+  if [[ -f "$ROOT_DIR/docker-compose.sandbox.yml" ]]; then
+    rm -f "$ROOT_DIR/docker-compose.sandbox.yml"
+  fi
+fi
 
 echo ""
 echo "Gateway running with host port mapping."

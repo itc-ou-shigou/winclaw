@@ -47,57 +47,124 @@ function buildRegistry(params: { acpxRoot: string; helperRoot: string }): Plugin
   };
 }
 
+function createSinglePluginRegistry(params: {
+  pluginRoot: string;
+  skills: string[];
+}): PluginManifestRegistry {
+  return {
+    diagnostics: [],
+    plugins: [
+      {
+        id: "helper",
+        name: "Helper",
+        channels: [],
+        providers: [],
+        skills: params.skills,
+        origin: "workspace",
+        rootDir: params.pluginRoot,
+        source: params.pluginRoot,
+        manifestPath: path.join(params.pluginRoot, "winclaw.plugin.json"),
+      },
+    ],
+  };
+}
+
+async function setupAcpxAndHelperRegistry() {
+  const workspaceDir = await tempDirs.make("winclaw-");
+  const acpxRoot = await tempDirs.make("winclaw-acpx-plugin-");
+  const helperRoot = await tempDirs.make("winclaw-helper-plugin-");
+  await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
+  await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
+  hoisted.loadPluginManifestRegistry.mockReturnValue(buildRegistry({ acpxRoot, helperRoot }));
+  return { workspaceDir, acpxRoot, helperRoot };
+}
+
+async function setupPluginOutsideSkills() {
+  const workspaceDir = await tempDirs.make("winclaw-");
+  const pluginRoot = await tempDirs.make("winclaw-plugin-");
+  const outsideDir = await tempDirs.make("winclaw-outside-");
+  const outsideSkills = path.join(outsideDir, "skills");
+  return { workspaceDir, pluginRoot, outsideSkills };
+}
+
 afterEach(async () => {
   hoisted.loadPluginManifestRegistry.mockReset();
   await tempDirs.cleanup();
 });
 
 describe("resolvePluginSkillDirs", () => {
-  it("keeps acpx plugin skills when ACP is enabled", async () => {
-    const workspaceDir = await tempDirs.make("winclaw-");
-    const acpxRoot = await tempDirs.make("winclaw-acpx-plugin-");
-    const helperRoot = await tempDirs.make("winclaw-helper-plugin-");
-    await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
-    await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
-
-    hoisted.loadPluginManifestRegistry.mockReturnValue(
-      buildRegistry({
-        acpxRoot,
-        helperRoot,
-      }),
-    );
+  it.each([
+    {
+      name: "keeps acpx plugin skills when ACP is enabled",
+      acpEnabled: true,
+      expectedDirs: ({ acpxRoot, helperRoot }: { acpxRoot: string; helperRoot: string }) => [
+        path.resolve(acpxRoot, "skills"),
+        path.resolve(helperRoot, "skills"),
+      ],
+    },
+    {
+      name: "skips acpx plugin skills when ACP is disabled",
+      acpEnabled: false,
+      expectedDirs: ({ helperRoot }: { acpxRoot: string; helperRoot: string }) => [
+        path.resolve(helperRoot, "skills"),
+      ],
+    },
+  ])("$name", async ({ acpEnabled, expectedDirs }) => {
+    const { workspaceDir, acpxRoot, helperRoot } = await setupAcpxAndHelperRegistry();
 
     const dirs = resolvePluginSkillDirs({
       workspaceDir,
       config: {
-        acp: { enabled: true },
+        acp: { enabled: acpEnabled },
       } as WinClawConfig,
     });
 
-    expect(dirs).toEqual([path.resolve(acpxRoot, "skills"), path.resolve(helperRoot, "skills")]);
+    expect(dirs).toEqual(expectedDirs({ acpxRoot, helperRoot }));
   });
 
-  it("skips acpx plugin skills when ACP is disabled", async () => {
-    const workspaceDir = await tempDirs.make("winclaw-");
-    const acpxRoot = await tempDirs.make("winclaw-acpx-plugin-");
-    const helperRoot = await tempDirs.make("winclaw-helper-plugin-");
-    await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
-    await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
+  it("rejects plugin skill paths that escape the plugin root", async () => {
+    const { workspaceDir, pluginRoot, outsideSkills } = await setupPluginOutsideSkills();
+    await fs.mkdir(path.join(pluginRoot, "skills"), { recursive: true });
+    await fs.mkdir(outsideSkills, { recursive: true });
+    const escapePath = path.relative(pluginRoot, outsideSkills);
 
     hoisted.loadPluginManifestRegistry.mockReturnValue(
-      buildRegistry({
-        acpxRoot,
-        helperRoot,
+      createSinglePluginRegistry({
+        pluginRoot,
+        skills: ["./skills", escapePath],
       }),
     );
 
     const dirs = resolvePluginSkillDirs({
       workspaceDir,
-      config: {
-        acp: { enabled: false },
-      } as WinClawConfig,
+      config: {} as WinClawConfig,
     });
 
-    expect(dirs).toEqual([path.resolve(helperRoot, "skills")]);
+    expect(dirs).toEqual([path.resolve(pluginRoot, "skills")]);
+  });
+
+  it("rejects plugin skill symlinks that resolve outside plugin root", async () => {
+    const { workspaceDir, pluginRoot, outsideSkills } = await setupPluginOutsideSkills();
+    const linkPath = path.join(pluginRoot, "skills-link");
+    await fs.mkdir(outsideSkills, { recursive: true });
+    await fs.symlink(
+      outsideSkills,
+      linkPath,
+      process.platform === "win32" ? ("junction" as const) : ("dir" as const),
+    );
+
+    hoisted.loadPluginManifestRegistry.mockReturnValue(
+      createSinglePluginRegistry({
+        pluginRoot,
+        skills: ["./skills-link"],
+      }),
+    );
+
+    const dirs = resolvePluginSkillDirs({
+      workspaceDir,
+      config: {} as WinClawConfig,
+    });
+
+    expect(dirs).toEqual([]);
   });
 });

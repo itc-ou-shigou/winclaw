@@ -1,4 +1,4 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/acpx";
 import { createAcpxPluginConfigSchema } from "./src/config.js";
 import { createAcpxRuntimeService } from "./src/service.js";
 

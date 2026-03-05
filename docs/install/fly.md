@@ -15,7 +15,7 @@ read_when:
 
 - [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/) installed
 - Fly.io account (free tier works)
-- Model auth: Anthropic API key (or other provider keys)
+- Model auth: API key for your chosen model provider
 - Channel credentials: Discord bot token, Telegram token, etc.
 
 ## Beginner quick path
@@ -82,13 +82,13 @@ primary_region = "iad"
 
 **Key settings:**
 
-| Setting                       | Why                                                                        |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| `--bind lan`                  | Binds to `0.0.0.0` so Fly's proxy can reach the gateway                    |
-| `--allow-unconfigured`        | Starts without a config file (you'll create one after)                     |
-| `internal_port = 3000`        | Must match `--port 3000` (or `WINCLAW_GATEWAY_PORT`) for Fly health checks |
-| `memory = "2048mb"`           | 512MB is too small; 2GB recommended                                        |
-| `WINCLAW_STATE_DIR = "/data"` | Persists state on the volume                                               |
+| Setting                        | Why                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `--bind lan`                   | Binds to `0.0.0.0` so Fly's proxy can reach the gateway                     |
+| `--allow-unconfigured`         | Starts without a config file (you'll create one after)                      |
+| `internal_port = 3000`         | Must match `--port 3000` (or `WINCLAW_GATEWAY_PORT`) for Fly health checks |
+| `memory = "2048mb"`            | 512MB is too small; 2GB recommended                                         |
+| `WINCLAW_STATE_DIR = "/data"` | Persists state on the volume                                                |
 
 ## 3) Set secrets
 

@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_AGENT_MAX_CONCURRENT,
@@ -8,7 +6,7 @@ import {
   resolveSubagentMaxConcurrent,
 } from "./agent-limits.js";
 import { loadConfig } from "./config.js";
-import { withTempHome } from "./test-helpers.js";
+import { withTempHome, writeWinClawConfig } from "./test-helpers.js";
 import { WinClawSchema } from "./zod-schema.js";
 
 describe("agent concurrency defaults", () => {
@@ -48,13 +46,7 @@ describe("agent concurrency defaults", () => {
 
   it("injects defaults on load", async () => {
     await withTempHome(async (home) => {
-      const configDir = path.join(home, ".winclaw");
-      await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(
-        path.join(configDir, "winclaw.json"),
-        JSON.stringify({}, null, 2),
-        "utf-8",
-      );
+      await writeWinClawConfig(home, {});
 
       const cfg = loadConfig();
 

@@ -90,6 +90,72 @@ Notes:
 - Returns PCM audio buffer + sample rate. Plugins must resample/encode for providers.
 - Edge TTS is not supported for telephony.
 
+For STT/transcription, plugins can call:
+
+```ts
+const { text } = await api.runtime.stt.transcribeAudioFile({
+  filePath: "/tmp/inbound-audio.ogg",
+  cfg: api.config,
+  // Optional when MIME cannot be inferred reliably:
+  mime: "audio/ogg",
+});
+```
+
+Notes:
+
+- Uses core media-understanding audio configuration (`tools.media.audio`) and provider fallback order.
+- Returns `{ text: undefined }` when no transcription output is produced (for example skipped/unsupported input).
+
+## Plugin SDK import paths
+
+Use SDK subpaths instead of the monolithic `winclaw/plugin-sdk` import when
+authoring plugins:
+
+- `winclaw/plugin-sdk/core` for generic plugin APIs, provider auth types, and shared helpers.
+- `winclaw/plugin-sdk/compat` for bundled/internal plugin code that needs broader shared runtime helpers than `core`.
+- `winclaw/plugin-sdk/telegram` for Telegram channel plugins.
+- `winclaw/plugin-sdk/discord` for Discord channel plugins.
+- `winclaw/plugin-sdk/slack` for Slack channel plugins.
+- `winclaw/plugin-sdk/signal` for Signal channel plugins.
+- `winclaw/plugin-sdk/imessage` for iMessage channel plugins.
+- `winclaw/plugin-sdk/whatsapp` for WhatsApp channel plugins.
+- `winclaw/plugin-sdk/line` for LINE channel plugins.
+- `winclaw/plugin-sdk/msteams` for the bundled Microsoft Teams plugin surface.
+- Bundled extension-specific subpaths are also available:
+  `winclaw/plugin-sdk/acpx`, `winclaw/plugin-sdk/bluebubbles`,
+  `winclaw/plugin-sdk/copilot-proxy`, `winclaw/plugin-sdk/device-pair`,
+  `winclaw/plugin-sdk/diagnostics-otel`, `winclaw/plugin-sdk/diffs`,
+  `winclaw/plugin-sdk/feishu`,
+  `winclaw/plugin-sdk/google-gemini-cli-auth`, `winclaw/plugin-sdk/googlechat`,
+  `winclaw/plugin-sdk/irc`, `winclaw/plugin-sdk/llm-task`,
+  `winclaw/plugin-sdk/lobster`, `winclaw/plugin-sdk/matrix`,
+  `winclaw/plugin-sdk/mattermost`, `winclaw/plugin-sdk/memory-core`,
+  `winclaw/plugin-sdk/memory-lancedb`,
+  `winclaw/plugin-sdk/minimax-portal-auth`,
+  `winclaw/plugin-sdk/nextcloud-talk`, `winclaw/plugin-sdk/nostr`,
+  `winclaw/plugin-sdk/open-prose`, `winclaw/plugin-sdk/phone-control`,
+  `winclaw/plugin-sdk/qwen-portal-auth`, `winclaw/plugin-sdk/synology-chat`,
+  `winclaw/plugin-sdk/talk-voice`, `winclaw/plugin-sdk/test-utils`,
+  `winclaw/plugin-sdk/thread-ownership`, `winclaw/plugin-sdk/tlon`,
+  `winclaw/plugin-sdk/twitch`, `winclaw/plugin-sdk/voice-call`,
+  `winclaw/plugin-sdk/zalo`, and `winclaw/plugin-sdk/zalouser`.
+
+Compatibility note:
+
+- `winclaw/plugin-sdk` remains supported for existing external plugins.
+- New and migrated bundled plugins should use channel or extension-specific
+  subpaths; use `core` for generic surfaces and `compat` only when broader
+  shared helpers are required.
+
+Performance note:
+
+- Plugin discovery and manifest metadata use short in-process caches to reduce
+  bursty startup/reload work.
+- Set `WINCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE=1` or
+  `WINCLAW_DISABLE_PLUGIN_MANIFEST_CACHE=1` to disable these caches.
+- Tune cache windows with `WINCLAW_PLUGIN_DISCOVERY_CACHE_MS` and
+  `WINCLAW_PLUGIN_MANIFEST_CACHE_MS`.
+
 ## Discovery & precedence
 
 WinClaw scans, in order:
@@ -108,13 +174,21 @@ WinClaw scans, in order:
 - `~/.winclaw/extensions/*.ts`
 - `~/.winclaw/extensions/*/index.ts`
 
-4. Bundled extensions (shipped with WinClaw, **disabled by default**)
+4. Bundled extensions (shipped with WinClaw, mostly disabled by default)
 
 - `<winclaw>/extensions/*`
 
-Bundled plugins must be enabled explicitly via `plugins.entries.<id>.enabled`
-or `winclaw plugins enable <id>`. Installed plugins are enabled by default,
-but can be disabled the same way.
+Most bundled plugins must be enabled explicitly via
+`plugins.entries.<id>.enabled` or `winclaw plugins enable <id>`.
+
+Default-on bundled plugin exceptions:
+
+- `device-pair`
+- `phone-control`
+- `talk-voice`
+- active memory slot plugin (default slot: `memory-core`)
+
+Installed plugins are enabled by default, but can be disabled the same way.
 
 Hardening notes:
 

@@ -1,4 +1,4 @@
-import type { PluginRuntime } from "winclaw/plugin-sdk";
+import type { PluginRuntime } from "winclaw/plugin-sdk/nextcloud-talk";
 
 let runtime: PluginRuntime | null = null;
 

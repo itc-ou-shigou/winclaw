@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/tlon";
 import {
   formatDocsLink,
   promptAccountId,
@@ -6,7 +6,7 @@ import {
   normalizeAccountId,
   type ChannelOnboardingAdapter,
   type WizardPrompter,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/tlon";
 import { buildTlonAccountFields } from "./account-fields.js";
 import type { TlonResolvedAccount } from "./types.js";
 import { listTlonAccountIds, resolveTlonAccount } from "./types.js";

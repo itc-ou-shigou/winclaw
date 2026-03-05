@@ -11,7 +11,6 @@ import type {
   ListSessionsResponse,
   LoadSessionRequest,
   LoadSessionResponse,
-  McpServer,
   NewSessionRequest,
   NewSessionResponse,
   PromptRequest,
@@ -36,7 +35,6 @@ import {
   formatToolTitle,
   inferToolKind,
 } from "./event-mapper.js";
-import { applyIdeMcpServersToConfig } from "./mcp-config-bridge.js";
 import { readBool, readNumber, readString } from "./meta.js";
 import { parseSessionMeta, resetSessionIfNeeded, resolveSessionKey } from "./session-mapper.js";
 import { defaultAcpSessionStore, type AcpSessionStore } from "./session.js";
@@ -132,8 +130,8 @@ export class AcpGatewayAgent implements Agent {
           embeddedContext: true,
         },
         mcpCapabilities: {
-          http: true,
-          sse: true,
+          http: false,
+          sse: false,
         },
         sessionCapabilities: {
           list: {},
@@ -146,24 +144,15 @@ export class AcpGatewayAgent implements Agent {
 
   async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
     if (params.mcpServers.length > 0) {
-      this.log(`received ${params.mcpServers.length} MCP server(s) from IDE`);
-      this.applyIdeMcpServers(params.mcpServers);
+      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
     }
     this.enforceSessionCreateRateLimit("newSession");
 
     const sessionId = randomUUID();
     const meta = parseSessionMeta(params._meta);
-    const sessionKey = await resolveSessionKey({
+    const sessionKey = await this.resolveSessionKeyFromMeta({
       meta,
       fallbackKey: `acp:${sessionId}`,
-      gateway: this.gateway,
-      opts: this.opts,
-    });
-    await resetSessionIfNeeded({
-      meta,
-      sessionKey,
-      gateway: this.gateway,
-      opts: this.opts,
     });
 
     const session = this.sessionStore.createSession({
@@ -178,25 +167,16 @@ export class AcpGatewayAgent implements Agent {
 
   async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
     if (params.mcpServers.length > 0) {
-      this.log(`received ${params.mcpServers.length} MCP server(s) from IDE`);
-      this.applyIdeMcpServers(params.mcpServers);
+      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
     }
     if (!this.sessionStore.hasSession(params.sessionId)) {
       this.enforceSessionCreateRateLimit("loadSession");
     }
 
     const meta = parseSessionMeta(params._meta);
-    const sessionKey = await resolveSessionKey({
+    const sessionKey = await this.resolveSessionKeyFromMeta({
       meta,
       fallbackKey: params.sessionId,
-      gateway: this.gateway,
-      opts: this.opts,
-    });
-    await resetSessionIfNeeded({
-      meta,
-      sessionKey,
-      gateway: this.gateway,
-      opts: this.opts,
     });
 
     const session = this.sessionStore.createSession({
@@ -332,6 +312,25 @@ export class AcpGatewayAgent implements Agent {
     }
   }
 
+  private async resolveSessionKeyFromMeta(params: {
+    meta: ReturnType<typeof parseSessionMeta>;
+    fallbackKey: string;
+  }): Promise<string> {
+    const sessionKey = await resolveSessionKey({
+      meta: params.meta,
+      fallbackKey: params.fallbackKey,
+      gateway: this.gateway,
+      opts: this.opts,
+    });
+    await resetSessionIfNeeded({
+      meta: params.meta,
+      sessionKey,
+      gateway: this.gateway,
+      opts: this.opts,
+    });
+    return sessionKey;
+  }
+
   private async handleAgentEvent(evt: EventFrame): Promise<void> {
     const payload = evt.payload as Record<string, unknown> | undefined;
     if (!payload) {
@@ -424,7 +423,9 @@ export class AcpGatewayAgent implements Agent {
     }
 
     if (state === "final") {
-      this.finishPrompt(pending.sessionId, pending, "end_turn");
+      const rawStopReason = payload.stopReason as string | undefined;
+      const stopReason: StopReason = rawStopReason === "max_tokens" ? "max_tokens" : "end_turn";
+      this.finishPrompt(pending.sessionId, pending, stopReason);
       return;
     }
     if (state === "aborted") {
@@ -478,14 +479,6 @@ export class AcpGatewayAgent implements Agent {
       }
     }
     return undefined;
-  }
-
-  private applyIdeMcpServers(mcpServers: McpServer[]): void {
-    try {
-      applyIdeMcpServersToConfig(mcpServers, this.log);
-    } catch (err) {
-      this.log(`failed to apply IDE MCP servers: ${String(err)}`);
-    }
   }
 
   private async sendAvailableCommands(sessionId: string): Promise<void> {

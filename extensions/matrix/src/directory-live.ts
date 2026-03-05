@@ -1,4 +1,4 @@
-import type { ChannelDirectoryEntry } from "winclaw/plugin-sdk";
+import type { ChannelDirectoryEntry } from "winclaw/plugin-sdk/matrix";
 import { resolveMatrixAuth } from "./matrix/client.js";
 
 type MatrixUserResult = {
@@ -174,7 +174,8 @@ export async function listMatrixDirectoryGroupsLive(
   }
 
   if (query.startsWith("!")) {
-    return [createGroupDirectoryEntry({ id: query, name: query })];
+    const originalId = params.query?.trim() ?? query;
+    return [createGroupDirectoryEntry({ id: originalId, name: originalId })];
   }
 
   const joined = await fetchMatrixJson<MatrixJoinedRoomsResponse>({

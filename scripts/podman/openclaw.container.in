@@ -1,0 +1,28 @@
+# WinClaw gateway — Podman Quadlet (rootless)
+# Installed by setup-podman.sh into winclaw's ~/.config/containers/systemd/
+# {{WINCLAW_HOME}} is replaced at install time.
+
+[Unit]
+Description=WinClaw gateway (rootless Podman)
+
+[Container]
+Image=winclaw:local
+ContainerName=winclaw
+UserNS=keep-id
+# Keep container UID/GID aligned with the invoking user so mounted config is readable.
+User=%U:%G
+Volume={{WINCLAW_HOME}}/.winclaw:/home/node/.winclaw
+EnvironmentFile={{WINCLAW_HOME}}/.winclaw/.env
+Environment=HOME=/home/node
+Environment=TERM=xterm-256color
+PublishPort=18789:18789
+PublishPort=18790:18790
+Pull=never
+Exec=node dist/index.js gateway --bind lan --port 18789
+
+[Service]
+TimeoutStartSec=300
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

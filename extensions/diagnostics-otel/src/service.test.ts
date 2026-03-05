@@ -98,16 +98,18 @@ vi.mock("@opentelemetry/semantic-conventions", () => ({
   ATTR_SERVICE_NAME: "service.name",
 }));
 
-vi.mock("winclaw/plugin-sdk", async () => {
-  const actual = await vi.importActual<typeof import("winclaw/plugin-sdk")>("winclaw/plugin-sdk");
+vi.mock("winclaw/plugin-sdk/diagnostics-otel", async () => {
+  const actual = await vi.importActual<typeof import("winclaw/plugin-sdk/diagnostics-otel")>(
+    "winclaw/plugin-sdk/diagnostics-otel",
+  );
   return {
     ...actual,
     registerLogTransport: registerLogTransportMock,
   };
 });
 
-import type { WinClawPluginServiceContext } from "winclaw/plugin-sdk";
-import { emitDiagnosticEvent } from "winclaw/plugin-sdk";
+import type { WinClawPluginServiceContext } from "winclaw/plugin-sdk/diagnostics-otel";
+import { emitDiagnosticEvent } from "winclaw/plugin-sdk/diagnostics-otel";
 import { createDiagnosticsOtelService } from "./service.js";
 
 const OTEL_TEST_STATE_DIR = "/tmp/winclaw-diagnostics-otel-test";
@@ -242,10 +244,14 @@ describe("diagnostics-otel service", () => {
     });
 
     expect(telemetryState.counters.get("winclaw.webhook.received")?.add).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("winclaw.webhook.duration_ms")?.record).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("winclaw.webhook.duration_ms")?.record,
+    ).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.message.queued")?.add).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.message.processed")?.add).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("winclaw.message.duration_ms")?.record).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("winclaw.message.duration_ms")?.record,
+    ).toHaveBeenCalled();
     expect(telemetryState.histograms.get("winclaw.queue.wait_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("winclaw.session.stuck")?.add).toHaveBeenCalled();
     expect(

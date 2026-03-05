@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/bluebubbles";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { bluebubblesMessageActions } from "./actions.js";
 import { getCachedBlueBubblesPrivateApiStatus } from "./probe.js";

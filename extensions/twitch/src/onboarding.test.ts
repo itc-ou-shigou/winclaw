@@ -11,11 +11,11 @@
  * - setTwitchAccount config updates
  */
 
-import type { WizardPrompter } from "winclaw/plugin-sdk";
+import type { WizardPrompter } from "winclaw/plugin-sdk/twitch";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TwitchAccountConfig } from "./types.js";
 
-vi.mock("winclaw/plugin-sdk", () => ({
+vi.mock("winclaw/plugin-sdk/twitch", () => ({
   formatDocsLink: (url: string, fallback: string) => fallback || url,
   promptChannelAccessConfig: vi.fn(async () => null),
 }));

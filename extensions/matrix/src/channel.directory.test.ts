@@ -1,4 +1,4 @@
-import type { PluginRuntime, RuntimeEnv } from "winclaw/plugin-sdk";
+import type { PluginRuntime, RuntimeEnv } from "winclaw/plugin-sdk/matrix";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { matrixPlugin } from "./channel.js";
 import { setMatrixRuntime } from "./runtime.js";

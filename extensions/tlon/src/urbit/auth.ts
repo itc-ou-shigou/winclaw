@@ -1,4 +1,4 @@
-import type { LookupFn, SsrFPolicy } from "winclaw/plugin-sdk";
+import type { LookupFn, SsrFPolicy } from "winclaw/plugin-sdk/tlon";
 import { UrbitAuthError } from "./errors.js";
 import { urbitFetch } from "./fetch.js";
 

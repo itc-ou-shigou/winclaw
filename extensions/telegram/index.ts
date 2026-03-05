@@ -1,5 +1,5 @@
-import type { ChannelPlugin, WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { ChannelPlugin, WinClawPluginApi } from "winclaw/plugin-sdk/telegram";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/telegram";
 import { telegramPlugin } from "./src/channel.js";
 import { setTelegramRuntime } from "./src/runtime.js";
 

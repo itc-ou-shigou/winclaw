@@ -1,4 +1,4 @@
-import type { RuntimeEnv } from "winclaw/plugin-sdk";
+import type { RuntimeEnv } from "winclaw/plugin-sdk/mattermost";
 import { describe, expect, it, vi } from "vitest";
 import {
   createMattermostConnectOnce,

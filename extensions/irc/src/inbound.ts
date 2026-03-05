@@ -16,7 +16,7 @@ import {
   type OutboundReplyPayload,
   type WinClawConfig,
   type RuntimeEnv,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/irc";
 import type { ResolvedIrcAccount } from "./accounts.js";
 import { normalizeIrcAllowlist, resolveIrcAllowlistMatch } from "./normalize.js";
 import {

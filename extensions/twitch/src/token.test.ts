@@ -8,7 +8,7 @@
  * - Account ID normalization
  */
 
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/twitch";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveTwitchToken, type TwitchTokenSource } from "./token.js";
 

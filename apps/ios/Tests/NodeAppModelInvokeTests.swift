@@ -1,33 +1,8 @@
-import WinClawKit
+import OpenClawKit
 import Foundation
 import Testing
 import UIKit
-@testable import WinClaw
-
-private func withUserDefaults<T>(_ updates: [String: Any?], _ body: () throws -> T) rethrows -> T {
-    let defaults = UserDefaults.standard
-    var snapshot: [String: Any?] = [:]
-    for key in updates.keys {
-        snapshot[key] = defaults.object(forKey: key)
-    }
-    for (key, value) in updates {
-        if let value {
-            defaults.set(value, forKey: key)
-        } else {
-            defaults.removeObject(forKey: key)
-        }
-    }
-    defer {
-        for (key, value) in snapshot {
-            if let value {
-                defaults.set(value, forKey: key)
-            } else {
-                defaults.removeObject(forKey: key)
-            }
-        }
-    }
-    return try body()
-}
+@testable import OpenClaw
 
 private func makeAgentDeepLinkURL(
     message: String,
@@ -96,7 +71,7 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
 @Suite(.serialized) struct NodeAppModelInvokeTests {
     @Test @MainActor func decodeParamsFailsWithoutJSON() {
         #expect(throws: Error.self) {
-            _ = try NodeAppModel._test_decodeParams(WinClawCanvasNavigateParams.self, from: nil)
+            _ = try NodeAppModel._test_decodeParams(OpenClawCanvasNavigateParams.self, from: nil)
         }
     }
 
@@ -125,7 +100,7 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
         let appModel = NodeAppModel()
         appModel.setScenePhase(.background)
 
-        let req = BridgeInvokeRequest(id: "bg", command: WinClawCanvasCommand.present.rawValue)
+        let req = BridgeInvokeRequest(id: "bg", command: OpenClawCanvasCommand.present.rawValue)
         let res = await appModel._test_handleInvoke(req)
         #expect(res.ok == false)
         #expect(res.error?.code == .backgroundUnavailable)
@@ -133,7 +108,7 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
 
     @Test @MainActor func handleInvokeRejectsCameraWhenDisabled() async {
         let appModel = NodeAppModel()
-        let req = BridgeInvokeRequest(id: "cam", command: WinClawCameraCommand.snap.rawValue)
+        let req = BridgeInvokeRequest(id: "cam", command: OpenClawCameraCommand.snap.rawValue)
 
         let defaults = UserDefaults.standard
         let key = "camera.enabled"
@@ -155,13 +130,13 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
 
     @Test @MainActor func handleInvokeRejectsInvalidScreenFormat() async {
         let appModel = NodeAppModel()
-        let params = WinClawScreenRecordParams(format: "gif")
+        let params = OpenClawScreenRecordParams(format: "gif")
         let data = try? JSONEncoder().encode(params)
         let json = data.flatMap { String(data: $0, encoding: .utf8) }
 
         let req = BridgeInvokeRequest(
             id: "screen",
-            command: WinClawScreenCommand.record.rawValue,
+            command: OpenClawScreenCommand.record.rawValue,
             paramsJSON: json)
 
         let res = await appModel._test_handleInvoke(req)
@@ -173,29 +148,29 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
         let appModel = NodeAppModel()
         appModel.screen.navigate(to: "http://example.com")
 
-        let present = BridgeInvokeRequest(id: "present", command: WinClawCanvasCommand.present.rawValue)
+        let present = BridgeInvokeRequest(id: "present", command: OpenClawCanvasCommand.present.rawValue)
         let presentRes = await appModel._test_handleInvoke(present)
         #expect(presentRes.ok == true)
         #expect(appModel.screen.urlString.isEmpty)
 
         // Loopback URLs are rejected (they are not meaningful for a remote gateway).
-        let navigateParams = WinClawCanvasNavigateParams(url: "http://example.com/")
+        let navigateParams = OpenClawCanvasNavigateParams(url: "http://example.com/")
         let navData = try JSONEncoder().encode(navigateParams)
         let navJSON = String(decoding: navData, as: UTF8.self)
         let navigate = BridgeInvokeRequest(
             id: "nav",
-            command: WinClawCanvasCommand.navigate.rawValue,
+            command: OpenClawCanvasCommand.navigate.rawValue,
             paramsJSON: navJSON)
         let navRes = await appModel._test_handleInvoke(navigate)
         #expect(navRes.ok == true)
         #expect(appModel.screen.urlString == "http://example.com/")
 
-        let evalParams = WinClawCanvasEvalParams(javaScript: "1+1")
+        let evalParams = OpenClawCanvasEvalParams(javaScript: "1+1")
         let evalData = try JSONEncoder().encode(evalParams)
         let evalJSON = String(decoding: evalData, as: UTF8.self)
         let eval = BridgeInvokeRequest(
             id: "eval",
-            command: WinClawCanvasCommand.evalJS.rawValue,
+            command: OpenClawCanvasCommand.evalJS.rawValue,
             paramsJSON: evalJSON)
         let evalRes = await appModel._test_handleInvoke(eval)
         #expect(evalRes.ok == true)
@@ -207,18 +182,18 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
     @Test @MainActor func handleInvokeA2UICommandsFailWhenHostMissing() async throws {
         let appModel = NodeAppModel()
 
-        let reset = BridgeInvokeRequest(id: "reset", command: WinClawCanvasA2UICommand.reset.rawValue)
+        let reset = BridgeInvokeRequest(id: "reset", command: OpenClawCanvasA2UICommand.reset.rawValue)
         let resetRes = await appModel._test_handleInvoke(reset)
         #expect(resetRes.ok == false)
         #expect(resetRes.error?.message.contains("A2UI_HOST_NOT_CONFIGURED") == true)
 
         let jsonl = "{\"beginRendering\":{}}"
-        let pushParams = WinClawCanvasA2UIPushJSONLParams(jsonl: jsonl)
+        let pushParams = OpenClawCanvasA2UIPushJSONLParams(jsonl: jsonl)
         let pushData = try JSONEncoder().encode(pushParams)
         let pushJSON = String(decoding: pushData, as: UTF8.self)
         let push = BridgeInvokeRequest(
             id: "push",
-            command: WinClawCanvasA2UICommand.pushJSONL.rawValue,
+            command: OpenClawCanvasA2UICommand.pushJSONL.rawValue,
             paramsJSON: pushJSON)
         let pushRes = await appModel._test_handleInvoke(push)
         #expect(pushRes.ok == false)
@@ -414,7 +389,7 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
 
     @Test @MainActor func handleDeepLinkSetsErrorWhenNotConnected() async {
         let appModel = NodeAppModel()
-        let url = URL(string: "winclaw://agent?message=hello")!
+        let url = URL(string: "openclaw://agent?message=hello")!
         await appModel.handleDeepLink(url: url)
         #expect(appModel.screen.errorText?.contains("Gateway not connected") == true)
     }
@@ -422,7 +397,7 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
     @Test @MainActor func handleDeepLinkRejectsOversizedMessage() async {
         let appModel = NodeAppModel()
         let msg = String(repeating: "a", count: 20001)
-        let url = URL(string: "winclaw://agent?message=\(msg)")!
+        let url = URL(string: "openclaw://agent?message=\(msg)")!
         await appModel.handleDeepLink(url: url)
         #expect(appModel.screen.errorText?.contains("Deep link too large") == true)
     }
@@ -439,6 +414,20 @@ private final class MockWatchMessagingService: @preconcurrency WatchMessagingSer
         await appModel.approvePendingAgentDeepLinkPrompt()
         #expect(appModel.pendingAgentDeepLinkPrompt == nil)
         #expect(appModel.openChatRequestID == 1)
+    }
+
+    @Test @MainActor func handleDeepLinkCoalescesPromptWhenRateLimited() async throws {
+        let appModel = NodeAppModel()
+        appModel._test_setGatewayConnected(true)
+
+        await appModel.handleDeepLink(url: makeAgentDeepLinkURL(message: "first prompt"))
+        let firstPrompt = try #require(appModel.pendingAgentDeepLinkPrompt)
+
+        await appModel.handleDeepLink(url: makeAgentDeepLinkURL(message: "second prompt"))
+        let coalescedPrompt = try #require(appModel.pendingAgentDeepLinkPrompt)
+
+        #expect(coalescedPrompt.id != firstPrompt.id)
+        #expect(coalescedPrompt.messagePreview.contains("second prompt"))
     }
 
     @Test @MainActor func handleDeepLinkStripsDeliveryFieldsWhenUnkeyed() async throws {

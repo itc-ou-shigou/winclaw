@@ -7,7 +7,7 @@ import type {
   MSTeamsConfig,
   MSTeamsReplyStyle,
   MSTeamsTeamConfig,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/msteams";
 import {
   buildChannelKeyCandidates,
   normalizeChannelSlug,
@@ -15,7 +15,7 @@ import {
   resolveToolsBySender,
   resolveChannelEntryMatchWithFallback,
   resolveNestedAllowlistDecision,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/msteams";
 
 export type MSTeamsResolvedRouteConfig = {
   teamConfig?: MSTeamsTeamConfig;

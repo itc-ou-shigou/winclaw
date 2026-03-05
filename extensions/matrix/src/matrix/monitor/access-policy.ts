@@ -3,7 +3,7 @@ import {
   issuePairingChallenge,
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/matrix";
 import {
   normalizeMatrixAllowList,
   resolveMatrixAllowListMatch,

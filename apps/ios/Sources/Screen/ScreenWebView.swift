@@ -1,4 +1,4 @@
-import WinClawKit
+import OpenClawKit
 import SwiftUI
 import WebKit
 

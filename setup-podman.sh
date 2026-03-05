@@ -56,6 +56,11 @@ run_as_winclaw() {
   run_as_user "$WINCLAW_USER" env HOME="$WINCLAW_HOME" "$@"
 }
 
+escape_sed_replacement_pipe_delim() {
+  # Escape replacement metacharacters for sed "s|...|...|g" replacement text.
+  printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'
+}
+
 # Quadlet: opt-in via --quadlet or WINCLAW_PODMAN_QUADLET=1
 INSTALL_QUADLET=false
 for arg in "$@"; do
@@ -224,7 +229,7 @@ QUADLET_DIR="$WINCLAW_HOME/.config/containers/systemd"
 if [[ "$INSTALL_QUADLET" == true && -f "$QUADLET_TEMPLATE" ]]; then
   echo "Installing systemd quadlet for $WINCLAW_USER..."
   run_as_winclaw mkdir -p "$QUADLET_DIR"
-  WINCLAW_HOME_SED="$(printf '%s' "$WINCLAW_HOME" | sed -e 's/[\\/&|]/\\\\&/g')"
+  WINCLAW_HOME_SED="$(escape_sed_replacement_pipe_delim "$WINCLAW_HOME")"
   sed "s|{{WINCLAW_HOME}}|$WINCLAW_HOME_SED|g" "$QUADLET_TEMPLATE" | run_as_winclaw tee "$QUADLET_DIR/winclaw.container" >/dev/null
   run_as_winclaw chmod 700 "$WINCLAW_HOME/.config" "$WINCLAW_HOME/.config/containers" "$QUADLET_DIR" 2>/dev/null || true
   run_as_winclaw chmod 600 "$QUADLET_DIR/winclaw.container" 2>/dev/null || true

@@ -8,7 +8,7 @@ import {
   extensionForMime,
   extractOriginalFilename,
   getFileExtension,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/msteams";
 
 /**
  * Detect MIME type from URL extension or data URL.

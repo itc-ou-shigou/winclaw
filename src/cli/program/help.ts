@@ -22,6 +22,10 @@ const ROOT_COMMANDS_HINT =
 const EXAMPLES = [
   ["winclaw models --help", "Show detailed help for the models command."],
   [
+    "winclaw channels login --verbose",
+    "Link personal WhatsApp Web and show QR + connection logs.",
+  ],
+  [
     'winclaw message send --target +15555550123 --message "Hi" --json',
     "Send via your web session and print JSON result.",
   ],

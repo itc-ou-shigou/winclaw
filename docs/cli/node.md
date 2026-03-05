@@ -92,12 +92,12 @@ Service commands accept `--json` for machine-readable output.
 
 ## Pairing
 
-The first connection creates a pending node pair request on the Gateway.
+The first connection creates a pending device pairing request (`role: node`) on the Gateway.
 Approve it via:
 
 ```bash
-winclaw nodes pending
-winclaw nodes approve <requestId>
+winclaw devices list
+winclaw devices approve <requestId>
 ```
 
 The node host stores its node id, token, display name, and gateway connection info in

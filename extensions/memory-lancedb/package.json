@@ -1,6 +1,6 @@
 {
   "name": "@winclaw/memory-lancedb",
-  "version": "2026.2.26",
+  "version": "2026.3.2",
   "private": true,
   "description": "WinClaw LanceDB-backed long-term memory plugin with auto-recall/capture",
   "type": "module",

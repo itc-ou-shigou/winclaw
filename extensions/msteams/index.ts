@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/msteams";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/msteams";
 import { msteamsPlugin } from "./src/channel.js";
 import { setMSTeamsRuntime } from "./src/runtime.js";
 

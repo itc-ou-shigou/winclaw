@@ -56,6 +56,18 @@ Env var equivalents:
 - `WINCLAW_LOAD_SHELL_ENV=1`
 - `WINCLAW_SHELL_ENV_TIMEOUT_MS=15000`
 
+## Runtime-injected env vars
+
+WinClaw also injects context markers into spawned child processes:
+
+- `WINCLAW_SHELL=exec`: set for commands run through the `exec` tool.
+- `WINCLAW_SHELL=acp`: set for ACP runtime backend process spawns (for example `acpx`).
+- `WINCLAW_SHELL=acp-client`: set for `winclaw acp client` when it spawns the ACP bridge process.
+- `WINCLAW_SHELL=tui-local`: set for local TUI `!` shell commands.
+
+These are runtime markers (not required user config). They can be used in shell/profile logic
+to apply context-specific rules.
+
 ## Env var substitution in config
 
 You can reference env vars directly in config string values using `${VAR_NAME}` syntax:
@@ -85,10 +97,10 @@ Both resolve from process env at activation time. SecretRef details are document
 
 ## Path-related env vars
 
-| Variable              | Purpose                                                                                                                                                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Variable               | Purpose                                                                                                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WINCLAW_HOME`        | Override the home directory used for all internal path resolution (`~/.winclaw/`, agent dirs, sessions, credentials). Useful when running WinClaw as a dedicated service user. |
-| `WINCLAW_STATE_DIR`   | Override the state directory (default `~/.winclaw`).                                                                                                                           |
+| `WINCLAW_STATE_DIR`   | Override the state directory (default `~/.winclaw`).                                                                                                                            |
 | `WINCLAW_CONFIG_PATH` | Override the config file path (default `~/.winclaw/winclaw.json`).                                                                                                             |
 
 ## Logging

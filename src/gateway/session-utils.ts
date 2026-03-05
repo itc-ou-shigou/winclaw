@@ -310,35 +310,25 @@ function listExistingAgentIdsFromDisk(): string[] {
 }
 
 function listConfiguredAgentIds(cfg: WinClawConfig): string[] {
-  const agents = cfg.agents?.list ?? [];
-  if (agents.length > 0) {
-    const ids = new Set<string>();
-    for (const entry of agents) {
-      if (entry?.id) {
-        ids.add(normalizeAgentId(entry.id));
-      }
-    }
-    const defaultId = normalizeAgentId(resolveDefaultAgentId(cfg));
-    ids.add(defaultId);
-    const sorted = Array.from(ids).filter(Boolean);
-    sorted.sort((a, b) => a.localeCompare(b));
-    return sorted.includes(defaultId)
-      ? [defaultId, ...sorted.filter((id) => id !== defaultId)]
-      : sorted;
-  }
-
   const ids = new Set<string>();
   const defaultId = normalizeAgentId(resolveDefaultAgentId(cfg));
   ids.add(defaultId);
+
+  for (const entry of cfg.agents?.list ?? []) {
+    if (entry?.id) {
+      ids.add(normalizeAgentId(entry.id));
+    }
+  }
+
   for (const id of listExistingAgentIdsFromDisk()) {
     ids.add(id);
   }
+
   const sorted = Array.from(ids).filter(Boolean);
   sorted.sort((a, b) => a.localeCompare(b));
-  if (sorted.includes(defaultId)) {
-    return [defaultId, ...sorted.filter((id) => id !== defaultId)];
-  }
-  return sorted;
+  return sorted.includes(defaultId)
+    ? [defaultId, ...sorted.filter((id) => id !== defaultId)]
+    : sorted;
 }
 
 export function listAgentsForGateway(cfg: WinClawConfig): {
@@ -393,7 +383,6 @@ export function listAgentsForGateway(cfg: WinClawConfig): {
     return {
       id,
       name: meta?.name,
-      workspace: resolveAgentWorkspaceDir(cfg, id),
       identity: meta?.identity,
     };
   });
@@ -852,7 +841,6 @@ export function listSessionsFromStore(params: {
         lastChannel: deliveryFields.lastChannel ?? entry?.lastChannel,
         lastTo: deliveryFields.lastTo ?? entry?.lastTo,
         lastAccountId: deliveryFields.lastAccountId ?? entry?.lastAccountId,
-        workspace: entry?.workspace,
       };
     })
     .toSorted((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));

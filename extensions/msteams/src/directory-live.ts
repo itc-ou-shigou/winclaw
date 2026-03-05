@@ -1,4 +1,4 @@
-import type { ChannelDirectoryEntry } from "winclaw/plugin-sdk";
+import type { ChannelDirectoryEntry } from "winclaw/plugin-sdk/msteams";
 import { searchGraphUsers } from "./graph-users.js";
 import {
   type GraphChannel,

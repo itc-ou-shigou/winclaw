@@ -1,4 +1,4 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/talk-voice";
 
 type ElevenLabsVoice = {
   voice_id: string;
@@ -73,6 +73,10 @@ function findVoice(voices: ElevenLabsVoice[], query: string): ElevenLabsVoice | 
   return partial ?? null;
 }
 
+function asTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export default function register(api: WinClawPluginApi) {
   api.registerCommand({
     name: "voice",
@@ -84,7 +88,7 @@ export default function register(api: WinClawPluginApi) {
       const action = (tokens[0] ?? "status").toLowerCase();
 
       const cfg = api.runtime.config.loadConfig();
-      const apiKey = (cfg.talk?.apiKey ?? "").trim();
+      const apiKey = asTrimmedString(cfg.talk?.apiKey);
       if (!apiKey) {
         return {
           text:

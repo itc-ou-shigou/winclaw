@@ -1,0 +1,13 @@
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WinClawUI.exe
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\runtimes\win-x64\native\WebView2Loader.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WinClawUI.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WinClawUI.deps.json
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WinClawUI.runtimeconfig.json
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WinClawUI.pdb
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\WebView2Loader.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.Core.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.WinForms.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.Wpf.dll
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.Core.xml
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.Wpf.xml
+C:\work\winclaw\apps\windows\WinClawUI\bin\Publish\Microsoft.Web.WebView2.WinForms.xml

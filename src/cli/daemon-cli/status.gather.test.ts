@@ -36,6 +36,18 @@ const resolveStateDir = vi.fn(
 const resolveConfigPath = vi.fn((env: NodeJS.ProcessEnv, stateDir: string) => {
   return env.WINCLAW_CONFIG_PATH ?? `${stateDir}/winclaw.json`;
 });
+let daemonLoadedConfig: Record<string, unknown> = {
+  gateway: {
+    bind: "lan",
+    tls: { enabled: true },
+    auth: { token: "daemon-token" },
+  },
+};
+let cliLoadedConfig: Record<string, unknown> = {
+  gateway: {
+    bind: "loopback",
+  },
+};
 
 vi.mock("../../config/config.js", () => ({
   createConfigIO: ({ configPath }: { configPath: string }) => {
@@ -47,20 +59,7 @@ vi.mock("../../config/config.js", () => ({
         valid: true,
         issues: [],
       }),
-      loadConfig: () =>
-        isDaemon
-          ? {
-              gateway: {
-                bind: "lan",
-                tls: { enabled: true },
-                auth: { token: "daemon-token" },
-              },
-            }
-          : {
-              gateway: {
-                bind: "loopback",
-              },
-            },
+      loadConfig: () => (isDaemon ? daemonLoadedConfig : cliLoadedConfig),
     };
   },
   resolveConfigPath: (env: NodeJS.ProcessEnv, stateDir: string) => resolveConfigPath(env, stateDir),
@@ -124,13 +123,27 @@ describe("gatherDaemonStatus", () => {
       "WINCLAW_CONFIG_PATH",
       "WINCLAW_GATEWAY_TOKEN",
       "WINCLAW_GATEWAY_PASSWORD",
+      "DAEMON_GATEWAY_PASSWORD",
     ]);
     process.env.WINCLAW_STATE_DIR = "/tmp/winclaw-cli";
     process.env.WINCLAW_CONFIG_PATH = "/tmp/winclaw-cli/winclaw.json";
     delete process.env.WINCLAW_GATEWAY_TOKEN;
     delete process.env.WINCLAW_GATEWAY_PASSWORD;
+    delete process.env.DAEMON_GATEWAY_PASSWORD;
     callGatewayStatusProbe.mockClear();
     loadGatewayTlsRuntime.mockClear();
+    daemonLoadedConfig = {
+      gateway: {
+        bind: "lan",
+        tls: { enabled: true },
+        auth: { token: "daemon-token" },
+      },
+    };
+    cliLoadedConfig = {
+      gateway: {
+        bind: "loopback",
+      },
+    };
   });
 
   afterEach(() => {
@@ -173,6 +186,68 @@ describe("gatherDaemonStatus", () => {
     );
     expect(status.gateway?.probeUrl).toBe("wss://override.example:18790");
     expect(status.rpc?.url).toBe("wss://override.example:18790");
+  });
+
+  it("resolves daemon gateway auth password SecretRef values before probing", async () => {
+    daemonLoadedConfig = {
+      gateway: {
+        bind: "lan",
+        tls: { enabled: true },
+        auth: {
+          password: { source: "env", provider: "default", id: "DAEMON_GATEWAY_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    };
+    process.env.DAEMON_GATEWAY_PASSWORD = "daemon-secretref-password";
+
+    await gatherDaemonStatus({
+      rpc: {},
+      probe: true,
+      deep: false,
+    });
+
+    expect(callGatewayStatusProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        password: "daemon-secretref-password",
+      }),
+    );
+  });
+
+  it("does not resolve daemon password SecretRef when token auth is configured", async () => {
+    daemonLoadedConfig = {
+      gateway: {
+        bind: "lan",
+        tls: { enabled: true },
+        auth: {
+          mode: "token",
+          token: "daemon-token",
+          password: { source: "env", provider: "default", id: "MISSING_DAEMON_GATEWAY_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    };
+
+    await gatherDaemonStatus({
+      rpc: {},
+      probe: true,
+      deep: false,
+    });
+
+    expect(callGatewayStatusProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: "daemon-token",
+        password: undefined,
+      }),
+    );
   });
 
   it("skips TLS runtime loading when probe is disabled", async () => {

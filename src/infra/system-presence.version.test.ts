@@ -7,30 +7,27 @@ async function withPresenceModule<T>(
 ): Promise<T> {
   return withEnvAsync(env, async () => {
     vi.resetModules();
-    try {
-      const module = await import("./system-presence.js");
-      return await run(module);
-    } finally {
-      vi.resetModules();
-    }
+    const module = await import("./system-presence.js");
+    return await run(module);
   });
 }
 
 describe("system-presence version fallback", () => {
-  it("uses WINCLAW_SERVICE_VERSION when WINCLAW_VERSION is not set", async () => {
+  it("uses runtime VERSION when WINCLAW_VERSION is not set", async () => {
     await withPresenceModule(
       {
         WINCLAW_SERVICE_VERSION: "2.4.6-service",
         npm_package_version: "1.0.0-package",
       },
-      ({ listSystemPresence }) => {
+      async ({ listSystemPresence }) => {
+        const { VERSION } = await import("../version.js");
         const selfEntry = listSystemPresence().find((entry) => entry.reason === "self");
-        expect(selfEntry?.version).toBe("2.4.6-service");
+        expect(selfEntry?.version).toBe(VERSION);
       },
     );
   });
 
-  it("prefers WINCLAW_VERSION over WINCLAW_SERVICE_VERSION", async () => {
+  it("prefers WINCLAW_VERSION over runtime VERSION", async () => {
     await withPresenceModule(
       {
         WINCLAW_VERSION: "9.9.9-cli",
@@ -44,16 +41,17 @@ describe("system-presence version fallback", () => {
     );
   });
 
-  it("uses npm_package_version when WINCLAW_VERSION and WINCLAW_SERVICE_VERSION are blank", async () => {
+  it("uses runtime VERSION when WINCLAW_VERSION and WINCLAW_SERVICE_VERSION are blank", async () => {
     await withPresenceModule(
       {
         WINCLAW_VERSION: " ",
         WINCLAW_SERVICE_VERSION: "\t",
         npm_package_version: "1.0.0-package",
       },
-      ({ listSystemPresence }) => {
+      async ({ listSystemPresence }) => {
+        const { VERSION } = await import("../version.js");
         const selfEntry = listSystemPresence().find((entry) => entry.reason === "self");
-        expect(selfEntry?.version).toBe("1.0.0-package");
+        expect(selfEntry?.version).toBe(VERSION);
       },
     );
   });

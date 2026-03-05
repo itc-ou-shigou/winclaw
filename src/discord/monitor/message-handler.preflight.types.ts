@@ -18,17 +18,20 @@ export type DiscordMessageEvent = import("./listeners.js").DiscordMessageEvent;
 
 export type DiscordMessagePreflightContext = {
   cfg: LoadedConfig;
-  discordConfig: NonNullable<import("../../config/config.js").WinClawConfig["channels"]>["discord"];
+  discordConfig: NonNullable<
+    import("../../config/config.js").WinClawConfig["channels"]
+  >["discord"];
   accountId: string;
   token: string;
   runtime: RuntimeEnv;
   botUserId?: string;
+  abortSignal?: AbortSignal;
   guildHistories: Map<string, HistoryEntry[]>;
   historyLimit: number;
   mediaMaxBytes: number;
   textLimit: number;
   replyToMode: ReplyToMode;
-  ackReactionScope: "all" | "direct" | "group-all" | "group-mentions";
+  ackReactionScope: "all" | "direct" | "group-all" | "group-mentions" | "off" | "none";
   groupPolicy: "open" | "disabled" | "allowlist";
 
   data: DiscordMessageEvent;
@@ -93,6 +96,7 @@ export type DiscordMessagePreflightParams = {
   token: string;
   runtime: RuntimeEnv;
   botUserId?: string;
+  abortSignal?: AbortSignal;
   guildHistories: Map<string, HistoryEntry[]>;
   historyLimit: number;
   mediaMaxBytes: number;

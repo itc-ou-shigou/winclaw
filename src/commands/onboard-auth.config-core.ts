@@ -239,7 +239,7 @@ export function applySyntheticProviderConfig(cfg: WinClawConfig): WinClawConfig 
   const models = { ...cfg.agents?.defaults?.models };
   models[SYNTHETIC_DEFAULT_MODEL_REF] = {
     ...models[SYNTHETIC_DEFAULT_MODEL_REF],
-    alias: models[SYNTHETIC_DEFAULT_MODEL_REF]?.alias ?? "MiniMax M2.1",
+    alias: models[SYNTHETIC_DEFAULT_MODEL_REF]?.alias ?? "MiniMax M2.5",
   };
 
   const providers = { ...cfg.models?.providers };

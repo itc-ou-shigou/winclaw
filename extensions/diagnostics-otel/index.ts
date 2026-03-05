@@ -1,5 +1,5 @@
-import type { WinClawPluginApi } from "winclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "winclaw/plugin-sdk";
+import type { WinClawPluginApi } from "winclaw/plugin-sdk/diagnostics-otel";
+import { emptyPluginConfigSchema } from "winclaw/plugin-sdk/diagnostics-otel";
 import { createDiagnosticsOtelService } from "./src/service.js";
 
 const plugin = {

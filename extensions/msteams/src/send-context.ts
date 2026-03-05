@@ -2,7 +2,7 @@ import {
   resolveChannelMediaMaxBytes,
   type WinClawConfig,
   type PluginRuntime,
-} from "winclaw/plugin-sdk";
+} from "winclaw/plugin-sdk/msteams";
 import type { MSTeamsAccessTokenProvider } from "./attachments/types.js";
 import { createMSTeamsConversationStoreFs } from "./conversation-store-fs.js";
 import type {

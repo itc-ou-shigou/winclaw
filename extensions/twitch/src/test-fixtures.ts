@@ -1,4 +1,4 @@
-import type { WinClawConfig } from "winclaw/plugin-sdk";
+import type { WinClawConfig } from "winclaw/plugin-sdk/twitch";
 import { afterEach, beforeEach, vi } from "vitest";
 
 export const BASE_TWITCH_TEST_ACCOUNT = {

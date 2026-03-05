@@ -1,1 +1,1 @@
-export { promptAccountId } from "winclaw/plugin-sdk";
+export { promptAccountId } from "winclaw/plugin-sdk/mattermost";

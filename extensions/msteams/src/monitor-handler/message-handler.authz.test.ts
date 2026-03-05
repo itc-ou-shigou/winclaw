@@ -1,4 +1,4 @@
-import type { WinClawConfig, PluginRuntime, RuntimeEnv } from "winclaw/plugin-sdk";
+import type { WinClawConfig, PluginRuntime, RuntimeEnv } from "winclaw/plugin-sdk/msteams";
 import { describe, expect, it, vi } from "vitest";
 import type { MSTeamsMessageHandlerDeps } from "../monitor-handler.js";
 import { setMSTeamsRuntime } from "../runtime.js";

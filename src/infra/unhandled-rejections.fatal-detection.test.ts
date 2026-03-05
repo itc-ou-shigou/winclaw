@@ -93,9 +93,21 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
         Object.assign(new Error("DNS resolve failed"), { code: "UND_ERR_DNS_RESOLVE_FAILED" }),
         Object.assign(new Error("Connection reset"), { code: "ECONNRESET" }),
         Object.assign(new Error("Timeout"), { code: "ETIMEDOUT" }),
+        Object.assign(
+          new Error(
+            "A request error occurred: Client network socket disconnected before secure TLS connection was established",
+          ),
+          { code: "slack_webapi_request_error" },
+        ),
         Object.assign(new Error("A request error occurred: getaddrinfo EAI_AGAIN slack.com"), {
           code: "slack_webapi_request_error",
           original: { code: "EAI_AGAIN", syscall: "getaddrinfo", hostname: "slack.com" },
+        }),
+        Object.assign(new Error("A request error occurred: unknown"), {
+          code: "slack_webapi_request_error",
+          original: Object.assign(new Error("connect timeout"), {
+            code: "UND_ERR_CONNECT_TIMEOUT",
+          }),
         }),
       ];
 
@@ -119,6 +131,17 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
       );
     });
 
+    it("exits on non-transient Slack request errors", () => {
+      const slackErr = Object.assign(
+        new Error("A request error occurred: invalid request payload"),
+        {
+          code: "slack_webapi_request_error",
+        },
+      );
+
+      expectExitCodeFromUnhandled(slackErr, [1]);
+    });
+
     it("does not exit on AbortError and logs suppression warning", () => {
       const abortErr = new Error("This operation was aborted");
       abortErr.name = "AbortError";
@@ -128,68 +151,6 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
         "[winclaw] Suppressed AbortError:",
         expect.stringContaining("This operation was aborted"),
       );
-    });
-  });
-
-  describe("Playwright internal errors", () => {
-    it("does NOT exit on Playwright FrameManager assertion error", () => {
-      const assertionErr = new Error("Assertion error");
-      assertionErr.stack = [
-        "Error: Assertion error",
-        "    at assert (playwright-core/lib/utils/isomorphic/assert.js:26:11)",
-        "    at FrameManager.frameAttached (playwright-core/lib/server/frames.js:114:31)",
-        "    at FrameSession._onFrameAttached (playwright-core/lib/server/chromium/crPage.js:503:29)",
-      ].join("\n");
-
-      process.emit("unhandledRejection", assertionErr, Promise.resolve());
-
-      expect(exitCalls).toEqual([]);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "[winclaw] Suppressed Playwright internal error (continuing):",
-        expect.stringContaining("Assertion error"),
-      );
-    });
-
-    it("does NOT exit on Playwright 'Frame was detached' error", () => {
-      const frameErr = new Error("Frame was detached");
-      frameErr.stack = [
-        "Error: Frame was detached",
-        "    at Frame.click (playwright-core/lib/server/frames.js:200:10)",
-      ].join("\n");
-
-      process.emit("unhandledRejection", frameErr, Promise.resolve());
-
-      expect(exitCalls).toEqual([]);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "[winclaw] Suppressed Playwright internal error (continuing):",
-        expect.stringContaining("Frame was detached"),
-      );
-    });
-
-    it("does NOT exit on Playwright 'Target closed' error", () => {
-      const targetErr = new Error("Target closed");
-      targetErr.stack = [
-        "Error: Target closed",
-        "    at CDPSession.send (playwright-core/lib/server/chromium/crConnection.js:100:15)",
-      ].join("\n");
-
-      process.emit("unhandledRejection", targetErr, Promise.resolve());
-
-      expect(exitCalls).toEqual([]);
-      expect(consoleWarnSpy).toHaveBeenCalled();
-    });
-
-    it("still exits on non-Playwright assertion errors", () => {
-      const genericAssertionErr = new Error("Assertion error");
-      // No playwright in the stack
-      genericAssertionErr.stack = [
-        "Error: Assertion error",
-        "    at myFunction (app/src/something.js:10:5)",
-      ].join("\n");
-
-      process.emit("unhandledRejection", genericAssertionErr, Promise.resolve());
-
-      expect(exitCalls).toEqual([1]);
     });
   });
 });
