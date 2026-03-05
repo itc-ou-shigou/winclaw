@@ -129,6 +129,35 @@ import type {
 } from "./sessions.js";
 import type { PresenceEntrySchema, SnapshotSchema, StateVersionSchema } from "./snapshot.js";
 import type {
+  GrcEvolutionParamsSchema,
+  GrcLoginParamsSchema,
+  GrcLogoutParamsSchema,
+  GrcPairParamsSchema,
+  GrcPairVerifyParamsSchema,
+  GrcSkillsParamsSchema,
+  GrcStatusParamsSchema,
+  GrcSyncParamsSchema,
+  GrcTelemetryParamsSchema,
+  GrcSkillsSearchParamsSchema,
+  GrcSkillsDetailParamsSchema,
+  GrcSkillsVersionsParamsSchema,
+  GrcSkillsInstallGrcParamsSchema,
+  GrcSkillsUpdateGrcParamsSchema,
+  GrcSkillsUninstallGrcParamsSchema,
+  GrcSkillsInstalledParamsSchema,
+  GrcSkillsRecommendedParamsSchema,
+  GrcSkillsPublishParamsSchema,
+  GrcSkillsRateParamsSchema,
+  GrcCommunityChannelsParamsSchema,
+  GrcCommunityFeedParamsSchema,
+  GrcCommunityPostParamsSchema,
+  GrcCommunityRepliesParamsSchema,
+  GrcCommunityCreatePostParamsSchema,
+  GrcCommunityReplyParamsSchema,
+  GrcCommunityVoteParamsSchema,
+  GrcCommunityStatsParamsSchema,
+} from "./grc.js";
+import type {
   WizardCancelParamsSchema,
   WizardNextParamsSchema,
   WizardNextResultSchema,
@@ -257,3 +286,30 @@ export type ChatEvent = Static<typeof ChatEventSchema>;
 export type UpdateRunParams = Static<typeof UpdateRunParamsSchema>;
 export type TickEvent = Static<typeof TickEventSchema>;
 export type ShutdownEvent = Static<typeof ShutdownEventSchema>;
+export type GrcStatusParams = Static<typeof GrcStatusParamsSchema>;
+export type GrcLoginParams = Static<typeof GrcLoginParamsSchema>;
+export type GrcLogoutParams = Static<typeof GrcLogoutParamsSchema>;
+export type GrcSyncParams = Static<typeof GrcSyncParamsSchema>;
+export type GrcSkillsParams = Static<typeof GrcSkillsParamsSchema>;
+export type GrcEvolutionParams = Static<typeof GrcEvolutionParamsSchema>;
+export type GrcTelemetryParams = Static<typeof GrcTelemetryParamsSchema>;
+export type GrcPairParams = Static<typeof GrcPairParamsSchema>;
+export type GrcPairVerifyParams = Static<typeof GrcPairVerifyParamsSchema>;
+export type GrcSkillsSearchParams = Static<typeof GrcSkillsSearchParamsSchema>;
+export type GrcSkillsDetailParams = Static<typeof GrcSkillsDetailParamsSchema>;
+export type GrcSkillsVersionsParams = Static<typeof GrcSkillsVersionsParamsSchema>;
+export type GrcSkillsInstallGrcParams = Static<typeof GrcSkillsInstallGrcParamsSchema>;
+export type GrcSkillsUpdateGrcParams = Static<typeof GrcSkillsUpdateGrcParamsSchema>;
+export type GrcSkillsUninstallGrcParams = Static<typeof GrcSkillsUninstallGrcParamsSchema>;
+export type GrcSkillsInstalledParams = Static<typeof GrcSkillsInstalledParamsSchema>;
+export type GrcSkillsRecommendedParams = Static<typeof GrcSkillsRecommendedParamsSchema>;
+export type GrcSkillsPublishParams = Static<typeof GrcSkillsPublishParamsSchema>;
+export type GrcSkillsRateParams = Static<typeof GrcSkillsRateParamsSchema>;
+export type GrcCommunityChannelsParams = Static<typeof GrcCommunityChannelsParamsSchema>;
+export type GrcCommunityFeedParams = Static<typeof GrcCommunityFeedParamsSchema>;
+export type GrcCommunityPostParams = Static<typeof GrcCommunityPostParamsSchema>;
+export type GrcCommunityRepliesParams = Static<typeof GrcCommunityRepliesParamsSchema>;
+export type GrcCommunityCreatePostParams = Static<typeof GrcCommunityCreatePostParamsSchema>;
+export type GrcCommunityReplyParams = Static<typeof GrcCommunityReplyParamsSchema>;
+export type GrcCommunityVoteParams = Static<typeof GrcCommunityVoteParamsSchema>;
+export type GrcCommunityStatsParams = Static<typeof GrcCommunityStatsParamsSchema>;

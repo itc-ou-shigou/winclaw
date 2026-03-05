@@ -1,0 +1,97 @@
+{
+  "qiita": {
+    "newPostUrl": "https://qiita.com/drafts/new",
+    "editUrlPattern": "https://qiita.com/drafts/{id}/edit",
+    "apiUrlPattern": "https://qiita.com/api/v2/items/{id}",
+    "selectors": {
+      "title": "input[placeholder]",
+      "content": ".cm-content",
+      "publishButton": "button:has-text('投稿する')",
+      "updateButton": "button:has-text('更新する')"
+    },
+    "editorType": "codemirror6",
+    "language": "ja",
+    "maxTags": 5,
+    "contentFormat": "markdown"
+  },
+  "csdn": {
+    "newPostUrl": "https://editor.csdn.net/md",
+    "selectors": {
+      "title": ".article-bar__title, input[placeholder*='标题']",
+      "content": "pre.editor__inner",
+      "publishModalTrigger": "p:has-text('发布文章'), span:has-text('发布文章')",
+      "publishConfirm": ".btn-b-red"
+    },
+    "editorType": "cledit",
+    "language": "zh",
+    "maxTags": 5,
+    "contentFormat": "markdown"
+  },
+  "blogger": {
+    "postsUrlPattern": "https://www.blogger.com/blog/posts/{blogId}",
+    "selectors": {
+      "title": "[aria-label='タイトル'], [aria-label='Title']",
+      "htmlModeToggle": "[role='button']:has-text('HTML')",
+      "htmlTextarea": "textarea",
+      "publishButton": "div[role='button'] span.RveJvd:has-text('公開')",
+      "confirmButton": "div[role='button'] span.RveJvd:has-text('確定')",
+      "newPostButton": "[role='button']:has-text('新しい投稿')"
+    },
+    "editorType": "iframe-html",
+    "language": "any",
+    "contentFormat": "html"
+  },
+  "devto": {
+    "newPostUrl": "https://dev.to/new",
+    "selectors": {
+      "title": "#article-form-title, textarea[placeholder*='title']",
+      "tags": "#tag-input",
+      "content": "#article_body_markdown",
+      "publishButton": "button:has-text('Publish')"
+    },
+    "editorType": "textarea",
+    "language": "en",
+    "maxTags": 4,
+    "contentFormat": "markdown"
+  },
+  "zenn": {
+    "newPostUrl": "https://zenn.dev/articles/new",
+    "selectors": {
+      "title": "input[placeholder*='タイトル']",
+      "content": "textarea"
+    },
+    "editorType": "textarea",
+    "language": "ja",
+    "contentFormat": "markdown"
+  },
+  "hatena": {
+    "selectors": {
+      "title": "#title, input[name='title']",
+      "content": "#body, textarea[name='body']",
+      "publishButton": "button:has-text('公開'), input[type='submit']:has-text('公開')"
+    },
+    "editorType": "textarea",
+    "language": "ja",
+    "contentFormat": "markdown"
+  },
+  "medium": {
+    "newPostUrl": "https://medium.com/new-story",
+    "selectors": {
+      "title": "[data-testid='storyTitle'], h3[contenteditable]",
+      "content": "[data-testid='storyEditor']"
+    },
+    "editorType": "prosemirror",
+    "language": "en",
+    "contentFormat": "richtext"
+  },
+  "note": {
+    "newPostUrl": "https://note.com/new",
+    "selectors": {
+      "title": "[placeholder*='タイトル']",
+      "content": "[contenteditable='true']"
+    },
+    "editorType": "contenteditable",
+    "language": "ja",
+    "contentFormat": "richtext"
+  }
+}

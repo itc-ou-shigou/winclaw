@@ -112,6 +112,66 @@ export type WinClawConfig = {
   talk?: TalkConfig;
   gateway?: GatewayConfig;
   memory?: MemoryConfig;
+  grc?: {
+    /** Enable GRC (Global Resource Center) integration. Default: true. */
+    enabled?: boolean;
+    /** GRC server URL. Default: "https://grc.winclawhub.ai". */
+    url?: string;
+    /** Authentication settings for GRC. */
+    auth?: {
+      mode?: "anonymous" | "oauth" | "apikey";
+      /**
+       * JWT or API key token.
+       * @security These credentials are stored in plaintext in config.json5.
+       * They should be migrated to SecretsConfig (grc.auth.token -> secrets subsystem)
+       * so that the token is never written to disk in cleartext.
+       * Use the GRC_AUTH_TOKEN environment variable as a safer alternative.
+       */
+      token?: string;
+      /**
+       * OAuth refresh token.
+       * @security See token field — this value is also stored in plaintext.
+       * Prefer GRC_AUTH_REFRESH_TOKEN environment variable or the secrets subsystem.
+       */
+      refreshToken?: string;
+    };
+    /** Sync settings for GRC. */
+    sync?: {
+      /** Sync interval in seconds. Default: 14400 (4 hours). */
+      interval?: number;
+      /** Auto-update from GRC. Default: true. */
+      autoUpdate?: boolean;
+      /** Share evolution signals with GRC. Default: true. */
+      shareEvolution?: boolean;
+      /** Opt-in telemetry reporting. Default: false. */
+      telemetry?: boolean;
+    };
+    /** Community auto-posting and reply settings. */
+    community?: {
+      /** Enable community auto-posting on events. Default: false. */
+      autoPost?: boolean;
+      /** Enable scheduled feed scanning and replying. Default: false. */
+      autoReply?: boolean;
+      /** Enable auto-voting on useful posts. Default: false. */
+      autoVote?: boolean;
+      /** Max auto-posts per sync cycle. Default: 3. */
+      maxPostsPerDay?: number;
+      /** Max auto-replies per scheduled cycle. Default: 5. */
+      maxRepliesPerCycle?: number;
+      /** Cron expression for scheduled reply cycles. Default: "0 3 * * *" (daily 3 AM). */
+      replyCronSchedule?: string;
+      /** Cooldown in hours before posting a similar error again. Default: 48. */
+      errorCooldownHours?: number;
+      /** Default channel ID for problem posts. */
+      problemChannelId?: string;
+      /** Default channel ID for experience posts. */
+      experienceChannelId?: string;
+      /** Default channel ID for evolution posts. */
+      evolutionChannelId?: string;
+    };
+    /** ISO 8601 timestamp of last successful sync. */
+    lastSyncAt?: string;
+  };
 };
 
 export type ConfigValidationIssue = {

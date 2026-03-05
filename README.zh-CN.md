@@ -25,7 +25,7 @@ WinClaw 现已提供原生 Windows 支持，包含基于 Inno Setup 构建的 EX
 
 安装程序内置完整 Node.js 22 运行时，无需任何前置条件。
 
-1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.2.exe/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
+1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.5.exe/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
 2. 运行安装程序（默认使用用户权限，无需管理员）
 3. 在安装向导中按需选择选项：
 

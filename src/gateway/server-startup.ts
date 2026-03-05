@@ -19,6 +19,7 @@ import {
   triggerInternalHook,
 } from "../hooks/internal-hooks.js";
 import { loadInternalHooks } from "../hooks/loader.js";
+import { GrcConnectionManager } from "../infra/grc-connection.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import type { loadWinClawPlugins } from "../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../plugins/services.js";
@@ -187,5 +188,14 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices };
+  // Start GRC auto-connect (non-blocking, fire-and-forget).
+  let grcConnection: GrcConnectionManager | null = null;
+  if (params.cfg.grc?.enabled !== false) {
+    grcConnection = new GrcConnectionManager();
+    grcConnection.autoConnect().catch((err) => {
+      params.log.warn(`GRC auto-connect failed (will retry): ${String(err)}`);
+    });
+  }
+
+  return { browserControl, pluginServices, grcConnection };
 }

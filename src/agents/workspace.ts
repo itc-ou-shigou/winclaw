@@ -7,6 +7,7 @@ import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
+import { readCachedPlatformValues } from "../infra/grc-sync.js";
 import { resolveWorkspaceTemplateDir } from "./workspace-templates.js";
 
 export function resolveDefaultAgentWorkspaceDir(
@@ -551,6 +552,23 @@ export async function loadWorkspaceBootstrapFiles(dir: string): Promise<Workspac
       result.push({ name: entry.name, path: entry.filePath, missing: true });
     }
   }
+
+  // Inject GRC Platform Values into SOUL.md (in-memory only, never overwrites file)
+  try {
+    const platformValues = readCachedPlatformValues();
+    if (platformValues && platformValues.content) {
+      const soulEntry = result.find(
+        (f) => f.name === DEFAULT_SOUL_FILENAME && !f.missing,
+      );
+      if (soulEntry && soulEntry.content) {
+        soulEntry.content +=
+          `\n\n---\n\n## Platform Values\n\n_Inherited from GRC server._\n\n${platformValues.content}`;
+      }
+    }
+  } catch {
+    // Non-critical — if cache read fails, SOUL.md remains unchanged
+  }
+
   return result;
 }
 

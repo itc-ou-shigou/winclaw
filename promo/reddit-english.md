@@ -72,7 +72,7 @@ Test results from all phases are aggregated into an auto-generated HTML test rep
 
 ### 1. Install WinClaw
 
-- **Windows EXE (Recommended)**: [Download from SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download) (Bundled Node.js 22 runtime, zero prerequisites)
+- **Windows EXE (Recommended)**: [Download from SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.2.exe/download) (Bundled Node.js 22 runtime, zero prerequisites)
 - **GitHub**: https://github.com/itc-ou-shigou/winclaw/releases
 - **npm**: `npm install -g winclaw`
 
@@ -106,7 +106,7 @@ setx ANTHROPIC_MODEL "glm-5"
 ## Links
 
 - **GitHub**: https://github.com/itc-ou-shigou/winclaw
-- **Windows Installer**: https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.2.30.exe/download
+- **Windows Installer**: https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.2.exe/download
 - **npm**: `npm install -g winclaw`
 - **License**: Apache-2.0 (free for personal and commercial use)
 

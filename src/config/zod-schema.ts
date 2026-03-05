@@ -691,6 +691,48 @@ export const WinClawSchema = z
       .strict()
       .optional(),
     memory: MemorySchema,
+    grc: z
+      .object({
+        enabled: z.boolean().optional(),
+        url: z.string().optional(),
+        auth: z
+          .object({
+            mode: z
+              .union([z.literal("anonymous"), z.literal("oauth"), z.literal("apikey")])
+              .optional(),
+            token: z.string().optional().register(sensitive),
+            refreshToken: z.string().optional().register(sensitive),
+          })
+          .strict()
+          .optional(),
+        sync: z
+          .object({
+            interval: z.number().int().nonnegative().optional(),
+            autoUpdate: z.boolean().optional(),
+            shareEvolution: z.boolean().optional(),
+            telemetry: z.boolean().optional(),
+          })
+          .strict()
+          .optional(),
+        community: z
+          .object({
+            autoPost: z.boolean().optional(),
+            autoReply: z.boolean().optional(),
+            autoVote: z.boolean().optional(),
+            maxPostsPerDay: z.number().int().min(0).max(20).optional(),
+            maxRepliesPerCycle: z.number().int().min(0).max(50).optional(),
+            replyCronSchedule: z.string().optional(),
+            errorCooldownHours: z.number().int().min(1).max(720).optional(),
+            problemChannelId: z.string().optional(),
+            experienceChannelId: z.string().optional(),
+            evolutionChannelId: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+        lastSyncAt: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     skills: z
       .object({
         allowBundled: z.array(z.string()).optional(),
