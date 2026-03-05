@@ -31,7 +31,7 @@ recommended.
 ### Method 1: EXE Installer (Recommended)
 
 Download **WinClawSetup-{version}.exe** from
-[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.5.exe/download) |
+[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.6.exe/download) |
 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases) and run it.
 The installer is also available locally in the [`releases/`](releases/) directory.
 
