@@ -1,3 +1,4 @@
+import type { PersonalInfoData } from "./controllers/personal-info.ts";
 import type { EventLogEntry } from "./app-events.ts";
 import type { CompactionStatus } from "./app-tool-stream.ts";
 import type { ExecLogEntry } from "./components/exec-log-console.ts";
@@ -95,6 +96,13 @@ export type AppViewState = {
   execApprovalBusy: boolean;
   execApprovalError: string | null;
   pendingGatewayUrl: string | null;
+  personalInfoLoading: boolean;
+  personalInfoSaving: boolean;
+  personalInfo: PersonalInfoData | null;
+  personalInfoForm: PersonalInfoData | null;
+  personalInfoError: string | null;
+  personalInfoDirty: boolean;
+  personalInfoSuccess: string | null;
   configLoading: boolean;
   configRaw: string;
   configRawOriginal: string;

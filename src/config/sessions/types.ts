@@ -111,6 +111,8 @@ export type SessionEntry = {
   groupActivation?: "mention" | "always";
   groupActivationNeedsSystemIntro?: boolean;
   sendPolicy?: "allow" | "deny";
+  /** Per-session workspace directory override. */
+  workspace?: string;
   queueMode?:
     | "steer"
     | "followup"

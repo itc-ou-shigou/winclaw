@@ -78,6 +78,8 @@ import { renderInstances } from "./views/instances.ts";
 import { renderLogs } from "./views/logs.ts";
 import { renderNodes } from "./views/nodes.ts";
 import { renderOverview } from "./views/overview.ts";
+import { renderPersonalInfo } from "./views/personal-info.ts";
+import { loadPersonalInfo, savePersonalInfo, updatePersonalInfoField } from "./controllers/personal-info.ts";
 import { renderSessions } from "./views/sessions.ts";
 import { renderSkills } from "./views/skills.ts";
 import { renderUsage } from "./views/usage.ts";
@@ -1144,6 +1146,23 @@ export function renderApp(state: AppViewState) {
                 assistantName: state.assistantName,
                 assistantAvatar: state.assistantAvatar,
               })}`
+            : nothing
+        }
+
+        ${
+          state.tab === "personal"
+            ? renderPersonalInfo({
+                loading: state.personalInfoLoading,
+                saving: state.personalInfoSaving,
+                data: state.personalInfo,
+                form: state.personalInfoForm,
+                dirty: state.personalInfoDirty,
+                error: state.personalInfoError,
+                success: state.personalInfoSuccess,
+                onFieldChange: (field, value) => updatePersonalInfoField(state, field, value),
+                onSave: () => void savePersonalInfo(state),
+                onRefresh: () => void loadPersonalInfo(state),
+              })
             : nothing
         }
 

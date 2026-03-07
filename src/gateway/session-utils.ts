@@ -383,6 +383,7 @@ export function listAgentsForGateway(cfg: WinClawConfig): {
     return {
       id,
       name: meta?.name,
+      workspace: resolveAgentWorkspaceDir(cfg, id),
       identity: meta?.identity,
     };
   });
@@ -829,6 +830,7 @@ export function listSessionsFromStore(params: {
         reasoningLevel: entry?.reasoningLevel,
         elevatedLevel: entry?.elevatedLevel,
         sendPolicy: entry?.sendPolicy,
+        workspace: entry?.workspace,
         inputTokens: entry?.inputTokens,
         outputTokens: entry?.outputTokens,
         totalTokens: total,

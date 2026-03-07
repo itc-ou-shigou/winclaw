@@ -775,6 +775,7 @@ export class GrcClient {
     nodeId: string,
     platform: string,
     winclawVersion: string,
+    employee?: { id?: string; name?: string; email?: string },
     abortSignal?: AbortSignal,
   ): Promise<{ ok: boolean; node?: { id: string } }> {
     return this.request<{ ok: boolean; node?: { id: string } }>(
@@ -785,6 +786,9 @@ export class GrcClient {
           node_id: nodeId,
           platform,
           winclaw_version: winclawVersion,
+          ...(employee?.id && { employee_id: employee.id }),
+          ...(employee?.name && { employee_name: employee.name }),
+          ...(employee?.email && { employee_email: employee.email }),
         }),
       },
       abortSignal,

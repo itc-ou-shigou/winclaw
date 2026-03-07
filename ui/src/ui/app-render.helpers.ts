@@ -6,8 +6,7 @@ import type { ThemeMode } from "./theme.ts";
 import type { SessionsListResult } from "./types.ts";
 import { WinClawApp } from "./app.ts";
 import { renderChatSessionTabs } from "./components/chat-session-tabs.ts";
-import { loadAgents } from "./controllers/agents.ts";
-import { loadSessions, patchSession } from "./controllers/sessions.ts";
+import { patchSession } from "./controllers/sessions.ts";
 import { icons } from "./icons.ts";
 import { iconForTab, pathForTab, titleForTab, type Tab } from "./navigation.ts";
 
@@ -55,12 +54,6 @@ function resolveCurrentWorkspace(state: AppViewState): string | undefined {
   const agentId = agentMatch?.[1] ?? state.agentsList?.defaultId;
   const agent = agents.find((a) => a.id === agentId) ?? agents[0];
   return agent?.workspace;
-}
-
-function resolveCurrentAgentId(state: AppViewState): string {
-  const sessionKey = state.sessionKey ?? "";
-  const match = sessionKey.match(/^agent:([^:]+):/);
-  return match?.[1] ?? state.agentsList?.defaultId ?? "default";
 }
 
 function resolveCurrentModel(state: AppViewState): string {
@@ -147,36 +140,13 @@ async function changeWorkspace(state: AppViewState) {
   }
   const trimmedPath = newPath.trim();
 
-  // Optimistic update: immediately reflect in UI
-  const agents = state.agentsList?.agents;
-  if (agents) {
-    const agentId = resolveCurrentAgentId(state);
-    const agent = agents.find((a) => a.id === agentId);
-    if (agent) {
-      agent.workspace = trimmedPath;
-      state.agentsList = { ...state.agentsList! };
-    }
-  }
-
-  // Per-session workspace: patch the session entry
+  // Per-session workspace: patch only the current session entry
   try {
-    await state.client?.request("sessions.patch", {
-      key: state.sessionKey,
+    await patchSession(state as unknown as WinClawApp, state.sessionKey, {
       workspace: trimmedPath,
     });
-    await loadSessions(state as unknown as WinClawApp);
-  } catch {
-    // Fallback: update at agent level
-    try {
-      const agentId = resolveCurrentAgentId(state);
-      await state.client?.request("agents.update", {
-        agentId,
-        workspace: trimmedPath,
-      });
-      await loadAgents(state as unknown as WinClawApp, { force: true });
-    } catch (err) {
-      console.error("[workspace] change failed:", err);
-    }
+  } catch (err) {
+    console.error("[workspace] change failed:", err);
   }
 }
 

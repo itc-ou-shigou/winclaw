@@ -117,6 +117,12 @@ export type WinClawConfig = {
     enabled?: boolean;
     /** GRC server URL. Default: "https://grc.winclawhub.ai". */
     url?: string;
+    /** Employee ID sent during GRC node registration. */
+    employeeId?: string;
+    /** Employee display name sent during GRC node registration. */
+    employeeName?: string;
+    /** Employee contact email sent during GRC node registration. */
+    employeeEmail?: string;
     /** Authentication settings for GRC. */
     auth?: {
       mode?: "anonymous" | "oauth" | "apikey";

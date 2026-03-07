@@ -167,6 +167,14 @@ export class WinClawApp extends LitElement {
   @state() execApprovalError: string | null = null;
   @state() pendingGatewayUrl: string | null = null;
 
+  @state() personalInfoLoading = false;
+  @state() personalInfoSaving = false;
+  @state() personalInfo: import("./controllers/personal-info.ts").PersonalInfoData | null = null;
+  @state() personalInfoForm: import("./controllers/personal-info.ts").PersonalInfoData | null = null;
+  @state() personalInfoError: string | null = null;
+  @state() personalInfoDirty = false;
+  @state() personalInfoSuccess: string | null = null;
+
   @state() configLoading = false;
   @state() configRaw = "{\n}\n";
   @state() configRawOriginal = "";

@@ -91,6 +91,9 @@ const BASE_METHODS = [
   "send",
   "agent",
   "agent.identity.get",
+  "personal-info.get",
+  "personal-info.save",
+  "system.showFolderDialog",
   "agent.wait",
   "browser.request",
   // WebChat WebSocket-native chat methods

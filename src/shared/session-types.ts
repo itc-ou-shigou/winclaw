@@ -9,6 +9,7 @@ export type GatewayAgentIdentity = {
 export type GatewayAgentRow = {
   id: string;
   name?: string;
+  workspace?: string;
   identity?: GatewayAgentIdentity;
 };
 

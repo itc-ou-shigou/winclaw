@@ -7,7 +7,7 @@ export const TAB_GROUPS = [
     tabs: ["overview", "channels", "instances", "sessions", "usage", "cron"],
   },
   { label: "Agent", tabs: ["agents", "skills", "nodes"] },
-  { label: "Settings", tabs: ["config", "debug", "logs"] },
+  { label: "Settings", tabs: ["personal", "config", "debug", "logs"] },
 ] as const;
 
 export type Tab =
@@ -21,6 +21,7 @@ export type Tab =
   | "skills"
   | "nodes"
   | "chat"
+  | "personal"
   | "config"
   | "debug"
   | "logs";
@@ -36,6 +37,7 @@ const TAB_PATHS: Record<Tab, string> = {
   skills: "/skills",
   nodes: "/nodes",
   chat: "/chat",
+  personal: "/personal",
   config: "/config",
   debug: "/debug",
   logs: "/logs",
@@ -144,6 +146,8 @@ export function iconForTab(tab: Tab): IconName {
       return "zap";
     case "nodes":
       return "monitor";
+    case "personal":
+      return "user";
     case "config":
       return "settings";
     case "debug":
@@ -177,6 +181,8 @@ export function titleForTab(tab: Tab) {
       return "Nodes";
     case "chat":
       return "Chat";
+    case "personal":
+      return "個人情報";
     case "config":
       return "Config";
     case "debug":
@@ -247,6 +253,14 @@ export const COMMANDS: CommandDefinition[] = [
     keywords: ["cron", "schedule", "スケジュール"],
   },
   // システム
+  {
+    id: "personal",
+    label: "個人情報",
+    category: "システム",
+    icon: "user",
+    tab: "personal",
+    keywords: ["personal", "個人情報", "従業員", "employee", "profile"],
+  },
   {
     id: "settings",
     label: "設定",
@@ -336,6 +350,8 @@ export function subtitleForTab(tab: Tab) {
       return "Paired devices, capabilities, and command exposure.";
     case "chat":
       return "Direct gateway chat session for quick interventions.";
+    case "personal":
+      return "従業員ID・氏名・メールアドレスを管理します。";
     case "config":
       return "Edit ~/.winclaw/winclaw.json (WinClaw config) safely.";
     case "debug":

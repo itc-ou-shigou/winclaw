@@ -209,16 +209,15 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
       void flushChatQueueForEvent(host as unknown as Parameters<typeof flushChatQueueForEvent>[0]);
       const runId = payload?.runId;
-      if (runId && host.refreshSessionsAfterChat.has(runId)) {
+      if (runId) {
         host.refreshSessionsAfterChat.delete(runId);
-        if (state === "final") {
-          void loadSessions(host as unknown as WinClawApp, {
-            activeMinutes: CHAT_SESSIONS_ACTIVE_MINUTES,
-          });
-        }
       }
     }
     if (state === "final") {
+      // Always refresh sessions to update derived titles (e.g. "New Chat" → first message text)
+      void loadSessions(host as unknown as WinClawApp, {
+        activeMinutes: CHAT_SESSIONS_ACTIVE_MINUTES,
+      });
       void loadChatHistory(host as unknown as WinClawApp);
     }
     return;

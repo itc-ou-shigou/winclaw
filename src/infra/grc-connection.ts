@@ -124,7 +124,12 @@ export class GrcConnectionManager {
       try {
         const platform = os.platform();
         const version = process.env.WINCLAW_VERSION ?? "0.0.0";
-        await this.client.hello(this.nodeId, platform, version);
+        const employee = {
+          id: config.grc?.employeeId,
+          name: config.grc?.employeeName,
+          email: config.grc?.employeeEmail,
+        };
+        await this.client.hello(this.nodeId, platform, version, employee);
         log.info("Node registered with GRC via A2A hello");
       } catch (err) {
         log.warn(`A2A hello failed (non-fatal): ${(err as Error).message}`);

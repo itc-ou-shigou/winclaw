@@ -797,6 +797,16 @@ export const WinClawSchema = z
           .strict()
           .optional(),
         entries: z.record(z.string(), SkillEntrySchema).optional(),
+        dynamicFilter: z
+          .object({
+            mode: z
+              .union([z.literal("off"), z.literal("auto"), z.literal("on")])
+              .optional(),
+            maxSkills: z.number().int().min(1).optional(),
+            maxSkillsPromptChars: z.number().int().min(0).optional(),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),
@@ -828,6 +838,55 @@ export const WinClawSchema = z
               .strict(),
           )
           .optional(),
+      })
+      .strict()
+      .optional(),
+    grc: z
+      .object({
+        enabled: z.boolean().optional(),
+        url: z.string().optional(),
+        employeeId: z.string().max(100).optional(),
+        employeeName: z.string().max(255).optional(),
+        employeeEmail: z.string().max(255).optional(),
+        auth: z
+          .object({
+            mode: z
+              .union([
+                z.literal("anonymous"),
+                z.literal("oauth"),
+                z.literal("apikey"),
+              ])
+              .optional(),
+            token: z.string().optional(),
+            refreshToken: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+        sync: z
+          .object({
+            interval: z.number().int().min(0).optional(),
+            autoUpdate: z.boolean().optional(),
+            shareEvolution: z.boolean().optional(),
+            telemetry: z.boolean().optional(),
+          })
+          .strict()
+          .optional(),
+        community: z
+          .object({
+            autoPost: z.boolean().optional(),
+            autoReply: z.boolean().optional(),
+            autoVote: z.boolean().optional(),
+            maxPostsPerDay: z.number().int().min(0).optional(),
+            maxRepliesPerCycle: z.number().int().min(0).optional(),
+            replyCronSchedule: z.string().optional(),
+            errorCooldownHours: z.number().int().min(0).optional(),
+            problemChannelId: z.string().optional(),
+            experienceChannelId: z.string().optional(),
+            evolutionChannelId: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+        lastSyncAt: z.string().optional(),
       })
       .strict()
       .optional(),
