@@ -7,6 +7,7 @@ import { EvolutionStore, hashPayload, type LocalGene, type LocalCapsule } from "
 import { GrcSkillManifestStore, compareSemver } from "./grc-skill-manifest.js";
 import { installGrcSkill } from "./grc-skill-installer.js";
 import { runGrcDownloadAndInstall } from "./update-runner.js";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 
 const log: SubsystemLogger = createSubsystemLogger("infra/grc-sync");
 
@@ -61,6 +62,12 @@ export type GrcSyncResult = {
   telemetrySent: boolean;
   /** Whether platform values were fetched/updated in this cycle. */
   platformValuesFetched: boolean;
+  /** Whether role config was checked from GRC in this cycle. */
+  configChecked: boolean;
+  /** Whether role config files were pulled and written to workspace in this cycle. */
+  configPulled: boolean;
+  /** The config revision that was applied, if any. */
+  configRevisionApplied: number | null;
   errors: string[];
   durationMs: number;
 };
@@ -267,6 +274,9 @@ export class GrcSyncService implements GrcSyncServiceHandle {
         updateInstallSuccess: false,
         telemetrySent: false,
         platformValuesFetched: false,
+        configChecked: false,
+        configPulled: false,
+        configRevisionApplied: null,
         errors: ["Sync skipped — already in progress"],
         durationMs: 0,
       };
@@ -293,6 +303,9 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       updateInstallSuccess: false,
       telemetrySent: false,
       platformValuesFetched: false,
+      configChecked: false,
+      configPulled: false,
+      configRevisionApplied: null,
       errors: [],
       durationMs: 0,
     };
@@ -529,6 +542,24 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       // Non-critical — ignore
     }
 
+    // 9. Role config pull — check & pull resolved MD config files from GRC
+    try {
+      const configResult = await this.syncRoleConfig(signal);
+      result.configChecked = configResult.checked;
+      result.configPulled = configResult.pulled;
+      result.configRevisionApplied = configResult.revisionApplied;
+      if (configResult.pulled) {
+        log.info("Role config pulled from GRC", {
+          revision: configResult.revisionApplied,
+          files: configResult.filesWritten,
+        });
+      }
+    } catch (err) {
+      const msg = `Role config sync failed: ${(err as Error).message}`;
+      result.errors.push(msg);
+      log.warn(msg);
+    }
+
     result.durationMs = Date.now() - started;
     this.lastResult = result;
     this.syncing = false;
@@ -541,6 +572,7 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       usageReportsSent: result.usageReportsSent,
       skillsChecked: result.skillsChecked,
       skillsUpdated: result.skillsUpdated,
+      configPulled: result.configPulled,
       durationMs: result.durationMs,
     });
 
@@ -706,6 +738,140 @@ export class GrcSyncService implements GrcSyncServiceHandle {
 
     return sent;
   }
+
+  // -- Private helpers: role config pull ------------------------------------
+
+  /**
+   * Check GRC for role config updates and, if available, pull the resolved
+   * MD files and write them to the local workspace directory.
+   *
+   * Returns a summary of the sync operation.
+   */
+  private async syncRoleConfig(signal?: AbortSignal): Promise<{
+    checked: boolean;
+    pulled: boolean;
+    revisionApplied: number | null;
+    filesWritten: number;
+  }> {
+    const nodeId = this.config.nodeId;
+    if (!nodeId) {
+      return { checked: false, pulled: false, revisionApplied: null, filesWritten: 0 };
+    }
+
+    // Read the locally tracked revision from the config state file
+    const stateFilePath = getConfigStatePath();
+    const localState = readConfigState(stateFilePath);
+
+    // 1. Check if update is available
+    const check = await this.client.checkConfig(nodeId, localState.appliedRevision, signal);
+    if (!check.ok) {
+      return { checked: true, pulled: false, revisionApplied: null, filesWritten: 0 };
+    }
+
+    if (!check.has_update) {
+      log.debug("Role config is up to date", {
+        nodeId,
+        revision: localState.appliedRevision,
+      });
+      return { checked: true, pulled: false, revisionApplied: null, filesWritten: 0 };
+    }
+
+    // 2. Pull the full config
+    const pulled = await this.client.pullConfig(nodeId, signal);
+    if (!pulled.ok || !pulled.files) {
+      return { checked: true, pulled: false, revisionApplied: null, filesWritten: 0 };
+    }
+
+    // 3. Write each file to the workspace directory
+    const workspaceDir = resolveDefaultAgentWorkspaceDir();
+    if (!fs.existsSync(workspaceDir)) {
+      fs.mkdirSync(workspaceDir, { recursive: true });
+    }
+
+    let filesWritten = 0;
+    for (const [fileName, content] of Object.entries(pulled.files)) {
+      if (!content) continue; // Skip null/empty files
+      const filePath = path.join(workspaceDir, fileName);
+      try {
+        // Atomic write: write to temp then rename
+        const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now().toString(36)}`;
+        fs.writeFileSync(tmpPath, content, "utf-8");
+        fs.renameSync(tmpPath, filePath);
+        filesWritten++;
+        log.debug("Wrote config file to workspace", { fileName, filePath });
+      } catch (err) {
+        log.warn(`Failed to write config file ${fileName}: ${(err as Error).message}`);
+      }
+    }
+
+    // 4. Report applied status back to GRC
+    try {
+      await this.client.reportConfigStatus(nodeId, pulled.revision, true, signal);
+    } catch (err) {
+      log.warn(`Failed to report config status: ${(err as Error).message}`);
+    }
+
+    // 5. Update local state file
+    writeConfigState(stateFilePath, {
+      appliedRevision: pulled.revision,
+      roleId: pulled.role_id,
+      roleMode: pulled.role_mode,
+      lastSyncAt: new Date().toISOString(),
+    });
+
+    log.info("Role config applied from GRC", {
+      nodeId,
+      revision: pulled.revision,
+      roleId: pulled.role_id,
+      filesWritten,
+    });
+
+    return {
+      checked: true,
+      pulled: true,
+      revisionApplied: pulled.revision,
+      filesWritten,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Config State Persistence
+// ---------------------------------------------------------------------------
+
+type ConfigSyncState = {
+  appliedRevision: number;
+  roleId?: string | null;
+  roleMode?: string | null;
+  lastSyncAt?: string;
+};
+
+/** Path to the config sync state file: ~/.winclaw/grc-config-state.json */
+function getConfigStatePath(): string {
+  return path.join(os.homedir(), ".winclaw", "grc-config-state.json");
+}
+
+function readConfigState(statePath: string): ConfigSyncState {
+  try {
+    const raw = fs.readFileSync(statePath, "utf-8");
+    const data = JSON.parse(raw) as Partial<ConfigSyncState>;
+    return {
+      appliedRevision: typeof data.appliedRevision === "number" ? data.appliedRevision : 0,
+      roleId: data.roleId,
+      roleMode: data.roleMode,
+      lastSyncAt: data.lastSyncAt,
+    };
+  } catch {
+    return { appliedRevision: 0 };
+  }
+}
+
+function writeConfigState(statePath: string, state: ConfigSyncState): void {
+  const dir = path.dirname(statePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
 }
 
 // ---------------------------------------------------------------------------

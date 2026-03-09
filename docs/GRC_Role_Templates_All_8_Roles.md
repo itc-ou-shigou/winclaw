@@ -260,6 +260,25 @@ You coordinate ALL departments. Your direct reports:
 ```markdown
 # TOOLS — CEO Dashboard
 
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **productivity** — Task management, daily planning, memory context
+  - Commands: /start, /update
+  - Skills: memory-management, task-management
+- **enterprise-search** — Cross-tool search across all company data
+  - Commands: /digest, /search
+  - Skills: knowledge-synthesis, search-strategy, source-management
+
+### Secondary Plugins
+- **operations** — Vendor management, process docs, capacity planning
+  - Commands: /capacity-plan, /change-request, /process-doc, /runbook, /status-report, /vendor-review
+- **finance** — Financial statements, variance analysis, reconciliation
+  - Commands: /income-statement, /journal-entry, /reconciliation, /variance-analysis
+- **data** — SQL queries, dashboards, data visualization
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /write-query
+
 ## Executive Dashboard
 - Company KPI dashboard: workspace/dashboards/executive.md
 - Department scorecards: workspace/dashboards/departments/
@@ -471,6 +490,22 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Marketing. 
 ```markdown
 # TOOLS — Marketing Stack
 
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **marketing** — Content creation, campaign planning, SEO, brand voice, competitive analysis
+  - Commands: /brand-review, /campaign-plan, /competitive-brief, /draft-content, /email-sequence, /performance-report, /seo-audit
+  - Skills: brand-voice, campaign-planning, competitive-analysis, content-creation, performance-analytics
+
+### Secondary Plugins
+- **data** — Analytics dashboards, data visualization, SQL queries
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /write-query
+- **design** — Design critique, UX writing, accessibility, research synthesis
+  - Commands: /accessibility, /critique, /design-system, /handoff, /research-synthesis, /ux-copy
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
+
 ## Analytics
 - Google Analytics 4 API: workspace/credentials/ga4-key.json
 - Search Console API: workspace/credentials/gsc-key.json
@@ -657,6 +692,24 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Product. Yo
 ```markdown
 # TOOLS — PM Stack
 
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **product-management** — Feature specs, roadmap planning, stakeholder updates, user research synthesis
+  - Commands: /competitive-brief, /metrics-review, /roadmap-update, /sprint-planning, /stakeholder-update, /synthesize-research, /write-spec
+  - Skills: competitive-analysis, feature-spec, metrics-tracking, roadmap-management, stakeholder-comms, user-research-synthesis
+
+### Secondary Plugins
+- **design** — Design critique, UX writing, accessibility review, handoff
+  - Commands: /accessibility, /critique, /design-system, /handoff, /research-synthesis, /ux-copy
+- **data** — Analytics dashboards, data visualization
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data
+- **engineering** — Architecture decisions, sprint planning, code review
+  - Commands: /architecture, /deploy-checklist, /review, /standup
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
+
 ## Project Management
 - Issue tracker API: workspace/credentials/tracker.json
 
@@ -835,6 +888,25 @@ You coordinate cross-functionally across all departments:
 ### TOOLS.md
 ```markdown
 # TOOLS — Strategy Stack
+
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **data** — Data analysis, dashboards, visualization, SQL queries
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /validate, /write-query
+  - Skills: data-exploration, data-visualization, interactive-dashboard-builder, sql-queries, statistical-analysis
+- **operations** — Capacity planning, process documentation, vendor review
+  - Commands: /capacity-plan, /change-request, /process-doc, /runbook, /status-report, /vendor-review
+  - Skills: change-management, process-optimization, resource-planning, risk-assessment
+
+### Secondary Plugins
+- **enterprise-search** — Cross-tool search for strategic intelligence
+  - Commands: /digest, /search
+- **finance** — Financial statements, variance analysis
+  - Commands: /income-statement, /variance-analysis, /reconciliation
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
 
 ## Research
 - Industry report database: workspace/data/industry-reports/
@@ -1022,6 +1094,21 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Finance. Yo
 ```markdown
 # TOOLS — Finance Stack
 
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **finance** — Journal entries, reconciliation, financial statements, SOX testing, variance analysis
+  - Commands: /income-statement, /journal-entry, /reconciliation, /sox-testing, /variance-analysis
+  - Skills: audit-support, close-management, financial-statements, journal-entry-prep, reconciliation, variance-analysis
+
+### Secondary Plugins
+- **data** — Data analysis, dashboards, SQL queries for financial reporting
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /write-query
+  - Skills: data-exploration, data-visualization, sql-queries, statistical-analysis
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
+
 ## Accounting
 - Accounting software API: workspace/credentials/accounting.json
 - Expense management API: workspace/credentials/expense.json
@@ -1201,6 +1288,20 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Sales. You:
 ```markdown
 # TOOLS — Sales Stack
 
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **sales** — Call prep, pipeline review, forecasting, outreach drafting, competitive intelligence
+  - Commands: /call-summary, /forecast, /pipeline-review
+  - Skills: account-research, call-prep, competitive-intelligence, create-an-asset, daily-briefing, draft-outreach
+
+### Secondary Plugins
+- **data** — Sales analytics dashboards, data visualization
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /write-query
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
+
 ## CRM
 - CRM API: workspace/credentials/crm.json
 
@@ -1374,6 +1475,21 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Support. Yo
 ### TOOLS.md
 ```markdown
 # TOOLS — Support Stack
+
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **customer-support** — Ticket triage, response drafting, escalation, knowledge base management
+  - Commands: /draft-response, /escalate, /kb-article, /research, /triage
+  - Skills: customer-research, escalation, knowledge-management, response-drafting, ticket-triage
+
+### Secondary Plugins
+- **enterprise-search** — Cross-tool search for customer context and history
+  - Commands: /digest, /search
+  - Skills: knowledge-synthesis, search-strategy
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
 
 ## Ticketing
 - Help desk API: workspace/credentials/helpdesk.json
@@ -1551,6 +1667,21 @@ You are an AI assistant supporting ${human_name} (${human_title}) in HR. You:
 ### TOOLS.md
 ```markdown
 # TOOLS — HR Stack
+
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **human-resources** — Recruiting, onboarding, performance reviews, compensation analysis, policy guidance
+  - Commands: /comp-analysis, /draft-offer, /onboarding, /people-report, /performance-review, /policy-lookup
+  - Skills: compensation-benchmarking, employee-handbook, interview-prep, org-planning, people-analytics, recruiting-pipeline
+
+### Secondary Plugins
+- **legal** — Contract review, compliance checks, NDA triage (for employment contracts)
+  - Commands: /brief, /compliance-check, /review-contract, /triage-nda
+  - Skills: compliance, contract-review, legal-risk-assessment
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
 
 ## Applicant Tracking
 - ATS API: workspace/credentials/ats.json
@@ -1733,6 +1864,21 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Engineering
 ### TOOLS.md
 ```markdown
 # TOOLS — Engineering Stack
+
+## WinClaw Plugins (Priority)
+> **Always load these plugins first.** They provide specialized skills and commands for your role.
+
+### Primary Plugins
+- **engineering** — Architecture decisions, code review, incident response, deploy checklists, standups
+  - Commands: /architecture, /debug, /deploy-checklist, /incident, /review, /standup
+  - Skills: code-review, documentation, incident-response, system-design, tech-debt, testing-strategy
+
+### Secondary Plugins
+- **data** — Data analysis, dashboards for engineering metrics
+  - Commands: /analyze, /build-dashboard, /create-viz, /explore-data, /write-query
+  - Skills: data-exploration, data-visualization, sql-queries
+- **productivity** — Task management, daily planning
+  - Commands: /start, /update
 
 ## Version Control
 - Git platform API: workspace/credentials/git-platform.json

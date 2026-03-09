@@ -1,0 +1,361 @@
+================================================================================
+                    OPENCLAW A2A GATEWAY - ARCHITECTURE
+================================================================================
+
+OVERALL SYSTEM TOPOLOGY
+=======================
+
+Network Layer (Tailscale/LAN/Public IP)
+    |
+    +-- SERVER A (Port 18800) -- SERVER B (Port 18800) -- SERVER C (Port 18800)
+    |        A2A Gateway             A2A Gateway            A2A Gateway
+    |
+A2A Protocol Network:
+  - JSON-RPC, REST (HTTP+JSON), gRPC
+  - Agent Card Discovery (/.well-known/agent-card.json)
+  - Message Send (message/send)
+  - Task Status Polling (tasks/get)
+
+
+SINGLE SERVER INTERNALS
+=======================
+
+OpenClaw A2A Gateway Plugin (Node.js / Express)
+    |
+    +-- HTTP/1.1 (Port 18800)     +-- gRPC (Port 18801)     +-- WebSocket (:18789)
+    |   - Agent Card (GET)         |   - A2A Service         |   OpenClaw Gateway RPC
+    |   - JSON-RPC (POST)          |   - Binary protocol     |   - agent
+    |   - REST (HTTP+JSON)         |                         |   - sessions.resolve
+    |                              |                         |   - chat.history
+    |                              |                         |   - hooks/wake
+    |
+    +-- A2A SDK Layer (@a2a-js/sdk)
+    |   - JSON-RPC Handler
+    |   - REST Handler
+    |   - gRPC Handler
+    |   - DefaultRequestHandler --> OpenClawAgentExecutor
+    |   - InMemoryTaskStore
+    |
+    +-- Authorization Middleware
+        - Bearer Token Validation (per-request)
+
+
+INBOUND MESSAGE FLOW (Peer Agent to Your Agent)
+================================================
+
+1. Peer Agent sends HTTP POST to your /a2a/jsonrpc
+   - Authorization: Bearer <token>
+   - Payload: JSON-RPC with message/send method
+
+2. Express HTTP Server receives request
+
+3. userBuilder() validates bearer token
+   - If no match: return JSON-RPC error -32000
+
+4. JSON-RPC Handler (from SDK) parses request
+
+5. DefaultRequestHandler (from SDK)
+   - Creates Task(id=UUID, status="accepted")
+   - Delegates to OpenClawAgentExecutor
+
+6. OpenClawAgentExecutor.execute()
+   - Extract message text
+   - Connect to OpenClaw gateway (:18789) via WebSocket
+   - Call sessions.resolve(agentId=config.routing.defaultAgentId)
+   - Call agent(agentId, message, deliver=false, idempotencyKey=UUID)
+   - Wait for response (configurable timeout, default 300s)
+   - Extract text from response
+   - Publish Task(status="working") -> Task(status="completed")
+
+7. InMemoryTaskStore stores final Task
+   (for subsequent tasks/get polling)
+
+8. Response returned to peer
+
+
+OUTBOUND MESSAGE FLOW (Your Agent to Peer Agent)
+=================================================
+
+1. OpenClaw Agent calls:
+   gateway("a2a.send", {peer: "Peer-B", message: {...}})
+
+2. Plugin handler (a2a.send) receives request
+   - Lookup peer by name in config.peers[]
+
+3. A2AClient.sendMessage(peer, message)
+   - ClientFactory options (auth + transports)
+   - factory.createFromUrl() to discover peer's Agent Card
+     * Fetch from agentCardUrl with auth headers
+   - Select best available transport (JSON-RPC/REST/gRPC)
+   - Inject Bearer token from peer.auth.token
+   - HTTP POST to peer's /a2a/jsonrpc with auth header
+
+4. Peer-B A2A Gateway processes (same as inbound flow)
+   - Returns completed Task with response
+
+5. Response delivered back to your agent
+
+
+CONFIGURATION PARSING
+=====================
+
+OpenClaw Config (YAML/JSON)
+  plugins.entries.a2a-gateway
+    ├─ agentCard (required)
+    │  ├─ name: "Server-A"
+    │  ├─ description: "A2A bridge for OpenClaw"
+    │  ├─ url: "http://ip:18800/a2a/jsonrpc" (auto if omitted)
+    │  └─ skills: [{id: "chat", name: "chat"}]
+    │
+    ├─ server
+    │  ├─ host: "0.0.0.0" (default)
+    │  └─ port: 18800 (default)
+    │
+    ├─ security
+    │  ├─ inboundAuth: "bearer" or "none" (default: none)
+    │  └─ token: "hex24-token" (required if bearer)
+    │
+    ├─ routing
+    │  └─ defaultAgentId: "main" (default: default)
+    │
+    ├─ peers: [
+    │  {
+    │    name: "Peer-B",
+    │    agentCardUrl: "http://peer-ip:18800/.well-known/agent-card.json",
+    │    auth: {type: "bearer", token: "peer-token"}
+    │  }
+    │]
+    │
+    └─ timeouts
+       └─ agentResponseTimeoutMs: 300000 (default)
+
+    Parsed into GatewayConfig (TypeScript)
+        |
+        +-- Passed to plugin.register(api)
+            |
+            +-- buildAgentCard() - Generate A2A Agent Card
+            +-- A2AClient() - Outbound A2A client
+            +-- Express server - HTTP/REST endpoints
+            +-- gRPC server - Binary transport
+            +-- registerService() - Register start/stop lifecycle
+            +-- registerGatewayMethod() - Register a2a.send method
+
+
+TASK LIFECYCLE
+==============
+
+[Inbound A2A Request Received]
+    |
+    V
+Task(id=UUID, status="accepted")
+    |
+    | OpenClawAgentExecutor.execute()
+    |
+    V
+Publish: Task(status="working", timestamp)
+    |
+    | Connect to OpenClaw gateway
+    | Call agent RPC
+    | Timeout: configurable (default 300s)
+    |
+    V
+Agent responds with text
+    |
+    V
+Extract response text
+    |
+    V
+Publish: Task(status="completed", message, artifacts)
+    |
+    | InMemoryTaskStore stores task
+    |
+    V
+Caller polls tasks/get(taskId)
+    |
+    V
+Task returned with final result
+
+State transitions:
+  accepted -> working -> completed
+  (or canceled if executor.cancelTask() called)
+
+
+TRANSPORT SELECTION
+===================
+
+Agent Card published includes:
+
+additionalInterfaces: [
+  {url: "http://host:18800/a2a/jsonrpc", transport: "JSONRPC"},
+  {url: "http://host:18800/a2a/rest", transport: "HTTP+JSON"},
+  {url: "host:18801", transport: "GRPC"}
+]
+
+SDK ClientFactory evaluates each:
+  1. Try JSON-RPC
+     - If successful: use it
+  2. Fall back to REST
+     - If successful: use it
+  3. Fall back to gRPC
+     - Use it
+
+
+KEY TIMEOUTS
+============
+
+GatewayConnectTimeout:    10 seconds  (WebSocket handshake)
+GatewayRequestTimeout:    10 seconds  (Gateway RPC call)
+AgentResponseTimeout:     300 seconds (Agent execution; configurable)
+HooksWakeTimeout:         5 seconds   (Fallback hook endpoint)
+
+
+BEARER TOKEN FLOW
+=================
+
+Inbound (Peer sends message to you):
+  1. Peer sends: Authorization: Bearer <token>
+  2. userBuilder() in index.ts extracts header
+  3. Compare with config.security.token
+  4. If match: allow; else: JSON-RPC error -32000
+
+Outbound (You send message to Peer):
+  1. Config has peer.auth.token
+  2. A2AClient.createAuthHandler() builds handler
+  3. createAuthenticatingFetchWithRetry() injects header:
+     - Authorization: Bearer <token>
+  4. Applied to Agent Card fetch + message/send request
+
+
+AGENT ROUTING (OpenClaw Extension)
+===================================
+
+Default:
+  All inbound A2A messages route to config.routing.defaultAgentId
+  (usually "main")
+
+Per-message routing (extension):
+  If message includes agentId field:
+    {kind: "message", agentId: "coder", parts: [...]}
+
+  Then executor.pickAgentId() uses explicit agentId
+
+  Result: Same A2A endpoint can route to different OpenClaw agents
+  (Note: Only reliable over JSON-RPC; gRPC may drop unknown fields)
+
+
+FILE STRUCTURE
+==============
+
+index.ts
+  - plugin.register(api) entry point
+  - Express app setup
+  - SDK handler initialization
+  - Bearer auth middleware
+  - Gateway method handler (a2a.send)
+  - Service lifecycle (start/stop)
+
+src/types.ts
+  - GatewayConfig
+  - PeerConfig, PeerAuthConfig
+  - AgentCardConfig, AgentSkillConfig
+  - InboundAuth, OutboundSendResult
+
+src/agent-card.ts
+  - buildAgentCard(config) - Generates A2A Agent Card JSON
+  - Maps OpenClaw config to A2A spec format
+
+src/executor.ts
+  - OpenClawAgentExecutor - Implements AgentExecutor interface
+  - execute(requestContext, eventBus) - Main execution logic
+  - cancelTask() - Task cancellation
+  - GatewayRpcConnection - WebSocket to OpenClaw gateway
+  - Timeout handling
+  - Response text extraction
+
+src/client.ts
+  - A2AClient - Outbound A2A client
+  - buildFactory() - SDK ClientFactory setup with auth
+  - discoverAgentCard() - Fetch peer's Agent Card
+  - sendMessage() - Send A2A message to peer
+
+
+MULTI-TRANSPORT PARALLEL EXECUTION
+===================================
+
+All three transports run on the same server:
+
+HTTP  Port :18800
+  ├─ /.well-known/agent-card.json      (GET)
+  ├─ /a2a/jsonrpc                       (POST)
+  └─ /a2a/rest                          (GET/POST/PUT)
+
+gRPC  Port :18801
+  └─ A2AService with unary + streaming RPCs
+
+Each request independently:
+  1. Authenticated (bearer token)
+  2. Handled by SDK layer
+  3. Delegated to same OpenClawAgentExecutor
+  4. Result stored in InMemoryTaskStore
+  5. Response returned via transport protocol
+
+
+SECURITY ARCHITECTURE
+=====================
+
+Layers:
+  1. Bearer Token (per-request validation)
+     - userBuilder checks Authorization header
+     - Matches against config.security.token
+     - Applies to all transports (HTTP + gRPC)
+
+  2. Transport Security
+     - Peer auth headers injected by A2AClient
+     - createAuthenticatingFetchWithRetry wraps fetch
+     - Headers applied to Agent Card discovery + message send
+
+  3. Network Layer
+     - Tailscale (recommended): Encrypted mesh
+     - LAN: Local network firewall
+     - Public IP: Bearer token + external firewall rules
+
+  4. OpenClaw Gateway Auth
+     - Executor authenticates to local gateway
+     - Uses config.gateway.auth.token or password
+     - WebSocket connection verified
+
+
+LIMITATIONS & GAPS
+==================
+
+1. In-Memory Tasks
+   - Lost on restart
+   - No durable store
+   - Can't scale horizontally
+
+2. No Streaming
+   - No SSE or gRPC streaming
+   - Polling only
+
+3. No Concurrency Limits
+   - Can overload OpenClaw gateway
+
+4. No Peer Health Checks
+   - No automatic failover
+
+5. No Transport Fallback
+   - Selection made once at initialization
+
+6. No File Transfer
+   - A2A spec supports file parts
+   - Not implemented
+
+7. No Token Rotation
+   - Single static token per peer
+
+8. No Audit Log
+   - Can't track who called what
+
+---
+
+Last Updated: 2026-03-08

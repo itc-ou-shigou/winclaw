@@ -121,6 +121,23 @@ export type GrcPlatformValues = {
   updatedAt: string;
 };
 
+/** Response from GET /a2a/config/check */
+export type GrcConfigCheckResult = {
+  ok: boolean;
+  has_update: boolean;
+  latest_revision: number;
+  role_id: string | null;
+};
+
+/** Response from GET /a2a/config/pull */
+export type GrcConfigPullResult = {
+  ok: boolean;
+  revision: number;
+  role_id: string | null;
+  role_mode: string | null;
+  files: Record<string, string>;
+};
+
 export type GrcApiError = {
   status: number;
   statusText: string;
@@ -1141,6 +1158,64 @@ export class GrcClient {
       clearTimeout(timeoutId);
       abortSignal?.removeEventListener("abort", onExternalAbort);
     }
+  }
+
+  // -- Role Config Distribution (A2A) ----------------------------------------
+
+  /**
+   * Check if a config update is available for a node.
+   * GET /a2a/config/check?node_id=xxx&current_revision=N
+   */
+  async checkConfig(
+    nodeId: string,
+    currentRevision: number,
+    abortSignal?: AbortSignal,
+  ): Promise<GrcConfigCheckResult> {
+    const params = new URLSearchParams({
+      node_id: nodeId,
+      current_revision: String(currentRevision),
+    });
+    return this.request<GrcConfigCheckResult>(
+      `/a2a/config/check?${params.toString()}`,
+      { method: "GET" },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Pull the full resolved config files for a node.
+   * GET /a2a/config/pull?node_id=xxx
+   */
+  async pullConfig(
+    nodeId: string,
+    abortSignal?: AbortSignal,
+  ): Promise<GrcConfigPullResult> {
+    const params = new URLSearchParams({ node_id: nodeId });
+    return this.request<GrcConfigPullResult>(
+      `/a2a/config/pull?${params.toString()}`,
+      { method: "GET" },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Report that a config revision has been applied by this node.
+   * POST /a2a/config/status
+   */
+  async reportConfigStatus(
+    nodeId: string,
+    revision: number,
+    applied: boolean,
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean }> {
+    return this.request<{ ok: boolean }>(
+      "/a2a/config/status",
+      {
+        method: "POST",
+        body: JSON.stringify({ node_id: nodeId, revision, applied }),
+      },
+      abortSignal,
+    );
   }
 
   /**
