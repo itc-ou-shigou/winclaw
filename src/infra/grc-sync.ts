@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
 import { createSubsystemLogger, type SubsystemLogger } from "../logging/subsystem.js";
-import { GrcClient, type GrcEvolutionAsset, type GrcSkill, type GrcPlatformValues, type UpdateCheckResult } from "./grc-client.js";
+import { GrcClient, type GrcEvolutionAsset, type GrcSkill, type GrcPlatformValues, type UpdateCheckResult, type GrcKeyConfigEntry } from "./grc-client.js";
 import { EvolutionStore, hashPayload, type LocalGene, type LocalCapsule } from "./evolution-store.js";
 import { GrcSkillManifestStore, compareSemver } from "./grc-skill-manifest.js";
 import { installGrcSkill } from "./grc-skill-installer.js";
@@ -804,6 +804,15 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       }
     }
 
+    // 3b. Sync key_config to winclaw.json (model key distribution)
+    if (pulled.key_config !== undefined) {
+      try {
+        this.syncKeyConfig(pulled.key_config ?? null);
+      } catch (err) {
+        log.warn(`Failed to sync key config to winclaw.json: ${(err as Error).message}`);
+      }
+    }
+
     // 4. Report applied status back to GRC
     try {
       await this.client.reportConfigStatus(nodeId, pulled.revision, true, signal);
@@ -832,6 +841,82 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       revisionApplied: pulled.revision,
       filesWritten,
     };
+  }
+
+  // -- Private helpers: key config sync to winclaw.json ----------------------
+
+  /**
+   * Write model key configuration (primary / auxiliary) into
+   * `~/.winclaw/winclaw.json` so that WinClaw can use the assigned keys
+   * for LLM calls and auxiliary tools.
+   *
+   * When `keyConfig` is null, any existing providers / auxiliaryKeys
+   * sections are removed from the config file.
+   */
+  private syncKeyConfig(
+    keyConfig: { primary: GrcKeyConfigEntry | null; auxiliary: GrcKeyConfigEntry | null } | null,
+  ): void {
+    const configPath = path.join(os.homedir(), ".winclaw", "winclaw.json");
+
+    // Read existing config
+    let config: Record<string, unknown> = {};
+    try {
+      const raw = fs.readFileSync(configPath, "utf-8");
+      config = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // File doesn't exist or is malformed — start with empty object
+    }
+
+    if (keyConfig === null) {
+      // Unbind: remove key sections
+      delete config.providers;
+      delete config.auxiliaryKeys;
+      log.info("Removed key config from winclaw.json (unbind)");
+    } else {
+      // Assign / update
+      if (keyConfig.primary) {
+        config.providers = [
+          {
+            provider: keyConfig.primary.provider,
+            model: keyConfig.primary.model,
+            apiKey: keyConfig.primary.apiKey,
+            ...(keyConfig.primary.baseUrl ? { baseUrl: keyConfig.primary.baseUrl } : {}),
+          },
+        ];
+        log.info("Updated primary key in winclaw.json", {
+          provider: keyConfig.primary.provider,
+          model: keyConfig.primary.model,
+        });
+      } else {
+        delete config.providers;
+      }
+
+      if (keyConfig.auxiliary) {
+        config.auxiliaryKeys = [
+          {
+            provider: keyConfig.auxiliary.provider,
+            model: keyConfig.auxiliary.model,
+            apiKey: keyConfig.auxiliary.apiKey,
+            ...(keyConfig.auxiliary.baseUrl ? { baseUrl: keyConfig.auxiliary.baseUrl } : {}),
+          },
+        ];
+        log.info("Updated auxiliary key in winclaw.json", {
+          provider: keyConfig.auxiliary.provider,
+          model: keyConfig.auxiliary.model,
+        });
+      } else {
+        delete config.auxiliaryKeys;
+      }
+    }
+
+    // Write back atomically
+    const dir = path.dirname(configPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const tmpPath = `${configPath}.tmp-${process.pid}-${Date.now().toString(36)}`;
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
+    fs.renameSync(tmpPath, configPath);
   }
 }
 

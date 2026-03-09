@@ -129,6 +129,14 @@ export type GrcConfigCheckResult = {
   role_id: string | null;
 };
 
+/** Key configuration for a single model key slot (primary or auxiliary). */
+export type GrcKeyConfigEntry = {
+  provider: string;
+  model: string;
+  apiKey: string;
+  baseUrl?: string;
+};
+
 /** Response from GET /a2a/config/pull */
 export type GrcConfigPullResult = {
   ok: boolean;
@@ -136,6 +144,11 @@ export type GrcConfigPullResult = {
   role_id: string | null;
   role_mode: string | null;
   files: Record<string, string>;
+  /** Model key configuration assigned to this node via the dashboard. */
+  key_config?: {
+    primary: GrcKeyConfigEntry | null;
+    auxiliary: GrcKeyConfigEntry | null;
+  } | null;
 };
 
 export type GrcApiError = {
