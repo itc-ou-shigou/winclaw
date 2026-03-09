@@ -121,6 +121,41 @@ export type GrcPlatformValues = {
   updatedAt: string;
 };
 
+/** Parameters for creating an agent task via POST /a2a/tasks/create */
+export type AgentTaskCreateParams = {
+  node_id: string;
+  title: string;
+  description?: string;
+  context: string;
+  category?: 'strategic' | 'operational' | 'administrative' | 'expense';
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+  target_role_id?: string;
+  target_node_id?: string;
+  deadline?: string;
+  depends_on?: string[];
+  deliverables?: string[];
+  notes?: string;
+  expense_amount?: string;
+  expense_currency?: string;
+};
+
+/** Response from POST /a2a/tasks/create */
+export type AgentTaskCreateResult = {
+  ok: boolean;
+  task?: {
+    id: string;
+    taskCode: string;
+    title: string;
+    status: string;
+    assignedBy: string;
+    createdAt: string;
+  };
+  approval_required?: boolean;
+  error?: string;
+  message?: string;
+  retry_after?: string;
+};
+
 /** Response from GET /a2a/config/check */
 export type GrcConfigCheckResult = {
   ok: boolean;
@@ -1227,6 +1262,23 @@ export class GrcClient {
         method: "POST",
         body: JSON.stringify({ node_id: nodeId, revision, applied }),
       },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Create an agent task via the A2A task distribution endpoint.
+   * POST /a2a/tasks/create
+   * Returns the created task or an approval_required signal when the task
+   * exceeds the node's auto-approve threshold.
+   */
+  async createAgentTask(
+    params: AgentTaskCreateParams,
+    abortSignal?: AbortSignal,
+  ): Promise<AgentTaskCreateResult> {
+    return this.request<AgentTaskCreateResult>(
+      '/a2a/tasks/create',
+      { method: 'POST', body: JSON.stringify(params) },
       abortSignal,
     );
   }
