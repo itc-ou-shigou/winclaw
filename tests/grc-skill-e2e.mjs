@@ -3,7 +3,7 @@
  * Tests both consumer (list/detail/versions) and publisher (publish/rate) flows.
  *
  * Usage:  node tests/grc-skill-e2e.mjs
- * Requires: GRC server running on localhost:3100 (dev mode with /auth/dev/token)
+ * Requires: GRC server running on grc.myaiportal.net (dev mode with /auth/dev/token)
  */
 
 import fs from "node:fs";
@@ -11,7 +11,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 
-const GRC_URL = "http://localhost:3100";
+const GRC_URL = "https://grc.myaiportal.net";
 const PASS = "\x1b[32mPASS\x1b[0m";
 const FAIL = "\x1b[31mFAIL\x1b[0m";
 const SKIP = "\x1b[33mSKIP\x1b[0m";
@@ -352,7 +352,7 @@ async function main() {
   try {
     await fetch(`${GRC_URL}/health`, { signal: AbortSignal.timeout(3000) });
   } catch {
-    console.error("\nERROR: GRC server not running on localhost:3100");
+    console.error("\nERROR: GRC server not running on grc.myaiportal.net");
     process.exit(1);
   }
 

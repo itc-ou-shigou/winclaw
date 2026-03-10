@@ -1,6 +1,6 @@
 // Decode JWT token to check scopes
 async function main() {
-  const r = await fetch("http://localhost:3100/auth/anonymous", {
+  const r = await fetch("https://grc.myaiportal.net/auth/anonymous", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ node_id: "test-e2e-node-jwt" }),
@@ -16,7 +16,7 @@ async function main() {
   console.log("JWT payload:", JSON.stringify(payload, null, 2));
 
   // Try using the anonymous token to publish (to see what error we get)
-  const pubRes = await fetch("http://localhost:3100/api/v1/skills", {
+  const pubRes = await fetch("https://grc.myaiportal.net/api/v1/skills", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -32,7 +32,7 @@ async function main() {
   const routes = ["/auth/register", "/auth/dev/token", "/auth/api-key"];
   for (const route of routes) {
     try {
-      const rr = await fetch("http://localhost:3100" + route, {
+      const rr = await fetch("https://grc.myaiportal.net" + route, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

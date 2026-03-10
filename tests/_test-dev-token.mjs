@@ -1,7 +1,7 @@
 // Test the dev token endpoint
 async function main() {
   try {
-    const r = await fetch("http://localhost:3100/auth/dev/token", {
+    const r = await fetch("https://grc.myaiportal.net/auth/dev/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -22,7 +22,7 @@ async function main() {
       console.log("\nJWT payload:", JSON.stringify(payload, null, 2));
 
       // Test publish auth with the dev token
-      const pubRes = await fetch("http://localhost:3100/api/v1/skills", {
+      const pubRes = await fetch("https://grc.myaiportal.net/api/v1/skills", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + body.token,

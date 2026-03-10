@@ -39,7 +39,7 @@ import {
 import type { GatewayRequestHandlers } from "./types.js";
 import { assertValidParams } from "./validation.js";
 
-const GRC_DEFAULT_URL = "https://grc.winclawhub.ai";
+const GRC_DEFAULT_URL = "https://grc.myaiportal.net";
 
 /** Lazy singleton for the skill manifest store. */
 let _manifestInstance: GrcSkillManifestStore | null = null;

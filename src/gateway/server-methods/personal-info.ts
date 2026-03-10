@@ -4,7 +4,7 @@ import { loadOrCreateDeviceIdentity } from "../../infra/device-identity.js";
 import { GrcClient } from "../../infra/grc-client.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
-const GRC_DEFAULT_URL = "https://grc.winclawhub.ai";
+const GRC_DEFAULT_URL = "https://grc.myaiportal.net";
 
 export const personalInfoHandlers: GatewayRequestHandlers = {
   "personal-info.get": async ({ respond }) => {

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
-const GRC_URL = "http://localhost:3100";
+const GRC_URL = "https://grc.myaiportal.net";
 
 async function main() {
   // Get dev token

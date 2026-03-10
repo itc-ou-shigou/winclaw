@@ -18,7 +18,7 @@ const log: SubsystemLogger = createSubsystemLogger("infra/grc-sync");
 export type GrcSyncConfig = {
   /** Master switch: when false the service never starts. */
   enabled: boolean;
-  /** GRC server base URL (e.g. "https://grc.winclawhub.ai"). */
+  /** GRC server base URL (e.g. "https://grc.myaiportal.net"). */
   url: string;
   /** Bearer token for authenticated endpoints (publish, telemetry). */
   authToken?: string;

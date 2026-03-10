@@ -2,7 +2,7 @@
 async function main() {
   // 1. Health check
   try {
-    const r1 = await fetch("http://localhost:3100/health");
+    const r1 = await fetch("https://grc.myaiportal.net/health");
     const b1 = await r1.json();
     console.log("health:", r1.status, JSON.stringify(b1));
   } catch (e) {
@@ -11,7 +11,7 @@ async function main() {
 
   // 2. Search with q param
   try {
-    const r2 = await fetch("http://localhost:3100/api/v1/skills?q=test&limit=10");
+    const r2 = await fetch("https://grc.myaiportal.net/api/v1/skills?q=test&limit=10");
     console.log("search status:", r2.status);
     const b2 = await r2.text();
     console.log("search body:", b2.substring(0, 600));
@@ -21,7 +21,7 @@ async function main() {
 
   // 3. List without q param
   try {
-    const r3 = await fetch("http://localhost:3100/api/v1/skills?limit=5");
+    const r3 = await fetch("https://grc.myaiportal.net/api/v1/skills?limit=5");
     console.log("list status:", r3.status);
     const b3 = await r3.text();
     console.log("list body:", b3.substring(0, 600));
@@ -31,7 +31,7 @@ async function main() {
 
   // 4. Email login
   try {
-    const r4 = await fetch("http://localhost:3100/auth/email/login", {
+    const r4 = await fetch("https://grc.myaiportal.net/auth/email/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "admin@winclawhub.ai", password: "Admin123!" }),
@@ -45,7 +45,7 @@ async function main() {
 
   // 5. Try register
   try {
-    const r5 = await fetch("http://localhost:3100/auth/email/register", {
+    const r5 = await fetch("https://grc.myaiportal.net/auth/email/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,7 +63,7 @@ async function main() {
 
   // 6. Anonymous token
   try {
-    const r6 = await fetch("http://localhost:3100/auth/anonymous", {
+    const r6 = await fetch("https://grc.myaiportal.net/auth/anonymous", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ node_id: "test-e2e-node-debug" }),
