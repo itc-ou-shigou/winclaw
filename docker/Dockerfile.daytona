@@ -150,12 +150,24 @@ RUN echo 'export PS1="\[\033[1;36m\]daytona\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m
   && echo 'export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"' >> ~/.bashrc
 
 # ---------------------------------------------------------------------------
-# Layer 11: Entrypoint — auto-start WinClaw gateway + GRC registration
+# Layer 11: Gateway auto-start (Daytona overrides ENTRYPOINT, so we use
+#           profile.d + bashrc guard instead)
 # ---------------------------------------------------------------------------
 COPY docker/entrypoint-daytona.sh /usr/local/bin/entrypoint-daytona.sh
-RUN sudo chmod +x /usr/local/bin/entrypoint-daytona.sh
+COPY docker/winclaw-gateway-autostart.sh /tmp/winclaw-gateway-autostart.sh
+RUN sudo chmod +x /usr/local/bin/entrypoint-daytona.sh \
+  && sudo cp /tmp/winclaw-gateway-autostart.sh /etc/profile.d/winclaw-gateway.sh \
+  && sudo chmod +r /etc/profile.d/winclaw-gateway.sh \
+  && sudo rm -f /tmp/winclaw-gateway-autostart.sh
 
-# Pre-create .winclaw directory for config and logs
-RUN mkdir -p /home/daytona/.winclaw
+# Source the guard from .bashrc too (for non-login interactive shells)
+RUN echo '' >> ~/.bashrc \
+  && echo '# WinClaw gateway auto-start' >> ~/.bashrc \
+  && echo '[ -f /etc/profile.d/winclaw-gateway.sh ] && . /etc/profile.d/winclaw-gateway.sh' >> ~/.bashrc
 
+# Pre-create .winclaw directory and bake-in default GRC config
+RUN mkdir -p /home/daytona/.winclaw \
+  && echo '{"grc":{"url":"https://grc.myaiportal.net"}}' > /home/daytona/.winclaw/winclaw.json
+
+# Keep the ENTRYPOINT for non-Daytona use (docker run directly)
 ENTRYPOINT ["/usr/local/bin/entrypoint-daytona.sh"]
