@@ -1,0 +1,161 @@
+# =============================================================================
+# WinClaw Daytona Sandbox Image
+# Full-featured development environment with winclaw, browser automation,
+# and common developer tools pre-installed.
+#
+# Build:  docker build -t winclaw-daytona:latest -f docker/Dockerfile.daytona .
+# Run:    docker run --rm -it winclaw-daytona:latest bash
+# =============================================================================
+FROM node:22-bookworm
+
+LABEL org.opencontainers.image.title="WinClaw Daytona Sandbox" \
+  org.opencontainers.image.description="Full-featured Daytona sandbox with winclaw, Claude CLI, browser automation, and dev tools" \
+  org.opencontainers.image.source="https://github.com/user/winclaw" \
+  org.opencontainers.image.licenses="MIT"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------------------------
+# Layer 1: System packages (apt) — single RUN for cache efficiency
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Basic utilities
+    bash \
+    ca-certificates \
+    curl \
+    wget \
+    git \
+    jq \
+    ripgrep \
+    coreutils \
+    unzip \
+    file \
+    gnupg \
+    lsb-release \
+    sudo \
+    openssh-client \
+    less \
+    vim-tiny \
+    # Build tools
+    build-essential \
+    pkg-config \
+    libasound2-dev \
+    # Python
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Go
+    golang-go \
+    # Rust
+    rustc \
+    cargo \
+    # Browser automation
+    chromium \
+    xvfb \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Layer 2: Docker CLI (official Docker apt repository)
+# ---------------------------------------------------------------------------
+RUN install -m 0755 -d /etc/apt/keyrings \
+  && curl -fsSL https://download.docker.com/linux/debian/gpg \
+     -o /etc/apt/keyrings/docker.asc \
+  && chmod a+r /etc/apt/keyrings/docker.asc \
+  && printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian %s stable\n' \
+     "$(dpkg --print-architecture)" "$(. /etc/os-release && echo "$VERSION_CODENAME")" \
+     > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends \
+     docker-ce-cli \
+     docker-compose-plugin \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Layer 3: corepack (pnpm)
+# ---------------------------------------------------------------------------
+RUN corepack enable
+
+# ---------------------------------------------------------------------------
+# Layer 4: Bun
+# ---------------------------------------------------------------------------
+ENV BUN_INSTALL="/opt/bun"
+RUN curl -fsSL https://bun.sh/install | bash \
+  && ln -sf "${BUN_INSTALL}/bin/bun" /usr/local/bin/bun \
+  && ln -sf "${BUN_INSTALL}/bin/bunx" /usr/local/bin/bunx
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+
+# ---------------------------------------------------------------------------
+# Layer 5: Homebrew (Linuxbrew)
+# ---------------------------------------------------------------------------
+RUN useradd -m -s /bin/bash linuxbrew \
+  && mkdir -p /home/linuxbrew/.linuxbrew \
+  && chown -R linuxbrew:linuxbrew /home/linuxbrew \
+  && curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o /tmp/brew-install.sh \
+  && chmod +x /tmp/brew-install.sh \
+  && su - linuxbrew -c "NONINTERACTIVE=1 CI=1 bash /tmp/brew-install.sh" \
+  && rm -f /tmp/brew-install.sh \
+  && test -x /home/linuxbrew/.linuxbrew/bin/brew \
+  && ln -sf /home/linuxbrew/.linuxbrew/bin/brew /usr/local/bin/brew
+ENV HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew" \
+    HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar" \
+    HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew/Homebrew"
+ENV PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:${PATH}"
+
+# ---------------------------------------------------------------------------
+# Layer 6: uv (Python package manager)
+# ---------------------------------------------------------------------------
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+  && mv /root/.local/bin/uv /usr/local/bin/uv \
+  && mv /root/.local/bin/uvx /usr/local/bin/uvx 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Layer 7: Claude CLI
+# ---------------------------------------------------------------------------
+RUN npm install -g @anthropic-ai/claude-code
+
+# ---------------------------------------------------------------------------
+# Layer 8: WinClaw (local build with GRC auto-connect)
+# ---------------------------------------------------------------------------
+COPY docker/winclaw-2026.3.11.tgz /tmp/winclaw.tgz
+RUN npm install -g /tmp/winclaw.tgz && rm -f /tmp/winclaw.tgz
+
+# ---------------------------------------------------------------------------
+# Layer 9: Playwright Chromium setup
+# ---------------------------------------------------------------------------
+ENV PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers"
+RUN mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}" \
+  && npx playwright install --with-deps chromium \
+  && chmod -R a+rX "${PLAYWRIGHT_BROWSERS_PATH}"
+
+# ---------------------------------------------------------------------------
+# Layer 10: User setup & environment
+# ---------------------------------------------------------------------------
+RUN (getent group docker || groupadd docker) \
+  && useradd -m -s /bin/bash -G sudo,docker daytona \
+  && echo "daytona ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/daytona \
+  && chmod 0440 /etc/sudoers.d/daytona
+
+# Ensure global npm packages are accessible
+ENV PATH="/usr/local/bin:${BUN_INSTALL}/bin:${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:/usr/local/go/bin:/home/daytona/.cargo/bin:${PATH}"
+
+USER daytona
+WORKDIR /home/daytona
+
+# Default shell prompt
+RUN echo 'export PS1="\[\033[1;36m\]daytona\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ "' >> ~/.bashrc \
+  && echo 'export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"' >> ~/.bashrc
+
+# ---------------------------------------------------------------------------
+# Layer 11: Entrypoint — auto-start WinClaw gateway + GRC registration
+# ---------------------------------------------------------------------------
+COPY docker/entrypoint-daytona.sh /usr/local/bin/entrypoint-daytona.sh
+RUN sudo chmod +x /usr/local/bin/entrypoint-daytona.sh
+
+# Pre-create .winclaw directory for config and logs
+RUN mkdir -p /home/daytona/.winclaw
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-daytona.sh"]
