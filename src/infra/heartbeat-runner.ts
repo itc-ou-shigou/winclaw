@@ -46,6 +46,10 @@ import { isWithinActiveHours } from "./heartbeat-active-hours.js";
 import {
   buildExecEventPrompt,
   buildCronEventPrompt,
+  buildConfigSyncEventPrompt,
+  isConfigSyncEvent,
+  isTaskEvent,
+  buildTaskEventPrompt,
   isCronSystemEvent,
   isExecCompletionEvent,
 } from "./heartbeat-events-filter.js";
@@ -668,12 +672,30 @@ export async function runHeartbeatOnce(opts: {
   const canRelayToUser = Boolean(
     delivery.channel !== "none" && delivery.to && visibility.showAlerts,
   );
-  const { prompt, hasExecCompletion, hasCronEvents } = resolveHeartbeatRunPrompt({
+  const { prompt: resolvedPrompt, hasExecCompletion, hasCronEvents } = resolveHeartbeatRunPrompt({
     cfg,
     heartbeat,
     preflight,
     canRelayToUser,
   });
+
+  // Inject strategy analysis prompt for config_sync-triggered heartbeats
+  let prompt = resolvedPrompt;
+  if (opts.reason && isConfigSyncEvent(opts.reason)) {
+    const configSyncPrompt = buildConfigSyncEventPrompt(opts.reason);
+    if (configSyncPrompt) {
+      prompt = configSyncPrompt + "\n---\n\n" + prompt;
+    }
+  }
+
+  // Inject task action prompt for task-event-triggered heartbeats
+  if (opts.reason && isTaskEvent(opts.reason)) {
+    const taskPrompt = buildTaskEventPrompt(opts.reason);
+    if (taskPrompt) {
+      prompt = taskPrompt + "\n---\n\n" + prompt;
+    }
+  }
+
   const ctx = {
     Body: appendCronStyleCurrentTimeLine(prompt, cfg, startedAt),
     From: sender,

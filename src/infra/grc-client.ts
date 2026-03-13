@@ -123,16 +123,17 @@ export type GrcPlatformValues = {
 
 /** Parameters for creating an agent task via POST /a2a/tasks/create */
 export type AgentTaskCreateParams = {
-  node_id: string;
+  creator_role_id: string;
+  creator_node_id: string;
   title: string;
   description?: string;
-  context: string;
   category?: 'strategic' | 'operational' | 'administrative' | 'expense';
   priority?: 'critical' | 'high' | 'medium' | 'low';
   target_role_id?: string;
   target_node_id?: string;
+  trigger_type: 'heartbeat' | 'task_chain' | 'strategy' | 'meeting' | 'escalation';
+  trigger_source?: string;
   deadline?: string;
-  depends_on?: string[];
   deliverables?: string[];
   notes?: string;
   expense_amount?: string;
@@ -1279,6 +1280,55 @@ export class GrcClient {
     return this.request<AgentTaskCreateResult>(
       '/a2a/tasks/create',
       { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Task Lifecycle Methods
+  // ---------------------------------------------------------------------------
+
+  /** Fetch pending tasks assigned to this node */
+  async fetchPendingTasks(
+    nodeId: string,
+    roleId?: string,
+    abortSignal?: AbortSignal,
+  ): Promise<any> {
+    let path = `/a2a/tasks/pending?node_id=${encodeURIComponent(nodeId)}`;
+    if (roleId) path += `&role_id=${encodeURIComponent(roleId)}`;
+    return this.request(path, {}, abortSignal);
+  }
+
+  /** Update task status and/or results */
+  async updateTaskStatus(
+    params: {
+      task_id: string;
+      node_id: string;
+      status?: string;
+      result_summary?: string;
+      result_data?: Record<string, unknown>;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<any> {
+    return this.request(
+      "/a2a/tasks/update",
+      { method: "POST", body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /** Add a comment to a task */
+  async addTaskComment(
+    params: {
+      task_id: string;
+      node_id: string;
+      content: string;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<any> {
+    return this.request(
+      "/a2a/tasks/comment",
+      { method: "POST", body: JSON.stringify(params) },
       abortSignal,
     );
   }

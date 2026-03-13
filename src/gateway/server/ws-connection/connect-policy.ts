@@ -82,7 +82,12 @@ export function evaluateMissingDeviceIdentity(params: {
   if (params.isControlUi && params.trustedProxyAuthOk) {
     return { kind: "allow" };
   }
-  if (params.isControlUi && !params.controlUiAuthPolicy.allowBypass) {
+  if (params.isControlUi && params.controlUiAuthPolicy.allowBypass) {
+    // dangerouslyDisableDeviceAuth is set — skip all device identity checks
+    // for Control UI connections regardless of auth mode.
+    return { kind: "allow" };
+  }
+  if (params.isControlUi) {
     // Allow localhost Control UI connections when allowInsecureAuth is configured.
     // Localhost has no network interception risk, and browser SubtleCrypto
     // (needed for device identity) is unavailable in insecure HTTP contexts.

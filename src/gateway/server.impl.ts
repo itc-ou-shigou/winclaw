@@ -30,6 +30,7 @@ import {
 import { isDiagnosticsEnabled } from "../infra/diagnostic-events.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
 import { createExecApprovalForwarder } from "../infra/exec-approval-forwarder.js";
+import { GrcConnectionManager } from "../infra/grc-connection.js";
 import { onHeartbeatEvent } from "../infra/heartbeat-events.js";
 import { startHeartbeatRunner, type HeartbeatRunner } from "../infra/heartbeat-runner.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
@@ -85,6 +86,7 @@ import { GATEWAY_EVENTS, listGatewayMethods } from "./server-methods-list.js";
 import { coreGatewayHandlers } from "./server-methods.js";
 import { createExecApprovalHandlers } from "./server-methods/exec-approval.js";
 import { safeParseJson } from "./server-methods/nodes.helpers.js";
+import { createGrcHandlers } from "./server-methods/grc.js";
 import { createSecretsHandlers } from "./server-methods/secrets.js";
 import { hasConnectedMobileNode } from "./server-mobile-nodes.js";
 import { loadGatewayModelCatalog } from "./server-model-catalog.js";
@@ -717,6 +719,20 @@ export async function startGatewayServer(
     })().catch((err) => log.error(`Delivery recovery failed: ${String(err)}`));
   }
 
+  // ── GRC connection manager (auto-connect to GRC on startup) ──
+  let grcConnection: GrcConnectionManager | null = null;
+  if (!minimalTestGateway) {
+    try {
+      grcConnection = new GrcConnectionManager();
+      void grcConnection.autoConnect().catch((err) => {
+        log.warn(`GRC auto-connect initial attempt failed: ${String(err)}`);
+      });
+    } catch (err) {
+      log.warn(`GRC manager initialization failed: ${String(err)}`);
+      grcConnection = null;
+    }
+  }
+
   const execApprovalManager = new ExecApprovalManager();
   const execApprovalForwarder = createExecApprovalForwarder();
   const execApprovalHandlers = createExecApprovalHandlers(execApprovalManager, {
@@ -747,6 +763,8 @@ export async function startGatewayServer(
     },
   });
 
+  const grcHandlers = createGrcHandlers(() => grcConnection);
+
   const canvasHostServerPort = (canvasHostServer as CanvasHostServer | null)?.port;
 
   attachGatewayWsHandlers({
@@ -768,6 +786,7 @@ export async function startGatewayServer(
       ...pluginRegistry.gatewayHandlers,
       ...execApprovalHandlers,
       ...secretsHandlers,
+      ...grcHandlers,
     },
     broadcast,
     context: {
@@ -967,6 +986,7 @@ export async function startGatewayServer(
     wss,
     httpServer,
     httpServers,
+    grcConnection,
   });
 
   return {

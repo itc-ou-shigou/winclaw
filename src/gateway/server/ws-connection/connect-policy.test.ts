@@ -169,6 +169,27 @@ describe("ws connect policy", () => {
         isLocalClient: false,
       }).kind,
     ).toBe("allow");
+
+    // dangerouslyDisableDeviceAuth bypasses all device identity checks
+    // for Control UI, even without sharedAuthOk (e.g. auth.mode "none").
+    const controlUiDangerouslyDisabled = resolveControlUiAuthPolicy({
+      isControlUi: true,
+      controlUiConfig: { dangerouslyDisableDeviceAuth: true },
+      deviceRaw: null,
+    });
+    expect(
+      evaluateMissingDeviceIdentity({
+        hasDeviceIdentity: false,
+        role: "operator",
+        isControlUi: true,
+        controlUiAuthPolicy: controlUiDangerouslyDisabled,
+        trustedProxyAuthOk: false,
+        sharedAuthOk: false,
+        authOk: true,
+        hasSharedAuth: false,
+        isLocalClient: false,
+      }).kind,
+    ).toBe("allow");
   });
 
   test("pairing bypass requires control-ui bypass + shared auth (or trusted-proxy auth)", () => {

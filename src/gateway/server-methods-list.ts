@@ -1,6 +1,38 @@
 import { listChannelPlugins } from "../channels/plugins/index.js";
 import { GATEWAY_EVENT_UPDATE_AVAILABLE } from "./events.js";
 
+const GRC_METHODS = [
+  "grc.status",
+  "grc.login",
+  "grc.logout",
+  "grc.pair",
+  "grc.pairVerify",
+  "grc.sync",
+  "grc.telemetry",
+  "grc.skills",
+  "grc.skills.search",
+  "grc.skills.detail",
+  "grc.skills.versions",
+  "grc.skills.install",
+  "grc.skills.update",
+  "grc.skills.uninstall",
+  "grc.skills.installed",
+  "grc.skills.recommended",
+  "grc.skills.publish",
+  "grc.skills.rate",
+  "grc.evolution",
+  "grc.community.channels",
+  "grc.community.feed",
+  "grc.community.post",
+  "grc.community.replies",
+  "grc.community.createPost",
+  "grc.community.reply",
+  "grc.community.vote",
+  "grc.community.stats",
+  "grc.community.autoStatus",
+  "grc.community.triggerReply",
+];
+
 const BASE_METHODS = [
   "health",
   "doctor.memory.status",
@@ -104,7 +136,7 @@ const BASE_METHODS = [
 
 export function listGatewayMethods(): string[] {
   const channelMethods = listChannelPlugins().flatMap((plugin) => plugin.gatewayMethods ?? []);
-  return Array.from(new Set([...BASE_METHODS, ...channelMethods]));
+  return Array.from(new Set([...BASE_METHODS, ...GRC_METHODS, ...channelMethods]));
 }
 
 export const GATEWAY_EVENTS = [

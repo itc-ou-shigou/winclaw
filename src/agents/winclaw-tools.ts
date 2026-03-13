@@ -10,6 +10,11 @@ import { createCanvasTool } from "./tools/canvas-tool.js";
 import type { AnyAgentTool } from "./tools/common.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
+import { createGrcTaskTool } from "./tools/grc-task-tool.js";
+import { createGrcTaskUpdateTool } from "./tools/grc-task-update-tool.js";
+import { createGrcTaskCompleteTool } from "./tools/grc-task-complete-tool.js";
+import { createGrcTaskAcceptTool } from "./tools/grc-task-accept-tool.js";
+import { createGrcTaskRejectTool } from "./tools/grc-task-reject-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -175,6 +180,11 @@ export function createWinClawTools(options?: {
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
+    createGrcTaskTool({ config: options?.config }),
+    createGrcTaskUpdateTool({ config: options?.config }),
+    createGrcTaskCompleteTool({ config: options?.config }),
+    createGrcTaskAcceptTool({ config: options?.config }),
+    createGrcTaskRejectTool({ config: options?.config }),
   ];
 
   const pluginTools = resolvePluginTools({

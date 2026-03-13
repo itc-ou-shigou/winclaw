@@ -8,6 +8,8 @@ import { GrcSkillManifestStore, compareSemver } from "./grc-skill-manifest.js";
 import { installGrcSkill } from "./grc-skill-installer.js";
 import { runGrcDownloadAndInstall } from "./update-runner.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
+import { requestHeartbeatNow } from "./heartbeat-wake.js";
+import { cacheTaskEvent } from "./task-event-cache.js";
 
 const log: SubsystemLogger = createSubsystemLogger("infra/grc-sync");
 
@@ -98,6 +100,19 @@ const MAX_UPLOAD_PER_CYCLE = 20;
 const MAX_REPORTS_PER_CYCLE = 100;
 
 // ---------------------------------------------------------------------------
+// SSE Config Stream Constants
+// ---------------------------------------------------------------------------
+
+/** Initial reconnect delay for SSE (ms). */
+const SSE_RECONNECT_DELAY_MS = 5_000;
+/** Maximum reconnect delay for SSE (ms). */
+const SSE_MAX_RECONNECT_DELAY_MS = 60_000;
+/** SSE keepalive timeout — reconnect if no data received for this long (ms). */
+const SSE_KEEPALIVE_TIMEOUT_MS = 120_000;
+
+const sseLog: SubsystemLogger = createSubsystemLogger("infra/grc-sse");
+
+// ---------------------------------------------------------------------------
 // Implementation
 // ---------------------------------------------------------------------------
 
@@ -112,6 +127,14 @@ export class GrcSyncService implements GrcSyncServiceHandle {
   private syncing = false;
   private lastResult: GrcSyncResult | null = null;
   private abortController: AbortController | null = null;
+
+  // SSE config stream state
+  private sseAbortController: AbortController | null = null;
+  private sseReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private sseReconnectAttempt = 0;
+  private sseCurrentRevision = 0;
+  private sseConnected = false;
+  private sseKeepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: GrcSyncConfig, store?: EvolutionStore, skillManifest?: GrcSkillManifestStore) {
     this.config = config;
@@ -167,6 +190,9 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     if (typeof this.timer.unref === "function") {
       this.timer.unref();
     }
+
+    // Start SSE config stream for real-time key/config push from GRC
+    this.startSSEConfigStream();
   }
 
   /** Stop the sync loop and cancel any in-flight requests. */
@@ -176,6 +202,7 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     }
     this.running = false;
     this.abortController?.abort();
+    this.stopSSEConfigStream();
 
     if (this.initialTimer) {
       clearTimeout(this.initialTimer);
@@ -843,20 +870,424 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     };
   }
 
+  // -- SSE Config Stream (real-time config push from GRC) --------------------
+
+  /**
+   * Start an SSE connection to GRC for real-time config updates.
+   * When GRC pushes a config_update event (e.g. LLM key assignment),
+   * we immediately pull the full config and apply key_config changes
+   * without waiting for the next polling cycle.
+   */
+  private startSSEConfigStream(): void {
+    if (!this.config.nodeId || !this.config.url) {
+      sseLog.info("SSE config stream skipped (no nodeId or URL)");
+      return;
+    }
+    sseLog.info("Starting SSE config stream", { url: this.config.url });
+    this.sseReconnectAttempt = 0;
+    this.connectSSE();
+  }
+
+  /** Stop the SSE config stream and all reconnect timers. */
+  private stopSSEConfigStream(): void {
+    this.sseConnected = false;
+    this.sseAbortController?.abort();
+    this.sseAbortController = null;
+
+    if (this.sseReconnectTimer) {
+      clearTimeout(this.sseReconnectTimer);
+      this.sseReconnectTimer = null;
+    }
+    if (this.sseKeepaliveTimer) {
+      clearTimeout(this.sseKeepaliveTimer);
+      this.sseKeepaliveTimer = null;
+    }
+    sseLog.info("SSE config stream stopped");
+  }
+
+  /** Connect (or reconnect) to the SSE config stream. */
+  private connectSSE(): void {
+    if (!this.running) return;
+
+    this.sseAbortController?.abort();
+    this.sseAbortController = new AbortController();
+    const signal = this.sseAbortController.signal;
+
+    const url = `${this.config.url}/a2a/config/stream?node_id=${encodeURIComponent(this.config.nodeId)}`;
+
+    const headers: Record<string, string> = {
+      Accept: "text/event-stream",
+      "Cache-Control": "no-cache",
+    };
+    if (this.config.authToken) {
+      headers["Authorization"] = `Bearer ${this.config.authToken}`;
+    }
+
+    sseLog.debug("Connecting to SSE config stream", { url });
+
+    fetch(url, { headers, signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`SSE stream HTTP ${response.status}: ${response.statusText}`);
+        }
+        if (!response.body) {
+          throw new Error("SSE stream has no response body");
+        }
+
+        this.sseConnected = true;
+        this.sseReconnectAttempt = 0;
+        sseLog.info("SSE config stream connected");
+        this.resetSSEKeepalive();
+
+        // Parse SSE events from the stream
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let eventType = "";
+        let eventData = "";
+
+        const reader = response.body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            this.resetSSEKeepalive();
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? ""; // Keep incomplete last line in buffer
+
+            for (const line of lines) {
+              if (line === "") {
+                // Empty line = dispatch event
+                if (eventData) {
+                  this.handleSSEEvent(eventType || "message", eventData.trim());
+                }
+                eventType = "";
+                eventData = "";
+              } else if (line.startsWith("event:")) {
+                eventType = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                eventData += (eventData ? "\n" : "") + line.slice(5).trim();
+              } else if (line.startsWith(":")) {
+                // Comment / keepalive — ignore
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        // Stream ended normally — schedule reconnect
+        this.sseConnected = false;
+        sseLog.info("SSE stream ended, scheduling reconnect");
+        this.scheduleSSEReconnect();
+      })
+      .catch((err: Error) => {
+        this.sseConnected = false;
+        if (signal.aborted) {
+          sseLog.debug("SSE connection aborted");
+          return;
+        }
+        sseLog.warn(`SSE connection error: ${err.message}`);
+        this.scheduleSSEReconnect();
+      });
+  }
+
+  /** Handle a parsed SSE event. */
+  private handleSSEEvent(eventType: string, data: string): void {
+    sseLog.debug("SSE event received", { eventType, dataLength: data.length });
+
+    if (eventType === "connected") {
+      try {
+        const parsed = JSON.parse(data) as { node_id?: string };
+        sseLog.info("SSE connected event", { nodeId: parsed.node_id });
+      } catch {
+        // Ignore parse errors for connected event
+      }
+      return;
+    }
+
+    if (eventType === "config_update") {
+      try {
+        const parsed = JSON.parse(data) as {
+          revision: number;
+          reason: string;
+          config?: {
+            key_config?: { primary: GrcKeyConfigEntry | null; auxiliary: GrcKeyConfigEntry | null } | null;
+          };
+        };
+
+        sseLog.info("Config update received via SSE", {
+          revision: parsed.revision,
+          reason: parsed.reason,
+          hasInlineConfig: !!parsed.config,
+        });
+
+        // Skip if we already have this revision or newer
+        if (parsed.revision <= this.sseCurrentRevision) {
+          sseLog.debug("Skipping config update (already at same or newer revision)", {
+            current: this.sseCurrentRevision,
+            received: parsed.revision,
+          });
+          return;
+        }
+
+        // Apply inline key_config immediately if present
+        if (parsed.config?.key_config !== undefined) {
+          this.applySSEKeyConfig(parsed.config.key_config ?? null, parsed.revision);
+        }
+
+        // Always pull full config from REST API so role files (AGENTS.md, SOUL.md, etc.)
+        // are written to the workspace — key_config alone is not sufficient.
+        this.pullAndApplyConfig(parsed.revision, parsed.reason);
+      } catch (err) {
+        sseLog.warn(`Failed to parse config_update SSE event: ${(err as Error).message}`);
+      }
+      return;
+    }
+
+    if (eventType === "task_event") {
+      try {
+        const taskEvent = JSON.parse(data) as {
+          event_type: string;
+          task_id: string;
+          task_code: string;
+          title: string;
+          priority: string;
+          category?: string;
+          status?: string;
+          description?: string;
+          deliverables?: string[];
+          feedback?: string;
+          result_summary?: string;
+          assigned_role_id?: string;
+          creator_node_id?: string;
+        };
+        const { event_type, task_id, task_code, title, priority } = taskEvent;
+
+        // Cache the full SSE payload so heartbeat prompts can include task details
+        cacheTaskEvent({
+          event_type: taskEvent.event_type,
+          task_id: taskEvent.task_id,
+          task_code: taskEvent.task_code,
+          title: taskEvent.title,
+          priority: taskEvent.priority,
+          category: taskEvent.category,
+          status: taskEvent.status,
+          description: taskEvent.description,
+          deliverables: taskEvent.deliverables,
+          feedback: taskEvent.feedback,
+          result_summary: taskEvent.result_summary,
+          assigned_role_id: taskEvent.assigned_role_id,
+          creator_node_id: taskEvent.creator_node_id,
+        });
+
+        switch (event_type) {
+          case "task_assigned":
+            requestHeartbeatNow({ reason: `task_assigned:${task_id}`, coalesceMs: 2000 });
+            sseLog.info("Task assigned event received", { task_id, task_code, title, priority });
+            break;
+          case "task_completed":
+            requestHeartbeatNow({ reason: `task_completed:${task_id}`, coalesceMs: 2000 });
+            sseLog.info("Task completed event received", { task_id, task_code, title });
+            break;
+          case "task_feedback":
+            requestHeartbeatNow({ reason: `task_feedback:${task_id}`, coalesceMs: 2000 });
+            sseLog.info("Task feedback event received", { task_id, task_code, title });
+            break;
+        }
+      } catch (e) {
+        sseLog.warn(`Failed to parse task_event SSE event: ${(e as Error).message}`);
+      }
+      return;
+    }
+
+    // Unknown event type — log for debugging
+    sseLog.debug("Ignoring unknown SSE event", { eventType });
+  }
+
+  /** Apply key_config from SSE inline payload. */
+  private applySSEKeyConfig(
+    keyConfig: { primary: GrcKeyConfigEntry | null; auxiliary: GrcKeyConfigEntry | null } | null,
+    revision: number,
+  ): void {
+    try {
+      this.syncKeyConfig(keyConfig);
+      this.sseCurrentRevision = revision;
+      sseLog.info("SSE key config applied", { revision });
+
+      // Report applied status
+      this.client
+        .reportConfigStatus(this.config.nodeId, revision, true, this.sseAbortController?.signal)
+        .catch((err) => sseLog.debug(`Failed to report SSE config status: ${(err as Error).message}`));
+    } catch (err) {
+      sseLog.warn(`Failed to apply SSE key config: ${(err as Error).message}`);
+    }
+  }
+
+  /** Pull full config from REST API and apply — writes role files, key_config, and updates state. */
+  private pullAndApplyConfig(revision: number, reason?: string): void {
+    const signal = this.sseAbortController?.signal;
+    this.syncRoleConfig(signal)
+      .then((result) => {
+        if (result.pulled) {
+          this.sseCurrentRevision = result.revisionApplied ?? revision;
+          sseLog.info("SSE-triggered full config sync completed", {
+            revision: result.revisionApplied,
+            filesWritten: result.filesWritten,
+          });
+          // Trigger heartbeat wake for strategy-related config changes
+          // so the agent can autonomously analyze and create tasks
+          if (reason && this.shouldTriggerHeartbeat(reason)) {
+            sseLog.info("Triggering heartbeat for config sync event", { reason });
+            requestHeartbeatNow({
+              reason: `config_sync:${reason}`,
+              coalesceMs: 2000,
+            });
+          }
+        } else if (result.checked) {
+          sseLog.debug("SSE-triggered config check: no update needed");
+        } else {
+          sseLog.warn("SSE-triggered config sync skipped (no nodeId)");
+        }
+      })
+      .catch((err: Error) => {
+        sseLog.warn(`SSE-triggered config sync failed: ${err.message}`);
+      });
+  }
+
+  /**
+   * Determine if the SSE config update reason should trigger a heartbeat wake.
+   * Currently only strategy deployments trigger an immediate agent session,
+   * but this list can be extended for future use cases.
+   */
+  private shouldTriggerHeartbeat(reason: string): boolean {
+    const HEARTBEAT_TRIGGER_REASONS = [
+      "strategy_deploy",
+    ];
+    return HEARTBEAT_TRIGGER_REASONS.includes(reason);
+  }
+
+  /** Schedule an SSE reconnection with exponential backoff. */
+  private scheduleSSEReconnect(): void {
+    if (!this.running) return;
+
+    this.sseReconnectAttempt++;
+    const delay = Math.min(
+      SSE_RECONNECT_DELAY_MS * Math.pow(2, this.sseReconnectAttempt - 1),
+      SSE_MAX_RECONNECT_DELAY_MS,
+    );
+
+    sseLog.debug("Scheduling SSE reconnect", {
+      attempt: this.sseReconnectAttempt,
+      delayMs: delay,
+    });
+
+    this.sseReconnectTimer = setTimeout(() => {
+      this.sseReconnectTimer = null;
+      this.connectSSE();
+    }, delay);
+    if (typeof this.sseReconnectTimer.unref === "function") {
+      this.sseReconnectTimer.unref();
+    }
+  }
+
+  /** Reset the SSE keepalive timer — if no data arrives for 2 minutes, reconnect. */
+  private resetSSEKeepalive(): void {
+    if (this.sseKeepaliveTimer) {
+      clearTimeout(this.sseKeepaliveTimer);
+    }
+    this.sseKeepaliveTimer = setTimeout(() => {
+      sseLog.warn("SSE keepalive timeout — no data for 2 minutes, reconnecting");
+      this.sseConnected = false;
+      this.sseAbortController?.abort();
+      this.scheduleSSEReconnect();
+    }, SSE_KEEPALIVE_TIMEOUT_MS);
+    if (typeof this.sseKeepaliveTimer.unref === "function") {
+      this.sseKeepaliveTimer.unref();
+    }
+  }
+
   // -- Private helpers: key config sync to winclaw.json ----------------------
 
   /**
-   * Write model key configuration (primary / auxiliary) into
-   * `~/.winclaw/winclaw.json` so that WinClaw can use the assigned keys
-   * for LLM calls and auxiliary tools.
+   * Infer the WinClaw `api` type from GRC provider name and/or baseUrl.
    *
-   * When `keyConfig` is null, any existing providers / auxiliaryKeys
-   * sections are removed from the config file.
+   * The `api` field tells the gateway which streaming implementation to use
+   * (e.g. "anthropic-messages", "openai-completions", "google-generative-ai").
+   *
+   * When GRC provides an explicit `apiType`, that is used directly.
+   * Otherwise we infer from provider name and baseUrl patterns.
+   */
+  private inferApiType(entry: GrcKeyConfigEntry): string {
+    // If GRC explicitly provides the api type, use it
+    if ((entry as Record<string, unknown>).apiType) {
+      return (entry as Record<string, unknown>).apiType as string;
+    }
+
+    const provider = entry.provider.toLowerCase();
+    const baseUrl = (entry.baseUrl || "").toLowerCase();
+
+    // Anthropic-compatible
+    if (
+      provider === "anthropic" ||
+      provider.includes("claude") ||
+      baseUrl.includes("anthropic") ||
+      baseUrl.includes("/api/anthropic")
+    ) {
+      return "anthropic-messages";
+    }
+
+    // Google Generative AI
+    if (
+      provider === "google" ||
+      provider.includes("gemini") ||
+      baseUrl.includes("generativelanguage.googleapis.com") ||
+      baseUrl.includes("google")
+    ) {
+      return "google-generative-ai";
+    }
+
+    // Amazon Bedrock
+    if (
+      provider === "bedrock" ||
+      provider.includes("bedrock") ||
+      baseUrl.includes("bedrock")
+    ) {
+      return "bedrock-converse-stream";
+    }
+
+    // Ollama
+    if (
+      provider === "ollama" ||
+      baseUrl.includes("ollama") ||
+      baseUrl.includes(":11434")
+    ) {
+      return "ollama";
+    }
+
+    // Default: OpenAI-compatible (most third-party providers use this)
+    return "openai-completions";
+  }
+
+  /**
+   * Write model key configuration (primary / auxiliary) into
+   * `~/.winclaw/winclaw.json` using the correct `models.providers` schema.
+   *
+   * Primary key → `models.providers[provider]` + `agents.defaults.model`
+   * Auxiliary key → additional entry in `models.providers[provider]`
+   *
+   * GRC-managed provider names are tracked in a state file so that
+   * unbinding cleanly removes only GRC-assigned providers.
+   *
+   * When `keyConfig` is null, GRC-managed providers are removed.
    */
   private syncKeyConfig(
     keyConfig: { primary: GrcKeyConfigEntry | null; auxiliary: GrcKeyConfigEntry | null } | null,
   ): void {
     const configPath = path.join(os.homedir(), ".winclaw", "winclaw.json");
+    const grcStatePath = path.join(os.homedir(), ".winclaw", ".grc-key-providers.json");
 
     // Read existing config
     let config: Record<string, unknown> = {};
@@ -867,49 +1298,137 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       // File doesn't exist or is malformed — start with empty object
     }
 
+    // Read previously GRC-managed provider names
+    let previousGrcProviders: string[] = [];
+    try {
+      const stateRaw = fs.readFileSync(grcStatePath, "utf-8");
+      const state = JSON.parse(stateRaw) as { providers?: string[] };
+      previousGrcProviders = state.providers ?? [];
+    } catch {
+      // No state file yet
+    }
+
+    // Ensure models.providers exists as an object
+    const models = (config.models ?? {}) as Record<string, unknown>;
+    const providers = (models.providers ?? {}) as Record<string, unknown>;
+
+    // Remove previously GRC-managed providers
+    for (const name of previousGrcProviders) {
+      delete providers[name];
+    }
+
+    const newGrcProviders: string[] = [];
+
     if (keyConfig === null) {
-      // Unbind: remove key sections
-      delete config.providers;
-      delete config.auxiliaryKeys;
-      log.info("Removed key config from winclaw.json (unbind)");
+      // Unbind: just remove GRC providers (already done above)
+      log.info("Removed GRC key config from winclaw.json (unbind)");
+
+      // Also reset default model if it referenced a GRC provider
+      const agents = (config.agents ?? {}) as Record<string, unknown>;
+      const defaults = (agents.defaults ?? {}) as Record<string, unknown>;
+      const currentModel = defaults.model;
+      if (typeof currentModel === "string") {
+        const providerPart = currentModel.split("/")[0];
+        if (providerPart && previousGrcProviders.includes(providerPart)) {
+          delete defaults.model;
+          agents.defaults = defaults;
+          config.agents = agents;
+          log.info("Reset agents.defaults.model (was GRC-managed)");
+        }
+      }
     } else {
-      // Assign / update
+      // Assign / update primary provider
       if (keyConfig.primary) {
-        config.providers = [
-          {
-            provider: keyConfig.primary.provider,
-            model: keyConfig.primary.model,
-            apiKey: keyConfig.primary.apiKey,
-            ...(keyConfig.primary.baseUrl ? { baseUrl: keyConfig.primary.baseUrl } : {}),
-          },
-        ];
-        log.info("Updated primary key in winclaw.json", {
-          provider: keyConfig.primary.provider,
+        const providerName = keyConfig.primary.provider;
+        const apiType = this.inferApiType(keyConfig.primary);
+        providers[providerName] = {
+          baseUrl: keyConfig.primary.baseUrl || `https://api.${providerName}.ai`,
+          api: apiType,
+          apiKey: keyConfig.primary.apiKey,
+          models: [
+            {
+              id: keyConfig.primary.model,
+              name: keyConfig.primary.model,
+            },
+          ],
+        };
+        newGrcProviders.push(providerName);
+
+        // Set as default agent model
+        const agents = (config.agents ?? {}) as Record<string, unknown>;
+        const defaults = (agents.defaults ?? {}) as Record<string, unknown>;
+        defaults.model = `${providerName}/${keyConfig.primary.model}`;
+        agents.defaults = defaults;
+        config.agents = agents;
+
+        log.info("Updated primary key in winclaw.json (models.providers)", {
+          provider: providerName,
           model: keyConfig.primary.model,
         });
-      } else {
-        delete config.providers;
       }
 
+      // Assign / update auxiliary provider
       if (keyConfig.auxiliary) {
-        config.auxiliaryKeys = [
-          {
-            provider: keyConfig.auxiliary.provider,
-            model: keyConfig.auxiliary.model,
+        const providerName = keyConfig.auxiliary.provider;
+        // Avoid overwriting primary if same provider name
+        if (!providers[providerName]) {
+          const auxApiType = this.inferApiType(keyConfig.auxiliary);
+          providers[providerName] = {
+            baseUrl: keyConfig.auxiliary.baseUrl || `https://api.${providerName}.ai`,
+            api: auxApiType,
             apiKey: keyConfig.auxiliary.apiKey,
-            ...(keyConfig.auxiliary.baseUrl ? { baseUrl: keyConfig.auxiliary.baseUrl } : {}),
-          },
-        ];
-        log.info("Updated auxiliary key in winclaw.json", {
-          provider: keyConfig.auxiliary.provider,
+            models: [
+              {
+                id: keyConfig.auxiliary.model,
+                name: keyConfig.auxiliary.model,
+              },
+            ],
+          };
+        } else {
+          // Same provider as primary — append model to existing entry
+          const existing = providers[providerName] as Record<string, unknown>;
+          const existingModels = (existing.models ?? []) as Array<Record<string, string>>;
+          if (!existingModels.some((m) => m.id === keyConfig.auxiliary!.model)) {
+            existingModels.push({
+              id: keyConfig.auxiliary.model,
+              name: keyConfig.auxiliary.model,
+            });
+            existing.models = existingModels;
+          }
+          // Update apiKey if different
+          if (keyConfig.auxiliary.apiKey) {
+            existing.apiKey = keyConfig.auxiliary.apiKey;
+          }
+        }
+        if (!newGrcProviders.includes(providerName)) {
+          newGrcProviders.push(providerName);
+        }
+
+        log.info("Updated auxiliary key in winclaw.json (models.providers)", {
+          provider: providerName,
           model: keyConfig.auxiliary.model,
         });
-      } else {
-        delete config.auxiliaryKeys;
       }
     }
 
-    // Write back atomically
+    // Clean up: remove models section if no providers remain
+    if (Object.keys(providers).length > 0) {
+      models.providers = providers;
+      config.models = models;
+    } else {
+      delete models.providers;
+      if (Object.keys(models).length === 0) {
+        delete config.models;
+      } else {
+        config.models = models;
+      }
+    }
+
+    // Also clean up any legacy top-level keys from earlier versions
+    delete (config as Record<string, unknown>).auxiliaryKeys;
+    // Don't delete top-level "providers" — it's used by talk.providers (voice/TTS)
+
+    // Write config atomically
     const dir = path.dirname(configPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -917,6 +1436,13 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     const tmpPath = `${configPath}.tmp-${process.pid}-${Date.now().toString(36)}`;
     fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
     fs.renameSync(tmpPath, configPath);
+
+    // Persist GRC provider state
+    try {
+      fs.writeFileSync(grcStatePath, JSON.stringify({ providers: newGrcProviders }), "utf-8");
+    } catch (err) {
+      log.warn(`Failed to persist GRC key provider state: ${(err as Error).message}`);
+    }
   }
 }
 

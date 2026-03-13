@@ -120,8 +120,17 @@ RUN npm install -g @anthropic-ai/claude-code
 # ---------------------------------------------------------------------------
 # Layer 8: WinClaw (local build with GRC auto-connect)
 # ---------------------------------------------------------------------------
-COPY docker/winclaw-2026.3.11.tgz /tmp/winclaw.tgz
+COPY docker/winclaw-2026.3.14.tgz /tmp/winclaw.tgz
 RUN npm install -g /tmp/winclaw.tgz && rm -f /tmp/winclaw.tgz
+
+# ---------------------------------------------------------------------------
+# Layer 8b: ngrok (for exposing gateway to the internet)
+# ---------------------------------------------------------------------------
+RUN curl -fsSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz \
+    -o /tmp/ngrok.tgz \
+  && tar -xzf /tmp/ngrok.tgz -C /usr/local/bin ngrok \
+  && chmod +x /usr/local/bin/ngrok \
+  && rm -f /tmp/ngrok.tgz
 
 # ---------------------------------------------------------------------------
 # Layer 9: Playwright Chromium setup
@@ -167,7 +176,7 @@ RUN echo '' >> ~/.bashrc \
 
 # Pre-create .winclaw directory and bake-in default GRC config
 RUN mkdir -p /home/daytona/.winclaw \
-  && echo '{"grc":{"url":"https://grc.myaiportal.net"}}' > /home/daytona/.winclaw/winclaw.json
+  && echo '{"gateway":{"controlUi":{"allowedOrigins":["*"],"dangerouslyDisableDeviceAuth":true},"auth":{"mode":"none"}},"grc":{"url":"https://grc.myaiportal.net"}}' > /home/daytona/.winclaw/winclaw.json
 
 # Keep the ENTRYPOINT for non-Daytona use (docker run directly)
 ENTRYPOINT ["/usr/local/bin/entrypoint-daytona.sh"]

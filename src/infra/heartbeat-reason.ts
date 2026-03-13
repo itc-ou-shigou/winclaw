@@ -40,6 +40,9 @@ export function resolveHeartbeatReasonKind(reason?: string): HeartbeatReasonKind
   if (trimmed.startsWith("hook:")) {
     return "hook";
   }
+  if (trimmed.startsWith("config_sync:")) {
+    return "wake";
+  }
   return "other";
 }
 

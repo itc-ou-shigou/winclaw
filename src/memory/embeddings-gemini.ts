@@ -50,10 +50,15 @@ function normalizeGeminiModel(model: string): string {
 }
 
 function normalizeGeminiBaseUrl(raw: string): string {
-  const trimmed = raw.replace(/\/+$/, "");
+  let trimmed = raw.replace(/\/+$/, "");
   const openAiIndex = trimmed.indexOf("/openai");
   if (openAiIndex > -1) {
-    return trimmed.slice(0, openAiIndex);
+    trimmed = trimmed.slice(0, openAiIndex);
+  }
+  // Strip /models suffix to avoid double /models/models/ path when the
+  // provider baseUrl (e.g. google-generative-ai) already includes it.
+  if (trimmed.endsWith("/models")) {
+    trimmed = trimmed.slice(0, -"/models".length);
   }
   return trimmed;
 }
