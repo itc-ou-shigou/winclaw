@@ -15,6 +15,9 @@ import { createGrcTaskUpdateTool } from "./tools/grc-task-update-tool.js";
 import { createGrcTaskCompleteTool } from "./tools/grc-task-complete-tool.js";
 import { createGrcTaskAcceptTool } from "./tools/grc-task-accept-tool.js";
 import { createGrcTaskRejectTool } from "./tools/grc-task-reject-tool.js";
+import { createGrcRelaySendTool } from "./tools/grc-relay-send-tool.js";
+import { createGrcBroadcastTool } from "./tools/grc-broadcast-tool.js";
+import { createGrcRosterTool } from "./tools/grc-roster-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -203,6 +206,9 @@ export function createWinClawTools(options?: {
     createGrcTaskCompleteTool({ config: options?.config }),
     createGrcTaskAcceptTool({ config: options?.config }),
     createGrcTaskRejectTool({ config: options?.config }),
+    createGrcRelaySendTool({ config: options?.config }),
+    createGrcBroadcastTool({ config: options?.config }),
+    createGrcRosterTool({ config: options?.config }),
   ];
 
   const pluginTools = resolvePluginTools({

@@ -1333,6 +1333,98 @@ export class GrcClient {
     );
   }
 
+  // -- A2A Relay Methods -----------------------------------------------------
+
+  /**
+   * Send a relay message to another node via GRC's unified delivery system.
+   * POST /a2a/relay/send
+   */
+  async relaySend(
+    params: {
+      from_node_id: string;
+      to_node_id: string;
+      message_type: 'text' | 'directive' | 'report' | 'query' | 'task_assignment';
+      subject?: string;
+      payload: Record<string, unknown>;
+      priority?: 'critical' | 'high' | 'normal' | 'low';
+      expires_at?: string;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; message_id: string; status: string; delivered_via_sse: boolean }> {
+    return this.request<{ ok: boolean; message_id: string; status: string; delivered_via_sse: boolean }>(
+      '/a2a/relay/send',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Broadcast a message to all nodes or filtered by role.
+   * POST /a2a/relay/broadcast
+   */
+  async relayBroadcast(
+    params: {
+      from_node_id: string;
+      message_type?: 'text' | 'directive' | 'report' | 'broadcast';
+      subject: string;
+      payload: Record<string, unknown>;
+      priority?: 'critical' | 'high' | 'normal' | 'low';
+      target_roles?: string[];
+      exclude_self?: boolean;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{
+    ok: boolean;
+    broadcast_summary: { total_recipients: number; delivered_immediately: number; queued_for_later: number };
+    results: Array<{ node_id: string; message_id: string; delivered_via_sse: boolean }>;
+  }> {
+    return this.request<{
+      ok: boolean;
+      broadcast_summary: { total_recipients: number; delivered_immediately: number; queued_for_later: number };
+      results: Array<{ node_id: string; message_id: string; delivered_via_sse: boolean }>;
+    }>(
+      '/a2a/relay/broadcast',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Get the agent roster with online status.
+   * GET /a2a/agents/roster
+   */
+  async agentRoster(
+    abortSignal?: AbortSignal,
+  ): Promise<{
+    ok: boolean;
+    roster: Array<{
+      node_id: string;
+      status: string;
+      sse_connected: boolean;
+      last_seen_at: string | null;
+      role_id: string | null;
+      display_name: string;
+    }>;
+    summary: { total: number; online: number; sse_connected: number; offline: number; busy: number };
+  }> {
+    return this.request<{
+      ok: boolean;
+      roster: Array<{
+        node_id: string;
+        status: string;
+        sse_connected: boolean;
+        last_seen_at: string | null;
+        role_id: string | null;
+        display_name: string;
+      }>;
+      summary: { total: number; online: number; sse_connected: number; offline: number; busy: number };
+    }>(
+      '/a2a/agents/roster',
+      { method: 'GET' },
+      abortSignal,
+    );
+  }
+
   /**
    * Check if a JWT token is expired or about to expire (within 5 minutes).
    * Uses simple base64 decode of the payload, no signature verification.

@@ -1,0 +1,152 @@
+# =============================================================================
+# WinClaw Sandbox Image
+# Production-ready sandbox with winclaw gateway, browser automation (Playwright),
+# and essential runtime tools. Stripped down from the full Daytona image to
+# contain only what's needed for winclaw operation + GRC integration.
+#
+# Build:  docker build -t winclaw-sandbox:latest -f docker/Dockerfile.sandbox .
+# Run:    docker run --rm -it -p 18789:18789 winclaw-sandbox:latest
+# =============================================================================
+FROM node:22-bookworm-slim
+
+LABEL org.opencontainers.image.title="WinClaw Sandbox" \
+  org.opencontainers.image.description="WinClaw gateway sandbox with browser automation and GRC integration" \
+  org.opencontainers.image.source="https://github.com/user/winclaw" \
+  org.opencontainers.image.licenses="MIT" \
+  org.opencontainers.image.vendor="ITC CloudSoft"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------------------------
+# Layer 1: System packages — essential utilities + browser automation deps
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Basic utilities
+    bash \
+    ca-certificates \
+    curl \
+    wget \
+    git \
+    jq \
+    ripgrep \
+    coreutils \
+    unzip \
+    file \
+    gnupg \
+    sudo \
+    openssh-client \
+    less \
+    vim-tiny \
+    tini \
+    # Build essentials (needed for native npm modules)
+    build-essential \
+    pkg-config \
+    python3 \
+    # Browser automation
+    chromium \
+    xvfb \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    fonts-noto-cjk \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Layer 2: corepack (pnpm support)
+# ---------------------------------------------------------------------------
+RUN corepack enable
+
+# ---------------------------------------------------------------------------
+# Layer 3: Bun runtime
+# ---------------------------------------------------------------------------
+ENV BUN_INSTALL="/opt/bun"
+RUN curl -fsSL https://bun.sh/install | bash \
+  && ln -sf "${BUN_INSTALL}/bin/bun" /usr/local/bin/bun \
+  && ln -sf "${BUN_INSTALL}/bin/bunx" /usr/local/bin/bunx
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+
+# ---------------------------------------------------------------------------
+# Layer 4: uv (Python package manager)
+# ---------------------------------------------------------------------------
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+  && mv /root/.local/bin/uv /usr/local/bin/uv \
+  && mv /root/.local/bin/uvx /usr/local/bin/uvx 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Layer 5: WinClaw (local build with GRC auto-connect)
+# ---------------------------------------------------------------------------
+COPY docker/winclaw-2026.3.15.tgz /tmp/winclaw.tgz
+RUN npm install -g /tmp/winclaw.tgz && rm -f /tmp/winclaw.tgz
+
+# ---------------------------------------------------------------------------
+# Layer 6: ngrok (for exposing gateway to the internet)
+# ---------------------------------------------------------------------------
+RUN ARCH="$(dpkg --print-architecture)" \
+  && if [ "${ARCH}" = "arm64" ]; then NGROK_ARCH="arm64"; else NGROK_ARCH="amd64"; fi \
+  && curl -fsSL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-${NGROK_ARCH}.tgz" \
+     -o /tmp/ngrok.tgz \
+  && tar -xzf /tmp/ngrok.tgz -C /usr/local/bin ngrok \
+  && chmod +x /usr/local/bin/ngrok \
+  && rm -f /tmp/ngrok.tgz
+
+# ---------------------------------------------------------------------------
+# Layer 7: Playwright Chromium setup
+# ---------------------------------------------------------------------------
+ENV PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers"
+RUN mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}" \
+  && npx playwright install --with-deps chromium \
+  && chmod -R a+rX "${PLAYWRIGHT_BROWSERS_PATH}"
+
+# ---------------------------------------------------------------------------
+# Layer 8: User setup & environment
+# ---------------------------------------------------------------------------
+RUN (getent group docker || groupadd docker) \
+  && useradd -m -s /bin/bash -G sudo,docker sandbox \
+  && echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/sandbox \
+  && chmod 0440 /etc/sudoers.d/sandbox
+
+# Ensure all tools are accessible
+ENV PATH="/usr/local/bin:${BUN_INSTALL}/bin:${PATH}"
+
+USER sandbox
+WORKDIR /home/sandbox
+
+# Default shell prompt
+RUN echo 'export PS1="\[\033[1;36m\]sandbox\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ "' >> ~/.bashrc \
+  && echo 'export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"' >> ~/.bashrc
+
+# ---------------------------------------------------------------------------
+# Layer 9: Gateway auto-start via profile.d + bashrc guard
+# ---------------------------------------------------------------------------
+COPY docker/entrypoint-daytona.sh /usr/local/bin/entrypoint-sandbox.sh
+COPY docker/winclaw-gateway-autostart.sh /tmp/winclaw-gateway-autostart.sh
+RUN sudo sed -i "s/\r$//" /usr/local/bin/entrypoint-sandbox.sh \
+  && sudo chmod +x /usr/local/bin/entrypoint-sandbox.sh \
+  && sudo cp /tmp/winclaw-gateway-autostart.sh /etc/profile.d/winclaw-gateway.sh \
+  && sudo chmod +r /etc/profile.d/winclaw-gateway.sh \
+  && sudo rm -f /tmp/winclaw-gateway-autostart.sh
+
+# Source the guard from .bashrc too (for non-login interactive shells)
+RUN echo '' >> ~/.bashrc \
+  && echo '# WinClaw gateway auto-start' >> ~/.bashrc \
+  && echo '[ -f /etc/profile.d/winclaw-gateway.sh ] && . /etc/profile.d/winclaw-gateway.sh' >> ~/.bashrc
+
+# Pre-create .winclaw directory and bake-in default GRC config
+RUN mkdir -p /home/sandbox/.winclaw \
+  && echo '{"gateway":{"controlUi":{"allowedOrigins":["*"],"dangerouslyDisableDeviceAuth":true},"auth":{"mode":"none"}},"agents":{"defaults":{"tools":{"sessions":{"visibility":"all"},"agentToAgent":true}}},"grc":{"url":"https://grc.myaiportal.net"}}' > /home/sandbox/.winclaw/winclaw.json
+
+# ---------------------------------------------------------------------------
+# Expose gateway port
+# ---------------------------------------------------------------------------
+EXPOSE 18789
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:18789/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# ---------------------------------------------------------------------------
+# Entrypoint: tini → entrypoint-sandbox.sh (gateway + optional ngrok)
+# ---------------------------------------------------------------------------
+ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint-sandbox.sh"]
