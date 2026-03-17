@@ -82,14 +82,12 @@ CONFIG_JSON=$(jq -n \
         token: $gw_token
       }
     },
-    agents: {
-      defaults: {
-        tools: {
-          sessions: {
-            visibility: "all"
-          },
-          agentToAgent: true
-        }
+    tools: {
+      sessions: {
+        visibility: "all"
+      },
+      agentToAgent: {
+        enabled: true
       }
     },
     grc: {

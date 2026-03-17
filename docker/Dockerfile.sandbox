@@ -133,7 +133,7 @@ RUN echo '' >> ~/.bashrc \
 
 # Pre-create .winclaw directory and bake-in default GRC config
 RUN mkdir -p /home/sandbox/.winclaw \
-  && echo '{"gateway":{"controlUi":{"allowedOrigins":["*"],"dangerouslyDisableDeviceAuth":true},"auth":{"mode":"none"}},"agents":{"defaults":{"tools":{"sessions":{"visibility":"all"},"agentToAgent":true}}},"grc":{"url":"https://grc.myaiportal.net"}}' > /home/sandbox/.winclaw/winclaw.json
+  && echo '{"gateway":{"controlUi":{"allowedOrigins":["*"],"dangerouslyDisableDeviceAuth":true},"auth":{"mode":"none"}},"tools":{"sessions":{"visibility":"all"},"agentToAgent":{"enabled":true}},"grc":{"url":"https://grc.myaiportal.net"}}' > /home/sandbox/.winclaw/winclaw.json
 
 # ---------------------------------------------------------------------------
 # Expose gateway port
