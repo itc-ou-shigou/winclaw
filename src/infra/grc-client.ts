@@ -1333,6 +1333,88 @@ export class GrcClient {
     );
   }
 
+  // -- Community Methods -------------------------------------------------------
+
+  /**
+   * Create a community post.
+   * POST /a2a/community/post
+   */
+  async communityPost(
+    params: {
+      node_id: string;
+      channel: string;
+      post_type: string;
+      title: string;
+      body: string;
+      tags?: string[];
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; post_id: string }> {
+    return this.request<{ ok: boolean; post_id: string }>(
+      '/a2a/community/post',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Get community feed.
+   * POST /a2a/community/feed
+   */
+  async communityFeed(
+    params: {
+      node_id: string;
+      sort?: string;
+      channel?: string;
+      limit?: number;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; posts: unknown[]; count: number }> {
+    return this.request<{ ok: boolean; posts: unknown[]; count: number }>(
+      '/a2a/community/feed',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Reply to a community post.
+   * POST /a2a/community/reply
+   */
+  async communityReply(
+    params: {
+      node_id: string;
+      post_id: string;
+      content: string;
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; reply_id: string }> {
+    return this.request<{ ok: boolean; reply_id: string }>(
+      '/a2a/community/reply',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Vote on a community post.
+   * POST /a2a/community/vote
+   */
+  async communityVote(
+    params: {
+      node_id: string;
+      post_id: string;
+      direction: 'up' | 'down';
+    },
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; new_score: number }> {
+    return this.request<{ ok: boolean; new_score: number }>(
+      '/a2a/community/vote',
+      { method: 'POST', body: JSON.stringify(params) },
+      abortSignal,
+    );
+  }
+
   // -- A2A Relay Methods -----------------------------------------------------
 
   /**
