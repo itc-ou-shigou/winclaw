@@ -43,14 +43,17 @@ function filterByConfiguredProviders(
     configuredKeys.has(`${entry.provider}/${entry.id}`),
   );
 
-  // If none matched in the catalog (model names may differ), synthesize entries
-  // from the provider config so the UI always shows at least the configured models.
-  if (filtered.length === 0) {
-    const synthetic: ModelCatalogEntry[] = [];
-    for (const [providerName, providerCfg] of Object.entries(providers)) {
-      if (providerCfg?.models) {
-        for (const model of providerCfg.models) {
-          synthetic.push({
+  // Synthesize entries for configured models that are NOT in the built-in catalog
+  // (e.g. custom providers like GLM added via GRC key distribution).
+  // This ensures ALL configured models appear in the UI, not just those that
+  // happen to match a built-in catalog entry.
+  const filteredKeys = new Set(filtered.map((e) => `${e.provider}/${e.id}`));
+  for (const [providerName, providerCfg] of Object.entries(providers)) {
+    if (providerCfg?.models) {
+      for (const model of providerCfg.models) {
+        const key = `${providerName}/${model.id}`;
+        if (!filteredKeys.has(key)) {
+          filtered.push({
             id: model.id,
             name: model.name || model.id,
             provider: providerName,
@@ -58,7 +61,6 @@ function filterByConfiguredProviders(
         }
       }
     }
-    return synthetic;
   }
 
   return filtered;

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("WinClaw Desktop App - Personal AI Assistant")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71d932b22bbd27025b14c3ee7da0923a4ca5fa11")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2ac7f6ab5b39ab4a70efc6eb4985955b15211fe5")]
 [assembly: System.Reflection.AssemblyProductAttribute("WinClaw")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WinClaw")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

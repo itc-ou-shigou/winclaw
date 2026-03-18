@@ -12,6 +12,7 @@
 #   WINCLAW_GATEWAY_BIND     Bind mode: loopback|lan|auto (default: lan)
 #   WINCLAW_GATEWAY_AUTH     Auth mode: none|token|password (default: token)
 #   WINCLAW_GATEWAY_TOKEN    Auth token (auto-generated if not set)
+#   WINCLAW_NODE_ID          Fixed node ID (preserves identity across restarts)
 # =============================================================================
 
 set -euo pipefail
@@ -25,8 +26,15 @@ GW_BIND="${WINCLAW_GATEWAY_BIND:-lan}"
 GW_AUTH="${WINCLAW_GATEWAY_AUTH:-token}"
 GW_TOKEN="${WINCLAW_GATEWAY_TOKEN:-}"
 
-WINCLAW_DIR="${HOME}/.winclaw"
+WINCLAW_DIR="/home/winclaw/.winclaw"
 CONFIG_FILE="${WINCLAW_DIR}/winclaw.json"
+
+# Fix permissions on mounted volumes so winclaw user can read/write
+# chown may not work on some Docker volume drivers, so use chmod as fallback
+chown -R winclaw:winclaw "${WINCLAW_DIR}/workspace" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}/workspace" 2>/dev/null || true
+chown -R winclaw:winclaw "${WINCLAW_DIR}/identity" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}/identity" 2>/dev/null || true
+# Ensure .winclaw dir itself is writable for config file
+chown -R winclaw:winclaw "${WINCLAW_DIR}" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}" 2>/dev/null || true
 
 # Auto-generate token if auth=token and no token provided
 if [ "${GW_AUTH}" = "token" ] && [ -z "${GW_TOKEN}" ]; then
@@ -58,8 +66,14 @@ fi
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
-# ── Generate winclaw.json ────────────────────────────────────────────────────
-mkdir -p "${WINCLAW_DIR}"
+# ── Ensure directories exist & fix ownership for mounted volumes ─────────────
+mkdir -p "${WINCLAW_DIR}/identity" "${WINCLAW_DIR}/workspace"
+# Docker volume mounts from Windows/macOS may be owned by root;
+# ensure winclaw user can write to workspace, identity, and config dir.
+# chown may fail on some volume drivers (e.g. Docker Desktop), so chmod as fallback.
+for d in "${WINCLAW_DIR}" "${WINCLAW_DIR}/workspace" "${WINCLAW_DIR}/identity"; do
+  chown -R winclaw:winclaw "$d" 2>/dev/null || chmod -R 777 "$d" 2>/dev/null || true
+done
 
 # Build JSON config with jq for proper escaping of CJK names
 CONFIG_JSON=$(jq -n \
@@ -115,5 +129,5 @@ GW_ARGS=(
   --token "${GW_TOKEN}"
 )
 
-# Execute gateway as PID 1 (tini handles signals)
-exec winclaw "${GW_ARGS[@]}"
+# Drop privileges to winclaw user and execute gateway (tini handles signals)
+exec gosu winclaw winclaw "${GW_ARGS[@]}"

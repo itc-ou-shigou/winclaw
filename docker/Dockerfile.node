@@ -30,13 +30,14 @@ LABEL org.opencontainers.image.title="WinClaw Node" \
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ---------------------------------------------------------------------------
-# Layer 1: Minimal system packages
+# Layer 1: Minimal system packages + gosu for privilege drop
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     curl \
     git \
+    gosu \
     jq \
     tini \
   && apt-get clean \
@@ -45,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ---------------------------------------------------------------------------
 # Layer 2: Install winclaw from pre-built tgz
 # ---------------------------------------------------------------------------
-COPY docker/winclaw-2026.3.15.tgz /tmp/winclaw.tgz
+COPY docker/winclaw-2026.3.18.tgz /tmp/winclaw.tgz
 RUN npm install -g /tmp/winclaw.tgz && rm -f /tmp/winclaw.tgz
 
 # ---------------------------------------------------------------------------
@@ -72,9 +73,8 @@ ENV WINCLAW_GRC_URL="https://grc.myaiportal.net" \
     WINCLAW_GATEWAY_AUTH="token"
 
 # ---------------------------------------------------------------------------
-# Switch to non-root user
+# Run as root; entrypoint fixes volume permissions then drops to winclaw
 # ---------------------------------------------------------------------------
-USER winclaw
 WORKDIR /home/winclaw
 
 # ---------------------------------------------------------------------------
@@ -90,5 +90,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # ---------------------------------------------------------------------------
 # Use tini as PID 1 for proper signal handling
+# Entrypoint runs as root, fixes perms, then gosu to winclaw
 # ---------------------------------------------------------------------------
 ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint-node.sh"]

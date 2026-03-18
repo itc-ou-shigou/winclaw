@@ -127,7 +127,8 @@ export function buildConfigSyncEventPrompt(reason: string): string {
 export function isTaskEvent(reason: string): boolean {
   return reason.startsWith("task_assigned:") ||
     reason.startsWith("task_completed:") ||
-    reason.startsWith("task_feedback:");
+    reason.startsWith("task_feedback:") ||
+    reason.startsWith("meeting_invite:");
 }
 
 /** Extract the event type prefix from a task event reason string. */
@@ -245,6 +246,31 @@ export function buildTaskEventPrompt(reason: string): string {
         "3. Use `grc_task_complete` to resubmit your improved results with an updated `result_summary`",
       );
       return feedbackLines.join("\n");
+    }
+
+    case "meeting_invite": {
+      const meetingLines: string[] = [
+        "# Strategy Alignment Meeting Invitation",
+        "",
+        "You have been invited to a strategy alignment meeting.",
+        "",
+        ...detailLines,
+      ];
+      meetingLines.push(
+        "",
+        "## Instructions",
+        "1. Review the meeting context and company strategy above",
+        "2. Based on your department responsibilities, identify actionable tasks",
+        "3. Use `grc_task` to create tasks aligned with company Q1 objectives:",
+        "   - Set trigger_type: \"meeting\"",
+        "   - Include concrete deliverables and deadlines",
+        "   - Align with your department budget",
+        "4. Start executing the most critical task immediately",
+        "",
+        "IMPORTANT: This is a strategic planning session. Create REAL tasks",
+        "that advance company goals, not placeholder items.",
+      );
+      return meetingLines.join("\n");
     }
 
     default:

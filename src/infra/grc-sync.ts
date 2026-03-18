@@ -10,6 +10,7 @@ import { runGrcDownloadAndInstall } from "./update-runner.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 import { requestHeartbeatNow } from "./heartbeat-wake.js";
 import { cacheTaskEvent } from "./task-event-cache.js";
+import { upsertAuthProfile, loadAuthProfileStore, saveAuthProfileStore } from "../agents/auth-profiles.js";
 
 const log: SubsystemLogger = createSubsystemLogger("infra/grc-sync");
 
@@ -1103,6 +1104,45 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       return;
     }
 
+    if (eventType === "meeting_event") {
+      try {
+        const meetingEvent = JSON.parse(data) as {
+          event_type: string;
+          session_id: string;
+          title: string;
+          type: string;
+          shared_context?: string;
+          facilitator_node_id?: string;
+          participants?: { node_id: string; role_id: string; display_name: string }[];
+        };
+
+        sseLog.info("Meeting event received", {
+          event_type: meetingEvent.event_type,
+          session_id: meetingEvent.session_id,
+          title: meetingEvent.title,
+        });
+
+        // Cache meeting context for heartbeat prompt
+        cacheTaskEvent({
+          event_type: `meeting:${meetingEvent.event_type}`,
+          task_id: meetingEvent.session_id,
+          task_code: "MEETING",
+          title: meetingEvent.title,
+          priority: "high",
+          category: "strategic",
+          description: meetingEvent.shared_context,
+        });
+
+        requestHeartbeatNow({
+          reason: `meeting_invite:${meetingEvent.session_id}`,
+          coalesceMs: 2000,
+        });
+      } catch (e) {
+        sseLog.warn(`Failed to parse meeting_event SSE event: ${(e as Error).message}`);
+      }
+      return;
+    }
+
     // Unknown event type — log for debugging
     sseLog.debug("Ignoring unknown SSE event", { eventType });
   }
@@ -1323,6 +1363,28 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       // Unbind: just remove GRC providers (already done above)
       log.info("Removed GRC key config from winclaw.json (unbind)");
 
+      // Also remove GRC-managed profiles from auth-profiles.json
+      try {
+        const authStore = loadAuthProfileStore();
+        let changed = false;
+        for (const name of previousGrcProviders) {
+          const profileId = `${name}:default`;
+          if (authStore.profiles[profileId]) {
+            delete authStore.profiles[profileId];
+            if (authStore.lastGood && (authStore.lastGood as Record<string, string>)[name] === profileId) {
+              delete (authStore.lastGood as Record<string, string>)[name];
+            }
+            changed = true;
+          }
+        }
+        if (changed) {
+          saveAuthProfileStore(authStore);
+          log.info("Removed GRC-managed profiles from auth-profiles.json");
+        }
+      } catch (err) {
+        log.warn(`Failed to clean auth-profiles.json on unbind: ${(err as Error).message}`);
+      }
+
       // Also reset default model if it referenced a GRC provider
       const agents = (config.agents ?? {}) as Record<string, unknown>;
       const defaults = (agents.defaults ?? {}) as Record<string, unknown>;
@@ -1365,6 +1427,11 @@ export class GrcSyncService implements GrcSyncServiceHandle {
           provider: providerName,
           model: keyConfig.primary.model,
         });
+
+        // Sync to auth-profiles.json so the agent can resolve the key
+        if (keyConfig.primary.apiKey) {
+          this.syncAuthProfile(providerName, keyConfig.primary.apiKey);
+        }
       }
 
       // Assign / update auxiliary provider
@@ -1408,6 +1475,11 @@ export class GrcSyncService implements GrcSyncServiceHandle {
           provider: providerName,
           model: keyConfig.auxiliary.model,
         });
+
+        // Sync auxiliary key to auth-profiles.json
+        if (keyConfig.auxiliary.apiKey) {
+          this.syncAuthProfile(providerName, keyConfig.auxiliary.apiKey);
+        }
       }
     }
 
@@ -1442,6 +1514,36 @@ export class GrcSyncService implements GrcSyncServiceHandle {
       fs.writeFileSync(grcStatePath, JSON.stringify({ providers: newGrcProviders }), "utf-8");
     } catch (err) {
       log.warn(`Failed to persist GRC key provider state: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Sync a provider API key to auth-profiles.json so the agent runtime can
+   * look it up via its normal credential resolution path.
+   */
+  private syncAuthProfile(provider: string, apiKey: string): void {
+    const profileId = `${provider}:default`;
+    try {
+      upsertAuthProfile({
+        profileId,
+        credential: {
+          type: "api_key",
+          provider,
+          key: apiKey,
+        },
+      });
+
+      // Also mark as lastGood for the provider
+      const store = loadAuthProfileStore();
+      if (!store.lastGood) {
+        store.lastGood = {} as Record<string, string>;
+      }
+      (store.lastGood as Record<string, string>)[provider] = profileId;
+      saveAuthProfileStore(store);
+
+      log.info("Synced key to auth-profiles.json", { provider, profileId });
+    } catch (err) {
+      log.warn(`Failed to sync auth profile for ${provider}: ${(err as Error).message}`);
     }
   }
 }

@@ -201,9 +201,10 @@ You coordinate ALL departments. Your direct reports:
 - **customer-support agent**: Customer satisfaction, retention
 
 ### Communication Protocol
+- **Meetings**: ALWAYS use GRC A2A Meeting Platform (`POST /a2a/meetings`) for multi-agent discussions, reviews, brainstorms, and decisions. Do NOT create tasks to "organize a meeting" — use the meeting API directly.
 - Weekly: Receive summary reports from all department agents
-- Monthly: Conduct company-wide performance review
-- Quarterly: Issue updated KPIs and strategic priorities
+- Monthly: Conduct company-wide performance review via GRC Meeting
+- Quarterly: Issue updated KPIs and strategic priorities via GRC Meeting
 - Ad-hoc: Issue urgent directives when critical issues arise
 
 ## Deliverables Format
@@ -259,6 +260,37 @@ You coordinate ALL departments. Your direct reports:
 ### TOOLS.md
 ```markdown
 # TOOLS — CEO Dashboard
+
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
 
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
@@ -490,6 +522,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Marketing. 
 ```markdown
 # TOOLS — Marketing Stack
 
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
+
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
 
@@ -692,6 +755,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Product. Yo
 ```markdown
 # TOOLS — PM Stack
 
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
+
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
 
@@ -888,6 +982,37 @@ You coordinate cross-functionally across all departments:
 ### TOOLS.md
 ```markdown
 # TOOLS — Strategy Stack
+
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
 
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
@@ -1094,6 +1219,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Finance. Yo
 ```markdown
 # TOOLS — Finance Stack
 
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
+
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
 
@@ -1288,6 +1444,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Sales. You:
 ```markdown
 # TOOLS — Sales Stack
 
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
+
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
 
@@ -1475,6 +1662,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Support. Yo
 ### TOOLS.md
 ```markdown
 # TOOLS — Support Stack
+
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
 
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
@@ -1667,6 +1885,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in HR. You:
 ### TOOLS.md
 ```markdown
 # TOOLS — HR Stack
+
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
 
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
@@ -1864,6 +2113,37 @@ You are an AI assistant supporting ${human_name} (${human_title}) in Engineering
 ### TOOLS.md
 ```markdown
 # TOOLS — Engineering Stack
+
+## GRC Platform Tools (Fixed — Always Available)
+> **These are mandatory GRC platform tools. Use them instead of ad-hoc alternatives.**
+
+### Meetings (A2A Meeting Platform)
+**ALWAYS use GRC meetings for any discussion, review, brainstorm, or decision involving 2+ agents.**
+Do NOT create tasks to "organize a meeting" — use the meeting API directly.
+- `POST /a2a/meetings` — Create meeting (title, facilitator_node_id, type, agenda, participants)
+- `POST /a2a/meetings/:id/start` — Start meeting
+- `POST /a2a/meetings/:id/join` — Join meeting (node_id, role_id, display_name)
+- `POST /a2a/meetings/:id/message` — Send message (speaker_node_id, speaker_role, content, type)
+- `GET /a2a/meetings/:id/transcript` — Get transcript
+- `POST /a2a/meetings/:id/close` — Conclude meeting (summary, decisions, action_items)
+
+### Expense Requests
+**ALL spending requests MUST go through GRC expense workflow.** Do NOT skip this step.
+- Create task with `category="expense"`, `expense_amount`, `expense_currency`
+- Include ROI justification and KPI impact in description
+- Human admin reviews → approves → pays → you receive notification → proceed
+- Coordinate with finance agent on budget availability before large requests
+
+### Task Management
+- `grc_task` — Create task (title, description, category, priority, deliverables)
+- `grc_task_update` — Update task status/result
+- `grc_task_complete` — Mark task completed
+- `grc_task_accept` / `grc_task_reject` — Review tasks
+
+### A2A Communication
+- `sessions_send` — Direct messaging to peer agents
+- `web_fetch` — Call GRC API endpoints
+- `GET /a2a/strategy/summary?node_id={your_node_id}` — Fetch company strategy
 
 ## WinClaw Plugins (Priority)
 > **Always load these plugins first.** They provide specialized skills and commands for your role.
