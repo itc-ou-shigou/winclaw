@@ -68,6 +68,7 @@ RUN sed -i "s/\r$//" /usr/local/bin/entrypoint-node.sh && chmod +x /usr/local/bi
 ENV WINCLAW_GRC_URL="https://grc.myaiportal.net" \
     employee_name="" \
     employee_code="" \
+    WINCLAW_WORKSPACE_HOST_PATH="" \
     WINCLAW_GATEWAY_PORT="18789" \
     WINCLAW_GATEWAY_BIND="lan" \
     WINCLAW_GATEWAY_AUTH="token"

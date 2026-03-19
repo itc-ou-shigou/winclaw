@@ -841,7 +841,7 @@ export class GrcClient {
     nodeId: string,
     platform: string,
     winclawVersion: string,
-    employee?: { id?: string; name?: string; email?: string },
+    employee?: { id?: string; name?: string; email?: string; role?: string; workspacePath?: string },
     abortSignal?: AbortSignal,
   ): Promise<{ ok: boolean; node?: { id: string } }> {
     return this.request<{ ok: boolean; node?: { id: string } }>(
@@ -855,6 +855,34 @@ export class GrcClient {
           ...(employee?.id && { employee_id: employee.id }),
           ...(employee?.name && { employee_name: employee.name }),
           ...(employee?.email && { employee_email: employee.email }),
+          ...(employee?.role && { employee_role: employee.role }),
+          ...(employee?.workspacePath && { workspace_path: employee.workspacePath }),
+        }),
+      },
+      abortSignal,
+    );
+  }
+
+  /**
+   * Register or update an Agent Card with the A2A Gateway.
+   * This makes the node discoverable in the agent roster.
+   */
+  async registerAgentCard(
+    nodeId: string,
+    agentCard: Record<string, unknown>,
+    skills?: Record<string, unknown>[],
+    capabilities?: Record<string, unknown>,
+    abortSignal?: AbortSignal,
+  ): Promise<{ ok: boolean; data: unknown }> {
+    return this.request<{ ok: boolean; data: unknown }>(
+      "/a2a/agents/register",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          node_id: nodeId,
+          agent_card: agentCard,
+          ...(skills && { skills }),
+          ...(capabilities && { capabilities }),
         }),
       },
       abortSignal,

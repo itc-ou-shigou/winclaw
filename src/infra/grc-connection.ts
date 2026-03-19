@@ -121,13 +121,16 @@ export class GrcConnectionManager {
       }
 
       // 4. Register node via A2A hello (non-fatal)
+      // Note: employee_role is NOT sent at startup — roles are assigned later
+      // via GRC admin panel (Step 4 of company-startup) and pushed via SSE.
+      const platform = os.platform();
+      const version = process.env.WINCLAW_VERSION ?? "0.0.0";
       try {
-        const platform = os.platform();
-        const version = process.env.WINCLAW_VERSION ?? "0.0.0";
         const employee = {
           id: config.grc?.employeeId,
           name: config.grc?.employeeName,
           email: config.grc?.employeeEmail,
+          workspacePath: config.grc?.workspaceHostPath,
         };
         await this.client.hello(this.nodeId, platform, version, employee);
         log.info("Node registered with GRC via A2A hello");
@@ -135,7 +138,29 @@ export class GrcConnectionManager {
         log.warn(`A2A hello failed (non-fatal): ${(err as Error).message}`);
       }
 
-      // 5. Start sync service
+      // 4b. Register Agent Card with A2A Gateway (non-fatal)
+      // Makes this node discoverable in the agent roster.
+      // Role will be updated when GRC assigns it via SSE config push (Step 4).
+      try {
+        const agentCard: Record<string, unknown> = {
+          name: config.grc?.employeeName ?? `winclaw-node-${this.nodeId!.slice(0, 8)}`,
+          employee_id: config.grc?.employeeId,
+          version,
+          platform,
+        };
+        const capabilities: Record<string, unknown> = {
+          chat: true,
+          a2a: true,
+          tools: true,
+          agentToAgent: config.tools?.agentToAgent?.enabled !== false,
+        };
+        await this.client.registerAgentCard(this.nodeId!, agentCard, undefined, capabilities);
+        log.info("Agent Card registered with GRC A2A Gateway");
+      } catch (err) {
+        log.warn(`Agent Card registration failed (non-fatal): ${(err as Error).message}`);
+      }
+
+      // 5. Start sync service (also starts SSE config stream)
       this.startSyncService();
 
       // 6. Start community services (auto-post + reply worker)

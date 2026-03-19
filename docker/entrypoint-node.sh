@@ -25,6 +25,7 @@ GW_PORT="${WINCLAW_GATEWAY_PORT:-18789}"
 GW_BIND="${WINCLAW_GATEWAY_BIND:-lan}"
 GW_AUTH="${WINCLAW_GATEWAY_AUTH:-token}"
 GW_TOKEN="${WINCLAW_GATEWAY_TOKEN:-}"
+WS_HOST_PATH="${WINCLAW_WORKSPACE_HOST_PATH:-}"
 
 WINCLAW_DIR="/home/winclaw/.winclaw"
 CONFIG_FILE="${WINCLAW_DIR}/winclaw.json"
@@ -83,6 +84,7 @@ CONFIG_JSON=$(jq -n \
   --arg gw_bind "${GW_BIND}" \
   --arg gw_auth "${GW_AUTH}" \
   --arg gw_token "${GW_TOKEN}" \
+  --arg ws_path "${WS_HOST_PATH}" \
   '{
     gateway: {
       mode: "local",
@@ -108,12 +110,30 @@ CONFIG_JSON=$(jq -n \
       enabled: true,
       url: $grc_url,
       employeeId: $emp_id,
-      employeeName: $emp_name
+      employeeName: $emp_name,
+      workspaceHostPath: $ws_path
     }
   }')
 
 echo "${CONFIG_JSON}" > "${CONFIG_FILE}"
 echo "[entrypoint] Config written to ${CONFIG_FILE}"
+
+# ── Wait for GRC server to be reachable ──────────────────────────────────────
+if [ -n "${GRC_URL}" ]; then
+  echo "[entrypoint] Waiting for GRC at ${GRC_URL}..."
+  GRC_READY=0
+  for i in $(seq 1 30); do
+    if curl -sf "${GRC_URL}/health" > /dev/null 2>&1; then
+      echo "[entrypoint] ✓ GRC server reachable (attempt ${i})"
+      GRC_READY=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "${GRC_READY}" -eq 0 ]; then
+    echo "[entrypoint] ⚠ GRC not reachable after 60s, starting gateway anyway (will retry in background)"
+  fi
+fi
 
 # ── Start Gateway ────────────────────────────────────────────────────────────
 echo "[entrypoint] Starting winclaw gateway on port ${GW_PORT} (bind: ${GW_BIND})..."

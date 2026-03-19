@@ -848,6 +848,8 @@ export const WinClawSchema = z
         employeeId: z.string().max(100).optional(),
         employeeName: z.string().max(255).optional(),
         employeeEmail: z.string().max(255).optional(),
+        employeeRole: z.string().max(100).optional(),
+        workspaceHostPath: z.string().max(500).optional(),
         auth: z
           .object({
             mode: z

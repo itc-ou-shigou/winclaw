@@ -123,6 +123,10 @@ export type WinClawConfig = {
     employeeName?: string;
     /** Employee contact email sent during GRC node registration. */
     employeeEmail?: string;
+    /** Employee role/position ID sent during GRC node registration (e.g. "sales", "engineering-lead"). */
+    employeeRole?: string;
+    /** Host filesystem path where workspace is mounted (for admin review access). */
+    workspaceHostPath?: string;
     /** Authentication settings for GRC. */
     auth?: {
       mode?: "anonymous" | "oauth" | "apikey";
