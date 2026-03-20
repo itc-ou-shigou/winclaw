@@ -253,10 +253,38 @@ export class GrcClient {
 
   // -- Core request --------------------------------------------------------
 
+  /**
+   * Attempt to refresh the current auth token using the GRC /auth/refresh endpoint.
+   * If the token stored in-memory is still valid, tries a token-rotation refresh.
+   * On failure returns null (caller should fall back to full re-auth).
+   */
+  async refreshToken(): Promise<string | null> {
+    if (!this.authToken) return null;
+
+    try {
+      const result = await this.request<{ access_token: string; refresh_token: string; token_type: string }>(
+        "/auth/refresh",
+        { method: "POST", body: JSON.stringify({ refresh_token: this.authToken }) },
+        undefined,
+        /* _isRetry */ true, // prevent recursive 401 retry
+      );
+
+      if (result.access_token) {
+        this.authToken = result.access_token;
+        log.info("GRC token refreshed successfully via refreshToken()");
+        return result.access_token;
+      }
+    } catch (err) {
+      log.warn(`Token refresh failed: ${(err as Error).message}, will re-authenticate on next hello()`);
+    }
+    return null;
+  }
+
   private async request<T>(
     path: string,
     opts: RequestInit = {},
     abortSignal?: AbortSignal,
+    _isRetry = false,
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
@@ -305,6 +333,19 @@ export class GrcClient {
             );
             await sleepWithAbort(delayMs, abortSignal);
             continue;
+          }
+
+          // 401 auto-retry: refresh token and retry the request once
+          if (res.status === 401 && !_isRetry) {
+            log.info("Got 401 from GRC, attempting token refresh and retry...", { path });
+            const refreshed = await this.refreshToken();
+            if (refreshed) {
+              // Token refreshed — retry the original request (with _isRetry=true to prevent loop)
+              return this.request<T>(path, opts, abortSignal, /* _isRetry */ true);
+            }
+            // refreshToken failed — clear token so callers know to re-authenticate
+            log.warn("Token refresh after 401 failed, clearing auth token");
+            this.authToken = undefined;
           }
 
           throw apiErr;

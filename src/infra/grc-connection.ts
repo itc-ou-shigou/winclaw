@@ -50,6 +50,7 @@ export class GrcConnectionManager {
   private url: string;
   private tokenCheckTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
 
   constructor() {
@@ -168,6 +169,9 @@ export class GrcConnectionManager {
 
       // 7. Start token expiry checker
       this.startTokenChecker();
+
+      // 8. Start proactive token refresh (every 20h, well before 24h JWT expiry)
+      this.startTokenRefresh();
 
       log.info("GRC auto-connect completed", {
         nodeId: this.nodeId.slice(0, 12) + "...",
@@ -329,6 +333,85 @@ export class GrcConnectionManager {
   }
 
   /**
+   * Start a proactive token refresh interval (every 20 hours).
+   * JWT tokens expire in 24h; refreshing 4h before expiry prevents
+   * 401 errors during long-running sessions.
+   */
+  private startTokenRefresh(): void {
+    // Clear existing interval if any
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+
+    const REFRESH_INTERVAL = 20 * 60 * 60 * 1000; // 20 hours
+
+    this.refreshIntervalId = setInterval(async () => {
+      if (this.stopped) return;
+
+      try {
+        log.info("Proactive token refresh starting...");
+        const newToken = await this.client.refreshToken();
+        if (newToken) {
+          // Persist the refreshed token to config
+          await this.persistTokens(newToken, undefined);
+          log.info("Proactive token refresh succeeded");
+        } else {
+          log.warn("Proactive refresh returned null, attempting full reconnect...");
+          await this.reconnect();
+        }
+      } catch (err) {
+        log.error(`Token refresh interval error: ${(err as Error).message}`);
+      }
+    }, REFRESH_INTERVAL);
+
+    if (typeof this.refreshIntervalId.unref === "function") {
+      this.refreshIntervalId.unref();
+    }
+
+    log.info("Proactive token refresh scheduled every 20h");
+  }
+
+  /**
+   * Reconnect to GRC by re-running the full autoConnect() flow.
+   * On failure, schedules a retry in 30 seconds.
+   */
+  async reconnect(): Promise<void> {
+    if (this.stopped) return;
+
+    log.info("Reconnecting to GRC...");
+
+    // Clean up existing services before re-connecting
+    if (this.syncService) {
+      this.syncService.stop();
+      this.syncService = null;
+    }
+    if (this.autoPostService) {
+      this.autoPostService.stop();
+      this.autoPostService = null;
+    }
+    if (this.replyTimer) {
+      clearInterval(this.replyTimer);
+      this.replyTimer = null;
+    }
+    this.replyWorker = null;
+    this.connected = false;
+
+    try {
+      await this.autoConnect();
+      log.info("Reconnect to GRC succeeded");
+    } catch (err) {
+      log.error(`Reconnect failed: ${(err as Error).message}, will retry in 30s`);
+      const retryTimeout = setTimeout(() => {
+        if (!this.stopped) void this.reconnect();
+      }, 30_000);
+      if (typeof retryTimeout.unref === "function") {
+        retryTimeout.unref();
+      }
+    }
+  }
+
+  /**
    * Persist tokens to config file.
    */
   private async persistTokens(
@@ -478,6 +561,11 @@ export class GrcConnectionManager {
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
+    }
+
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
     }
 
     if (this.replyTimer) {
