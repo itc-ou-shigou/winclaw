@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClawTeam</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #000000;
+    --surface: #0a0a0a;
+    --surface2: #111111;
+    --surface3: #1a1a1a;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #f5f5f7;
+    --text-secondary: #86868b;
+    --text-tertiary: #6e6e73;
+    --accent: #ffffff;
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --blue: #0a84ff;
+    --purple: #bf5af2;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ─── Styles ────────────────────────────────────────────────────────────────
+
+const S = {
+  nav: {
+    position: 'sticky', top: 0, zIndex: 100,
+    background: 'rgba(0,0,0,0.72)',
+    backdropFilter: 'saturate(180%) blur(20px)',
+    WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+    borderBottom: '1px solid var(--border)',
+    padding: '0 32px', height: 52,
+    display: 'flex', alignItems: 'center', gap: 16,
+  },
+  navTitle: {
+    fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em',
+    color: 'var(--text)',
+  },
+  select: {
+    background: 'var(--surface2)', color: 'var(--text)',
+    border: '1px solid var(--border)', borderRadius: 8,
+    padding: '6px 12px', fontSize: 13, outline: 'none',
+    cursor: 'pointer',
+  },
+  statusDot: (connected) => ({
+    width: 8, height: 8, borderRadius: '50%', marginLeft: 'auto',
+    background: connected ? 'var(--green)' : 'var(--red)',
+    boxShadow: connected ? '0 0 8px var(--green)' : 'none',
+  }),
+  statusText: {
+    fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 6,
+  },
+  container: {
+    maxWidth: 1200, margin: '0 auto', padding: '24px 32px',
+  },
+
+  // Summary cards
+  summaryGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 12, marginBottom: 24,
+  },
+  summaryCard: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    padding: '20px 16px', textAlign: 'center',
+    transition: 'border-color 0.2s',
+  },
+  summaryNum: (color) => ({
+    fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em',
+    color: color, lineHeight: 1,
+  }),
+  summaryLabel: {
+    fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
+    marginTop: 6,
+  },
+
+  // Section
+  section: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    marginBottom: 20, overflow: 'hidden',
+  },
+  sectionHeader: {
+    padding: '14px 20px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: 13, fontWeight: 600, color: 'var(--text)',
+    letterSpacing: '-0.01em',
+  },
+  sectionBadge: {
+    fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)',
+    background: 'var(--surface3)', borderRadius: 10,
+    padding: '2px 8px',
+  },
+
+  // Members
+  membersGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: 1, background: 'var(--border)',
+  },
+  memberCard: {
+    background: 'var(--surface)', padding: '14px 20px',
+  },
+  memberName: {
+    fontSize: 14, fontWeight: 600, color: 'var(--text)',
+  },
+  memberType: {
+    fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2,
+  },
+  inboxBadge: (count) => ({
+    display: 'inline-block', marginTop: 6,
+    fontSize: 11, fontWeight: 500,
+    padding: '2px 8px', borderRadius: 10,
+    background: count > 0 ? 'rgba(255,69,58,0.15)' : 'var(--surface3)',
+    color: count > 0 ? 'var(--red)' : 'var(--text-tertiary)',
+  }),
+
+  // Messages
+  msgList: {
+    maxHeight: 360, overflowY: 'auto',
+  },
+  msgItem: {
+    padding: '12px 20px',
+    borderBottom: '1px solid var(--border)',
+    transition: 'background 0.15s',
+  },
+  msgMeta: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    fontSize: 12, marginBottom: 4,
+  },
+  msgTag: {
+    fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    padding: '2px 6px', borderRadius: 4,
+    background: 'var(--surface3)', color: 'var(--text-tertiary)',
+  },
+  msgFrom: { color: 'var(--text)', fontWeight: 500 },
+  msgTo: { color: 'var(--text-tertiary)' },
+  msgTime: { color: 'var(--text-tertiary)', marginLeft: 'auto', fontSize: 11 },
+  msgContent: {
+    fontSize: 13, color: 'var(--text-secondary)',
+    lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+  },
+  msgEmpty: {
+    padding: 32, textAlign: 'center',
+    fontSize: 13, color: 'var(--text-tertiary)',
+  },
+
+  // Kanban
+  kanban: {
+    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 12,
+  },
+  kanbanCol: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    minHeight: 200, overflow: 'hidden',
+  },
+  kanbanHeader: (color) => ({
+    padding: '12px 16px',
+    borderBottom: `2px solid ${color}`,
+    fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.06em', color: color,
+    display: 'flex', justifyContent: 'space-between',
+  }),
+  kanbanBody: { padding: 8 },
+  taskCard: {
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '10px 12px', marginBottom: 6,
+    transition: 'border-color 0.15s',
+    cursor: 'default',
+  },
+  taskId: {
+    fontSize: 11, fontFamily: 'SF Mono, Menlo, monospace',
+    color: 'var(--text-tertiary)',
+  },
+  taskSubject: {
+    fontSize: 13, fontWeight: 500, color: 'var(--text)',
+    marginTop: 2, lineHeight: 1.4,
+  },
+  taskOwner: {
+    fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4,
+  },
+  taskBlocked: {
+    fontSize: 11, color: 'var(--red)', marginTop: 2,
+  },
+  emptyCol: {
+    padding: 24, textAlign: 'center',
+    fontSize: 12, color: 'var(--text-tertiary)',
+  },
+
+  // Team header
+  teamInfo: {
+    display: 'flex', alignItems: 'baseline', gap: 16,
+    marginBottom: 20,
+  },
+  teamName: {
+    fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em',
+    color: 'var(--text)',
+  },
+  teamMeta: {
+    fontSize: 13, color: 'var(--text-tertiary)',
+  },
+};
+
+// ─── Components ────────────────────────────────────────────────────────────
+
+function SummaryCards({ summary }) {
+  const items = [
+    { key: 'pending', label: 'Pending', color: 'var(--orange)' },
+    { key: 'in_progress', label: 'In Progress', color: 'var(--blue)' },
+    { key: 'completed', label: 'Completed', color: 'var(--green)' },
+    { key: 'blocked', label: 'Blocked', color: 'var(--red)' },
+  ];
+  return (
+    <div style={S.summaryGrid}>
+      {items.map(it => (
+        <div key={it.key} style={S.summaryCard}>
+          <div style={S.summaryNum(it.color)}>{summary[it.key] || 0}</div>
+          <div style={S.summaryLabel}>{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Members({ members }) {
+  return (
+    <div style={S.section}>
+      <div style={S.sectionHeader}>
+        <span style={S.sectionTitle}>Members</span>
+        <span style={S.sectionBadge}>{members.length}</span>
+      </div>
+      <div style={S.membersGrid}>
+        {members.map(m => (
+          <div key={m.name} style={S.memberCard}>
+            <div style={S.memberName}>{m.name}</div>
+            {m.user && <div style={{fontSize: 12, color: 'var(--purple)'}}>{m.user}</div>}
+            <div style={S.memberType}>{m.agentType}</div>
+            <span style={S.inboxBadge(m.inboxCount)}>
+              {m.inboxCount > 0 ? `${m.inboxCount} message${m.inboxCount > 1 ? 's' : ''}` : 'inbox empty'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Messages({ messages }) {
+  const sorted = useMemo(() => {
+    return [...messages].sort((a, b) =>
+      (b.timestamp || '').localeCompare(a.timestamp || '')
+    );
+  }, [messages]);
+
+  return (
+    <div style={S.section}>
+      <div style={S.sectionHeader}>
+        <span style={S.sectionTitle}>Messages</span>
+        <span style={S.sectionBadge}>{messages.length}</span>
+      </div>
+      <div style={S.msgList}>
+        {sorted.length === 0 ? (
+          <div style={S.msgEmpty}>No pending messages</div>
+        ) : sorted.map((msg, i) => {
+          const time = (msg.timestamp || '').slice(11, 19);
+          const date = (msg.timestamp || '').slice(5, 10);
+          return (
+            <div key={i} style={S.msgItem}>
+              <div style={S.msgMeta}>
+                <span style={S.msgTag}>{msg.type || 'message'}</span>
+                <span style={S.msgFrom}>{msg.from || ''}</span>
+                <span style={S.msgTo}>{msg.to || ''}</span>
+                <span style={S.msgTime}>{date} {time}</span>
+              </div>
+              <div style={S.msgContent}>{msg.content || ''}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TaskCard({ task, status }) {
+  return (
+    <div style={S.taskCard}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
+      <div style={S.taskId}>#{(task.id || '').slice(0, 8)}</div>
+      <div style={S.taskSubject}>{task.subject || ''}</div>
+      <div style={S.taskOwner}>{task.owner || '-'}</div>
+      {status === 'blocked' && task.blockedBy && task.blockedBy.length > 0 && (
+        <div style={S.taskBlocked}>blocked by: {task.blockedBy.join(', ')}</div>
+      )}
+    </div>
+  );
+}
+
+function Kanban({ tasks }) {
+  const cols = [
+    { key: 'pending', label: 'Pending', color: 'var(--orange)' },
+    { key: 'in_progress', label: 'In Progress', color: 'var(--blue)' },
+    { key: 'completed', label: 'Completed', color: 'var(--green)' },
+    { key: 'blocked', label: 'Blocked', color: 'var(--red)' },
+  ];
+  return (
+    <div style={S.kanban}>
+      {cols.map(col => {
+        const items = tasks[col.key] || [];
+        return (
+          <div key={col.key} style={S.kanbanCol}>
+            <div style={S.kanbanHeader(col.color)}>
+              <span>{col.label}</span>
+              <span>{items.length}</span>
+            </div>
+            <div style={S.kanbanBody}>
+              {items.length === 0 ? (
+                <div style={S.emptyCol}>&mdash;</div>
+              ) : items.map(t => (
+                <TaskCard key={t.id} task={t} status={col.key} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Dashboard({ data }) {
+  const { team, members = [], tasks = {}, taskSummary = {}, messages = [] } = data;
+  return (
+    <div style={S.container}>
+      <div style={S.teamInfo}>
+        <span style={S.teamName}>{team.name}</span>
+        <span style={S.teamMeta}>
+          led by {team.leaderName || '?'} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
+          {team.description ? ` \u2014 ${team.description}` : ''}
+        </span>
+      </div>
+      <SummaryCards summary={taskSummary} />
+      <Members members={members} />
+      <Messages messages={messages} />
+      <Kanban tasks={tasks} />
+    </div>
+  );
+}
+
+function App() {
+  const [teams, setTeams] = useState([]);
+  const [current, setCurrent] = useState('');
+  const [data, setData] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const evtRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/overview').then(r => r.json()).then(list => {
+      setTeams(list);
+      if (list.length === 1) setCurrent(list[0].name);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (evtRef.current) { evtRef.current.close(); evtRef.current = null; }
+    if (!current) { setData(null); setConnected(false); return; }
+
+    const src = new EventSource('/api/events/' + encodeURIComponent(current));
+    src.onmessage = e => {
+      const d = JSON.parse(e.data);
+      if (!d.error) { setData(d); setConnected(true); }
+    };
+    src.onerror = () => setConnected(false);
+    evtRef.current = src;
+    return () => src.close();
+  }, [current]);
+
+  return (
+    <>
+      <nav style={S.nav}>
+        <span style={S.navTitle}>ClawTeam</span>
+        <select style={S.select} value={current} onChange={e => setCurrent(e.target.value)}>
+          <option value="">Select Team</option>
+          {teams.map(t => (
+            <option key={t.name} value={t.name}>
+              {t.name}{t.description ? ` \u2014 ${t.description}` : ''}
+            </option>
+          ))}
+        </select>
+        <div style={{display:'flex',alignItems:'center',marginLeft:'auto'}}>
+          <div style={S.statusDot(connected)} />
+          <span style={S.statusText}>{connected ? 'Live' : 'Disconnected'}</span>
+        </div>
+      </nav>
+      {data ? <Dashboard data={data} /> : (
+        <div style={{...S.container, textAlign:'center', paddingTop:120}}>
+          <div style={{fontSize:48, fontWeight:700, letterSpacing:'-0.04em', color:'var(--text)'}}>
+            ClawTeam
+          </div>
+          <div style={{fontSize:15, color:'var(--text-tertiary)', marginTop:8}}>
+            Select a team to get started
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
