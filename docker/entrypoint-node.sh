@@ -8,6 +8,7 @@
 #   WINCLAW_GRC_URL          GRC server URL (default: https://grc.myaiportal.net)
 #   employee_name            Employee display name (e.g. 橋本透)
 #   employee_code            Employee ID/code (e.g. 0753242)
+#   employee_email           Employee email (e.g. info@example.com)
 #   WINCLAW_GATEWAY_PORT     Gateway port (default: 18789)
 #   WINCLAW_GATEWAY_BIND     Bind mode: loopback|lan|auto (default: lan)
 #   WINCLAW_GATEWAY_AUTH     Auth mode: none|token|password (default: token)
@@ -21,6 +22,7 @@ set -euo pipefail
 GRC_URL="${WINCLAW_GRC_URL:-https://grc.myaiportal.net}"
 EMP_NAME="${employee_name:-}"
 EMP_CODE="${employee_code:-}"
+EMP_EMAIL="${employee_email:-}"
 GW_PORT="${WINCLAW_GATEWAY_PORT:-18789}"
 GW_BIND="${WINCLAW_GATEWAY_BIND:-lan}"
 GW_AUTH="${WINCLAW_GATEWAY_AUTH:-token}"
@@ -81,6 +83,7 @@ CONFIG_JSON=$(jq -n \
   --arg grc_url "${GRC_URL}" \
   --arg emp_id "${EMP_CODE}" \
   --arg emp_name "${EMP_NAME}" \
+  --arg emp_email "${EMP_EMAIL}" \
   --arg gw_bind "${GW_BIND}" \
   --arg gw_auth "${GW_AUTH}" \
   --arg gw_token "${GW_TOKEN}" \
@@ -111,6 +114,7 @@ CONFIG_JSON=$(jq -n \
       url: $grc_url,
       employeeId: $emp_id,
       employeeName: $emp_name,
+      employeeEmail: $emp_email,
       workspaceHostPath: $ws_path
     }
   }')

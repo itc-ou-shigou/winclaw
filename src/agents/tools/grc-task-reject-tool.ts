@@ -5,7 +5,7 @@ import { loadOrCreateDeviceIdentity } from "../../infra/device-identity.js";
 import { type AnyAgentTool, ToolInputError, jsonResult, readStringParam } from "./common.js";
 import { readRoleIdFromConfigState } from "./grc-config-state.js";
 
-const GRC_DEFAULT_URL = "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
 
 const GrcTaskRejectToolSchema = Type.Object(
   {

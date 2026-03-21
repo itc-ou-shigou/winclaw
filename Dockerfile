@@ -17,6 +17,13 @@ LABEL org.opencontainers.image.base.name="docker.io/library/node:22-bookworm" \
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 
+# ClawTeam dependencies: tmux (agent spawning backend) + Python
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      tmux python3 python3-pip python3-venv && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
 RUN corepack enable
 
 WORKDIR /app
@@ -108,6 +115,9 @@ RUN pnpm ui:build
 USER root
 RUN ln -sf /app/winclaw.mjs /usr/local/bin/winclaw \
  && chmod 755 /app/winclaw.mjs
+
+# Install ClawTeam CLI (Python-based AI agent spawning tool)
+RUN pip install --break-system-packages /app/packages/clawteam
 
 ENV NODE_ENV=production
 

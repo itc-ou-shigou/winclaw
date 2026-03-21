@@ -1626,6 +1626,9 @@ def spawn_agent(
     if backend is None:
         backend, _ = get_effective("default_backend")
         backend = backend or "tmux"
+        # tmux is unavailable on Windows — fall back to subprocess automatically
+        if backend == "tmux" and sys.platform == "win32":
+            backend = "subprocess"
     if not command:
         command = ["openclaw"]
 
@@ -2170,6 +2173,9 @@ def launch_team(
     # 2. Determine team name
     t_name = team_name or f"{tmpl.name}-{uuid.uuid4().hex[:6]}"
     be_name = backend or tmpl.backend
+    # tmux is unavailable on Windows — fall back to subprocess automatically
+    if be_name == "tmux" and sys.platform == "win32":
+        be_name = "subprocess"
     cmd = command_override or tmpl.command
 
     # 3. Create team

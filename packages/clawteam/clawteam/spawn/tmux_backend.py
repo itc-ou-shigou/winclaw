@@ -6,6 +6,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -36,6 +37,12 @@ class TmuxBackend(SpawnBackend):
         cwd: str | None = None,
         skip_permissions: bool = False,
     ) -> str:
+        if sys.platform == "win32":
+            raise RuntimeError(
+                "TmuxBackend is not supported on Windows. "
+                "Use the subprocess backend instead: clawteam spawn subprocess ..."
+                " or set default_backend = subprocess in your config."
+            )
         if not shutil.which("tmux"):
             return "Error: tmux not installed"
 

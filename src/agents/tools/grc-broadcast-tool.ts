@@ -8,7 +8,7 @@ import { loadOrCreateDeviceIdentity } from "../../infra/device-identity.js";
 import { optionalStringEnum } from "../schema/typebox.js";
 import { type AnyAgentTool, ToolInputError, jsonResult, readStringParam, readStringArrayParam } from "./common.js";
 
-const GRC_DEFAULT_URL = "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
 
 const PRIORITIES = ["critical", "high", "normal", "low"] as const;
 

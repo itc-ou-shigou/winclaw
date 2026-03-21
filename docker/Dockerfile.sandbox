@@ -42,6 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     python3 \
+    python3-pip \
+    python3-venv \
+    tmux \
     # Browser automation
     chromium \
     xvfb \
@@ -98,7 +101,14 @@ RUN mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}" \
   && chmod -R a+rX "${PLAYWRIGHT_BROWSERS_PATH}"
 
 # ---------------------------------------------------------------------------
-# Layer 8: User setup & environment
+# Layer 8: ClawTeam CLI (Python-based AI agent spawning tool)
+# ---------------------------------------------------------------------------
+COPY packages/clawteam /tmp/clawteam
+RUN pip install --break-system-packages /tmp/clawteam \
+  && rm -rf /tmp/clawteam
+
+# ---------------------------------------------------------------------------
+# Layer 9: User setup & environment
 # ---------------------------------------------------------------------------
 RUN (getent group docker || groupadd docker) \
   && useradd -m -s /bin/bash -G sudo,docker sandbox \

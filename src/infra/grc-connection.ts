@@ -17,7 +17,7 @@ import {
 
 const log: SubsystemLogger = createSubsystemLogger("infra/grc-connection");
 
-const GRC_DEFAULT_URL = "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
 
 /** How often to check token expiry (ms). */
 const TOKEN_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes

@@ -55,7 +55,7 @@ class FileTransport(Transport):
                     # duplicate reads when multiple processes fetch concurrently.
                     consumed = f.with_suffix(".consumed")
                     try:
-                        f.rename(consumed)
+                        f.replace(consumed)
                     except OSError:
                         # Another process already consumed this message
                         continue
