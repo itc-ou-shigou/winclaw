@@ -119,8 +119,49 @@ CONFIG_JSON=$(jq -n \
     }
   }')
 
-echo "${CONFIG_JSON}" > "${CONFIG_FILE}"
-echo "[entrypoint] Config written to ${CONFIG_FILE}"
+PERSIST_DIR="/home/winclaw/.winclaw/config-persist"
+
+# Check if persistent config exists (from previous container / 换水)
+if [ -f "${PERSIST_DIR}/winclaw.json" ]; then
+  echo "[entrypoint] Found persistent config from previous container"
+
+  # Merge: take LLM providers, auth token from old config
+  # but use NEW grc/gateway settings from env vars
+  # "models" is the correct WinClaw config key for LLM provider settings (not "providers")
+  MERGED_JSON=$(jq -s '
+    .[0] * {
+      models: (.[1].models // {}),
+      tools: (.[1].tools // .[0].tools),
+      gateway: (.[0].gateway * { auth: { mode: .[0].gateway.auth.mode, token: (.[1].gateway.auth.token // .[0].gateway.auth.token) } })
+    }
+  ' <(echo "${CONFIG_JSON}") "${PERSIST_DIR}/winclaw.json" 2>/dev/null) || true
+
+  if [ -n "${MERGED_JSON}" ] && [ "${MERGED_JSON}" != "null" ]; then
+    echo "${MERGED_JSON}" > "${CONFIG_FILE}"
+    echo "[entrypoint] Config merged with persistent data (LLM providers preserved)"
+  else
+    echo "${CONFIG_JSON}" > "${CONFIG_FILE}"
+    echo "[entrypoint] Config merge failed, using fresh config"
+  fi
+else
+  echo "${CONFIG_JSON}" > "${CONFIG_FILE}"
+  echo "[entrypoint] Config written (no persistent data found)"
+fi
+
+# Restore grc-config-state.json (role assignments)
+if [ -f "${PERSIST_DIR}/grc-config-state.json" ]; then
+  cp "${PERSIST_DIR}/grc-config-state.json" "/home/winclaw/.winclaw/grc-config-state.json"
+  chown winclaw:winclaw "/home/winclaw/.winclaw/grc-config-state.json" 2>/dev/null || true
+  echo "[entrypoint] Restored grc-config-state.json (role: $(jq -r '.roleId // "none"' /home/winclaw/.winclaw/grc-config-state.json))"
+fi
+
+# Restore OAuth credentials if they exist
+if [ -f "${PERSIST_DIR}/oauth.json" ]; then
+  mkdir -p /home/winclaw/.winclaw/credentials
+  cp "${PERSIST_DIR}/oauth.json" "/home/winclaw/.winclaw/credentials/oauth.json"
+  chown -R winclaw:winclaw /home/winclaw/.winclaw/credentials 2>/dev/null || true
+  echo "[entrypoint] Restored OAuth credentials"
+fi
 
 # ── Wait for GRC server to be reachable ──────────────────────────────────────
 if [ -n "${GRC_URL}" ]; then

@@ -884,8 +884,8 @@ export class GrcClient {
     winclawVersion: string,
     employee?: { id?: string; name?: string; email?: string; role?: string; workspacePath?: string },
     abortSignal?: AbortSignal,
-  ): Promise<{ ok: boolean; node?: { id: string } }> {
-    return this.request<{ ok: boolean; node?: { id: string } }>(
+  ): Promise<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }> {
+    return this.request<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }>(
       "/a2a/hello",
       {
         method: "POST",

@@ -17,7 +17,10 @@ import {
 
 const log: SubsystemLogger = createSubsystemLogger("infra/grc-connection");
 
-const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL
+  ?? (process.env.GRC_DB_DIALECT === "sqlite" || process.env.WINCLAW_DESKTOP_MODE === "1"
+    ? "http://127.0.0.1:3100"
+    : "https://grc.myaiportal.net");
 
 /** How often to check token expiry (ms). */
 const TOKEN_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -133,8 +136,16 @@ export class GrcConnectionManager {
           email: config.grc?.employeeEmail,
           workspacePath: config.grc?.workspaceHostPath,
         };
-        await this.client.hello(this.nodeId, platform, version, employee);
+        const helloResult = await this.client.hello(this.nodeId, platform, version, employee);
         log.info("Node registered with GRC via A2A hello");
+
+        // If GRC returned an upgraded token (desktop mode auto-upgrade),
+        // update the stored auth token and refresh token.
+        if (helloResult?.token) {
+          this.client.setAuthToken(helloResult.token);
+          await this.persistTokens(helloResult.token, helloResult.refreshToken);
+          log.info("Token upgraded by GRC hello response (desktop mode)");
+        }
       } catch (err) {
         log.warn(`A2A hello failed (non-fatal): ${(err as Error).message}`);
       }
