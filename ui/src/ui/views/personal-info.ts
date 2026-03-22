@@ -86,15 +86,22 @@ export function renderPersonalInfo(props: PersonalInfoProps) {
                   />
                 </label>
 
+                <label class="field">
+                  <span class="field-label">GRC URL</span>
+                  <input
+                    type="url"
+                    .value=${form.grcUrl ?? ""}
+                    placeholder="例: https://grc.myaiportal.net"
+                    @input=${(e: Event) =>
+                      props.onFieldChange("grcUrl", (e.target as HTMLInputElement).value)}
+                  />
+                </label>
+
                 <div
                   class="callout"
                   style="margin-top: 4px; opacity: 0.7; font-size: 0.85em;"
                 >
-                  <div style="margin-bottom: 4px;"><strong>GRC URL:</strong> ${form.grcUrl || "未設定"}</div>
                   <div><strong>Node ID:</strong> ${form.nodeId || "未接続"}</div>
-                  <div class="muted" style="margin-top: 4px; font-size: 0.9em;">
-                    GRC URL の変更は winclaw.json の grc.url で行ってください。
-                  </div>
                 </div>
 
                 <div class="row" style="margin-top: 8px; gap: 8px;">

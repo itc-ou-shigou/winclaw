@@ -29,6 +29,7 @@ export const personalInfoHandlers: GatewayRequestHandlers = {
     const employeeId = typeof params.employeeId === "string" ? params.employeeId : undefined;
     const employeeName = typeof params.employeeName === "string" ? params.employeeName : undefined;
     const employeeEmail = typeof params.employeeEmail === "string" ? params.employeeEmail : undefined;
+    const grcUrl = typeof params.grcUrl === "string" ? params.grcUrl : undefined;
 
     // 1) Sync to GRC via A2A hello FIRST (before writeConfigFile which triggers
     //    config-reload and may restart the gateway, killing in-flight requests).
@@ -42,7 +43,7 @@ export const personalInfoHandlers: GatewayRequestHandlers = {
     } catch {
       nodeId = `${os.hostname()}-winclaw`;
     }
-    const baseUrl = grc?.url ?? GRC_DEFAULT_URL;
+    const baseUrl = grcUrl ?? grc?.url ?? GRC_DEFAULT_URL;
     const authToken = grc?.auth?.token;
     if (baseUrl && authToken) {
       try {
@@ -71,6 +72,7 @@ export const personalInfoHandlers: GatewayRequestHandlers = {
         ...(employeeId !== undefined && { employeeId }),
         ...(employeeName !== undefined && { employeeName }),
         ...(employeeEmail !== undefined && { employeeEmail }),
+        ...(grcUrl !== undefined && { url: grcUrl }),
       },
     };
     await writeConfigFile(nextConfig);

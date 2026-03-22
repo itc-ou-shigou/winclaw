@@ -54,6 +54,7 @@ export async function savePersonalInfo(state: PersonalInfoState) {
       employeeId: state.personalInfoForm.employeeId,
       employeeName: state.personalInfoForm.employeeName,
       employeeEmail: state.personalInfoForm.employeeEmail,
+      grcUrl: state.personalInfoForm.grcUrl,
     })) as { ok: boolean; grcSynced?: boolean; grcError?: string };
     state.personalInfoDirty = false;
     let msg = "保存しました";
