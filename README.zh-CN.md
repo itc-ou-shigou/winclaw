@@ -25,7 +25,7 @@ WinClaw 现已提供原生 Windows 支持，包含基于 Inno Setup 构建的 EX
 
 安装程序内置完整 Node.js 22 运行时，无需任何前置条件。
 
-1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.10.exe/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
+1. 从 [SourceForge](https://sourceforge.net/projects/winclaw/files/latest/download) 或 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases/latest) 下载 `WinClawSetup-{version}.exe`（也可从本仓库 [`releases/`](releases/) 目录获取）
 2. 运行安装程序（默认使用用户权限，无需管理员）
 3. 在安装向导中按需选择选项：
 
@@ -133,17 +133,39 @@ winclaw onboard --install-daemon
 
 ---
 
-## macOS / Linux 安装
+## macOS / Linux / Windows 跨平台安装 (npm)
+
+npm 包支持 **Windows / macOS / Linux** 全平台，只需 Node.js 22+ 即可安装：
 
 ```bash
-npm install -g winclaw@latest
+# 安装
+npm install -g winclaw
+
+# 安装指定版本
+npm install -g winclaw@2026.3.29
+
+# 启动 Gateway
+winclaw gateway
+
+# 运行引导向导
 winclaw onboard --install-daemon
 ```
 
 - **macOS**：守护进程通过 launchd 注册为 `ai.winclaw.gateway`
 - **Linux**：守护进程通过 systemd 注册为 `winclaw-gateway.service`
+- **Windows**：守护进程通过 schtasks 注册为计划任务
 
 > 系统要求：Node.js 22+。建议使用 [nvm](https://github.com/nvm-sh/nvm) 或 [fnm](https://github.com/Schniz/fnm) 管理版本。
+
+**其他安装方式：**
+
+| 方式        | 命令 / 链接                                                      |
+| ----------- | ---------------------------------------------------------------- |
+| npm (全平台)| `npm install -g winclaw`                                         |
+| Docker      | `docker pull itccloudsoft/winclaw-node:latest`                   |
+| DockerHub   | [itccloudsoft/winclaw-node](https://hub.docker.com/r/itccloudsoft/winclaw-node) |
+| npmjs       | [winclaw](https://www.npmjs.com/package/winclaw)                 |
+| 源码构建    | 见下方 [开发](#从源码开发) 章节                                  |
 
 ---
 

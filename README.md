@@ -31,7 +31,7 @@ recommended.
 ### Method 1: EXE Installer (Recommended)
 
 Download **WinClawSetup-{version}.exe** from
-[SourceForge](https://sourceforge.net/projects/winclaw/files/WinClawSetup-2026.3.10.exe/download) |
+[SourceForge](https://sourceforge.net/projects/winclaw/files/latest/download) |
 [GitHub Releases](https://github.com/itc-ou-shigou/winclaw/releases) and run it.
 The installer is also available locally in the [`releases/`](releases/) directory.
 
@@ -171,11 +171,13 @@ systemd user service (Linux) so it stays running across reboots.
 
 **Alternative methods:**
 
-| Method      | Command / Link                                        |
-| ----------- | ----------------------------------------------------- |
-| Nix         | [nix-winclaw](https://github.com/winclaw/nix-winclaw) |
-| Docker      | `docker pull winclaw/winclaw:latest`                  |
-| From source | See [Development](#development-from-source) below     |
+| Method      | Command / Link                                                   |
+| ----------- | ---------------------------------------------------------------- |
+| npm (any OS)| `npm install -g winclaw` (Windows / macOS / Linux)               |
+| Docker      | `docker pull itccloudsoft/winclaw-node:latest`                   |
+| DockerHub   | [itccloudsoft/winclaw-node](https://hub.docker.com/r/itccloudsoft/winclaw-node) |
+| npmjs       | [winclaw](https://www.npmjs.com/package/winclaw)                 |
+| From source | See [Development](#development-from-source) below                |
 
 ## Quick Start
 
