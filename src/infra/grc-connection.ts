@@ -63,6 +63,10 @@ export class GrcConnectionManager {
       baseUrl: this.url,
       authToken: config.grc?.auth?.token,
     });
+    // Hydrate the refresh token from config so refreshToken() works immediately
+    if (config.grc?.auth?.refreshToken) {
+      this.client.setRefreshToken(config.grc.auth.refreshToken);
+    }
   }
 
   /**
@@ -135,6 +139,10 @@ export class GrcConnectionManager {
           name: config.grc?.employeeName,
           email: config.grc?.employeeEmail,
           workspacePath: config.grc?.workspaceHostPath,
+          // Include gateway info so GRC can update node record on reconnect
+          gatewayPort: config.gateway?.port,
+          gatewayToken: config.gateway?.auth?.token,
+          containerId: process.env.HOSTNAME,  // Docker sets HOSTNAME to container ID
         };
         const helloResult = await this.client.hello(this.nodeId, platform, version, employee);
         log.info("Node registered with GRC via A2A hello");
@@ -181,7 +189,7 @@ export class GrcConnectionManager {
       // 7. Start token expiry checker
       this.startTokenChecker();
 
-      // 8. Start proactive token refresh (every 20h, well before 24h JWT expiry)
+      // 8. Start proactive token refresh (every 12h, well before 24h JWT expiry)
       this.startTokenRefresh();
 
       log.info("GRC auto-connect completed", {
@@ -205,12 +213,12 @@ export class GrcConnectionManager {
     const result = await this.client.getAnonymousToken(this.nodeId);
     this.client.setAuthToken(result.token);
     this.connected = true;
-    this.tier = "anonymous";
+    this.tier = result.refreshToken ? "paired" : "anonymous";
     this.userId = result.user.id;
 
-    // Persist token (no refresh token for anonymous)
-    await this.persistTokens(result.token, undefined);
-    log.info("Registered anonymously with GRC", { userId: result.user.id });
+    // Persist token + refresh token (refresh token enables long-lived sessions)
+    await this.persistTokens(result.token, result.refreshToken);
+    log.info("Registered anonymously with GRC", { userId: result.user.id, hasRefreshToken: !!result.refreshToken });
   }
 
   /**
@@ -333,8 +341,26 @@ export class GrcConnectionManager {
             await this.persistTokens(result.access_token, result.refresh_token);
             log.info("GRC token auto-refreshed");
           })
-          .catch((err) => {
+          .catch(async (err) => {
             log.warn(`Token auto-refresh failed: ${(err as Error).message}`);
+            // Fallback: re-register anonymously to get a fresh token + refresh token
+            try {
+              log.info("Attempting re-registration to recover from refresh failure...");
+              await this.registerAnonymous();
+              // Re-run hello to get upgraded token
+              if (this.nodeId) {
+                const helloResult = await this.client.hello(
+                  this.nodeId, process.platform, "0.0.0",
+                );
+                if (helloResult?.token) {
+                  await this.persistTokens(helloResult.token, helloResult.refreshToken);
+                  this.client.setAuthToken(helloResult.token);
+                }
+              }
+              log.info("Re-registration succeeded, tokens recovered");
+            } catch (reregErr) {
+              log.error(`Re-registration also failed: ${(reregErr as Error).message}`);
+            }
           });
       }
     }, TOKEN_CHECK_INTERVAL_MS);
@@ -344,8 +370,8 @@ export class GrcConnectionManager {
   }
 
   /**
-   * Start a proactive token refresh interval (every 20 hours).
-   * JWT tokens expire in 24h; refreshing 4h before expiry prevents
+   * Start a proactive token refresh interval (every 12 hours).
+   * JWT tokens expire in 24h; refreshing 12h before expiry prevents
    * 401 errors during long-running sessions.
    */
   private startTokenRefresh(): void {
@@ -355,7 +381,7 @@ export class GrcConnectionManager {
       this.refreshIntervalId = null;
     }
 
-    const REFRESH_INTERVAL = 20 * 60 * 60 * 1000; // 20 hours
+    const REFRESH_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
 
     this.refreshIntervalId = setInterval(async () => {
       if (this.stopped) return;
@@ -364,8 +390,10 @@ export class GrcConnectionManager {
         log.info("Proactive token refresh starting...");
         const newToken = await this.client.refreshToken();
         if (newToken) {
-          // Persist the refreshed token to config
-          await this.persistTokens(newToken, undefined);
+          // Persist the refreshed token + updated refresh token to config
+          const cfg = loadConfig();
+          const currentRefresh = cfg.grc?.auth?.refreshToken;
+          await this.persistTokens(newToken, currentRefresh);
           log.info("Proactive token refresh succeeded");
         } else {
           log.warn("Proactive refresh returned null, attempting full reconnect...");
@@ -380,7 +408,7 @@ export class GrcConnectionManager {
       this.refreshIntervalId.unref();
     }
 
-    log.info("Proactive token refresh scheduled every 20h");
+    log.info("Proactive token refresh scheduled every 12h");
   }
 
   /**
@@ -429,6 +457,9 @@ export class GrcConnectionManager {
     token: string,
     refreshToken: string | undefined,
   ): Promise<void> {
+    // Keep the in-memory GrcClient refresh token in sync
+    this.client.setRefreshToken(refreshToken ?? null);
+
     const config = loadConfig();
     const nextConfig: WinClawConfig = {
       ...config,

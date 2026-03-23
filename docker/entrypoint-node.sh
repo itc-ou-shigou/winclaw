@@ -43,6 +43,8 @@ chown -R winclaw:winclaw "${WINCLAW_DIR}" 2>/dev/null || chmod -R 777 "${WINCLAW
 if [ "${GW_AUTH}" = "token" ] && [ -z "${GW_TOKEN}" ]; then
   GW_TOKEN="winclaw-node-$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 fi
+# Persist token to file for GRC restart flow to read
+echo "${GW_TOKEN}" > /tmp/winclaw-token
 
 # ── Banner ───────────────────────────────────────────────────────────────────
 echo ""
@@ -125,14 +127,16 @@ PERSIST_DIR="/home/winclaw/.winclaw/config-persist"
 if [ -f "${PERSIST_DIR}/winclaw.json" ]; then
   echo "[entrypoint] Found persistent config from previous container"
 
-  # Merge: take LLM providers, auth token from old config
-  # but use NEW grc/gateway settings from env vars
+  # Merge: take LLM providers from old config
+  # but use NEW grc/gateway settings from env vars (employee info, token, etc.)
+  # IMPORTANT: grc section must ALWAYS come from .[0] (env vars) to preserve employee info
   # "models" is the correct WinClaw config key for LLM provider settings (not "providers")
   MERGED_JSON=$(jq -s '
-    .[0] * {
+    .[0] + {
       models: (.[1].models // {}),
       tools: (.[1].tools // .[0].tools),
-      gateway: (.[0].gateway * { auth: { mode: .[0].gateway.auth.mode, token: (.[1].gateway.auth.token // .[0].gateway.auth.token) } })
+      gateway: (.[0].gateway),
+      grc: (.[0].grc)
     }
   ' <(echo "${CONFIG_JSON}") "${PERSIST_DIR}/winclaw.json" 2>/dev/null) || true
 

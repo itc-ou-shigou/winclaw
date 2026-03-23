@@ -231,6 +231,7 @@ function isRetryableError(err: unknown): boolean {
 export class GrcClient {
   private baseUrl: string;
   private authToken: string | undefined;
+  private refreshTokenValue: string | null = null;
   private timeout: number;
   private maxRetries: number;
 
@@ -247,6 +248,10 @@ export class GrcClient {
     this.authToken = token;
   }
 
+  setRefreshToken(token: string | null): void {
+    this.refreshTokenValue = token;
+  }
+
   clearAuthToken(): void {
     this.authToken = undefined;
   }
@@ -259,18 +264,25 @@ export class GrcClient {
    * On failure returns null (caller should fall back to full re-auth).
    */
   async refreshToken(): Promise<string | null> {
-    if (!this.authToken) return null;
+    if (!this.refreshTokenValue) {
+      log.warn("refreshToken() called but no refresh token available, falling back to re-auth");
+      return null;
+    }
 
     try {
       const result = await this.request<{ access_token: string; refresh_token: string; token_type: string }>(
         "/auth/refresh",
-        { method: "POST", body: JSON.stringify({ refresh_token: this.authToken }) },
+        { method: "POST", body: JSON.stringify({ refresh_token: this.refreshTokenValue }) },
         undefined,
         /* _isRetry */ true, // prevent recursive 401 retry
       );
 
       if (result.access_token) {
         this.authToken = result.access_token;
+        // Update stored refresh token if server returned a new one (token rotation)
+        if (result.refresh_token) {
+          this.refreshTokenValue = result.refresh_token;
+        }
         log.info("GRC token refreshed successfully via refreshToken()");
         return result.access_token;
       }
@@ -867,8 +879,8 @@ export class GrcClient {
   async getAnonymousToken(
     nodeId: string,
     abortSignal?: AbortSignal,
-  ): Promise<{ token: string; user: { id: string; tier: string; scopes: string[] } }> {
-    return this.request<{ token: string; user: { id: string; tier: string; scopes: string[] } }>(
+  ): Promise<{ token: string; refreshToken?: string; user: { id: string; tier: string; scopes: string[] } }> {
+    return this.request<{ token: string; refreshToken?: string; user: { id: string; tier: string; scopes: string[] } }>(
       "/auth/anonymous",
       { method: "POST", body: JSON.stringify({ node_id: nodeId }) },
       abortSignal,
@@ -882,7 +894,7 @@ export class GrcClient {
     nodeId: string,
     platform: string,
     winclawVersion: string,
-    employee?: { id?: string; name?: string; email?: string; role?: string; workspacePath?: string },
+    employee?: { id?: string; name?: string; email?: string; role?: string; workspacePath?: string; gatewayPort?: number; gatewayToken?: string; containerId?: string },
     abortSignal?: AbortSignal,
   ): Promise<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }> {
     return this.request<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }>(
@@ -898,6 +910,9 @@ export class GrcClient {
           ...(employee?.email && { employee_email: employee.email }),
           ...(employee?.role && { employee_role: employee.role }),
           ...(employee?.workspacePath && { workspace_path: employee.workspacePath }),
+          ...(employee?.gatewayPort && { gateway_port: employee.gatewayPort }),
+          ...(employee?.gatewayToken && { gateway_token: employee.gatewayToken }),
+          ...(employee?.containerId && { container_id: employee.containerId }),
         }),
       },
       abortSignal,
