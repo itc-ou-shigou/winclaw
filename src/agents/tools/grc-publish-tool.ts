@@ -78,15 +78,20 @@ PARAMETERS:
         asset_type: assetType,
         asset_id: assetId,
         content_hash: contentHash,
+        category: tags[0] ?? "general",
         payload: {
-          summary,
-          trigger_data: {
+          // Map to GRC DB schema fields
+          strategy: {
+            summary,
+            solution,
             problem: problem ?? "",
             context: context ?? "",
+            tags,
+            created_by: nodeId,
           },
-          solution,
-          tags,
-          created_by: nodeId,
+          signalsMatch: tags,
+          constraints_data: problem ? { problem, context: context ?? "" } : null,
+          validation: { auto_published: true, source: "grc_publish_tool" },
         },
       });
 
