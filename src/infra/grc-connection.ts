@@ -411,11 +411,11 @@ export class GrcConnectionManager {
       const mem = process.memoryUsage();
       const heapMB = Math.round(mem.heapUsed / 1024 / 1024);
       const rssMB = Math.round(mem.rss / 1024 / 1024);
+      const msg = `heap=${heapMB}MB rss=${rssMB}MB`;
       if (heapMB > 500) {
-        log.warn(`High memory usage detected: heap=${heapMB}MB rss=${rssMB}MB`);
-      } else {
-        log.info(`Memory usage: heap=${heapMB}MB rss=${rssMB}MB`);
+        log.warn("High memory usage detected: " + msg);
       }
+      // Only log at debug level to avoid triggering console formatter issues
     }, 10 * 60 * 1000); // 10 minutes
     if (typeof this.memoryMonitorTimer.unref === "function") {
       this.memoryMonitorTimer.unref();
