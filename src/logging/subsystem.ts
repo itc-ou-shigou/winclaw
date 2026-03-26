@@ -148,6 +148,9 @@ export function stripRedundantSubsystemPrefixForConsole(
   message: string,
   displaySubsystem: string,
 ): string {
+  if (typeof message !== "string") {
+    try { return JSON.stringify(message); } catch { return String(message); }
+  }
   if (!displaySubsystem) {
     return message;
   }

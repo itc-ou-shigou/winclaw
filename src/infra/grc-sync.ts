@@ -21,7 +21,7 @@ const log: SubsystemLogger = createSubsystemLogger("infra/grc-sync");
 export type GrcSyncConfig = {
   /** Master switch: when false the service never starts. */
   enabled: boolean;
-  /** GRC server base URL (e.g. "https://grc.myaiportal.net"). */
+  /** GRC server base URL (e.g. "http://localhost:3100"). */
   url: string;
   /** Bearer token for authenticated endpoints (publish, telemetry). */
   authToken?: string;
@@ -107,7 +107,9 @@ const MAX_REPORTS_PER_CYCLE = 100;
 /** Initial reconnect delay for SSE (ms). */
 const SSE_RECONNECT_DELAY_MS = 5_000;
 /** Maximum reconnect delay for SSE (ms). */
-const SSE_MAX_RECONNECT_DELAY_MS = 60_000;
+const SSE_MAX_RECONNECT_DELAY_MS = 300_000;
+/** Maximum number of consecutive SSE reconnect attempts before entering dormant mode. */
+const MAX_SSE_RECONNECT_ATTEMPTS = 100;
 /** SSE keepalive timeout — reconnect if no data received for this long (ms). */
 const SSE_KEEPALIVE_TIMEOUT_MS = 120_000;
 
@@ -1214,6 +1216,16 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     if (!this.running) return;
 
     this.sseReconnectAttempt++;
+
+    if (this.sseReconnectAttempt > MAX_SSE_RECONNECT_ATTEMPTS) {
+      sseLog.warn(
+        `SSE reconnect limit reached (${MAX_SSE_RECONNECT_ATTEMPTS} attempts) — entering dormant mode. ` +
+        "SSE will not reconnect until next full sync cycle or manual restart.",
+      );
+      this.sseConnected = false;
+      return;
+    }
+
     const delay = Math.min(
       SSE_RECONNECT_DELAY_MS * Math.pow(2, this.sseReconnectAttempt - 1),
       SSE_MAX_RECONNECT_DELAY_MS,

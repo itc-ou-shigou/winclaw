@@ -20,13 +20,19 @@ const log: SubsystemLogger = createSubsystemLogger("infra/grc-connection");
 const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL
   ?? (process.env.GRC_DB_DIALECT === "sqlite" || process.env.WINCLAW_DESKTOP_MODE === "1"
     ? "http://127.0.0.1:3100"
-    : "https://grc.myaiportal.net");
+    : "http://localhost:3100");
 
-/** How often to check token expiry (ms). */
-const TOKEN_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+/** Minimum token refresh interval (ms). */
+const MIN_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 
 /** Retry delays for auto-connect (ms). */
 const RETRY_DELAYS = [5_000, 15_000, 30_000, 60_000, 120_000, 300_000]; // 5s, 15s, 30s, 1m, 2m, 5m
+
+/** Local GRC discovery constants. */
+const LOCAL_GRC_URL = "http://127.0.0.1:3100";
+const LOCAL_GRC_HEALTH_TIMEOUT_MS = 2_000;
+const DISCOVERY_RETRY_INTERVAL_MS = 30_000;
+const DISCOVERY_MAX_RETRIES = 10;
 
 export type ConnectionStatus = {
   connected: boolean;
@@ -53,7 +59,10 @@ export class GrcConnectionManager {
   private url: string;
   private tokenCheckTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+  private tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private discoveryTimer: ReturnType<typeof setTimeout> | null = null;
+  private memoryMonitorTimer: ReturnType<typeof setInterval> | null = null;
+  private discoveryAttempt = 0;
   private stopped = false;
 
   constructor() {
@@ -87,6 +96,20 @@ export class GrcConnectionManager {
     }
 
     try {
+      // 0. Auto-discover local GRC if no token and URL is default/empty
+      const cfg = loadConfig();
+      const hasToken = !!cfg.grc?.auth?.token;
+      if (!hasToken) {
+        const localUrl = await this.discoverLocalGrc();
+        if (localUrl) {
+          this.url = localUrl;
+          log.info("Auto-bootstrap: local GRC discovered, proceeding with connection");
+        } else {
+          log.info("No local GRC found, scheduling background discovery");
+          this.scheduleDiscoveryRetry();
+        }
+      }
+
       // 1. Get stable device identity
       const identity = loadOrCreateDeviceIdentity();
       this.nodeId = identity.deviceId;
@@ -151,7 +174,9 @@ export class GrcConnectionManager {
         // update the stored auth token and refresh token.
         if (helloResult?.token) {
           this.client.setAuthToken(helloResult.token);
-          await this.persistTokens(helloResult.token, helloResult.refreshToken);
+          // Preserve existing refresh token if hello didn't return a new one
+          const existingRefreshToken = loadConfig().grc?.auth?.refreshToken;
+          await this.persistTokens(helloResult.token, helloResult.refreshToken ?? existingRefreshToken);
           log.info("Token upgraded by GRC hello response (desktop mode)");
         }
       } catch (err) {
@@ -190,7 +215,12 @@ export class GrcConnectionManager {
       this.startTokenChecker();
 
       // 8. Start proactive token refresh (every 12h, well before 24h JWT expiry)
-      this.startTokenRefresh();
+      // Schedule JWT-aware token refresh
+      const currentToken = loadConfig().grc?.auth?.token;
+      if (currentToken) this.scheduleTokenRefresh(currentToken);
+
+      // 9. Start memory usage monitor (every 10 minutes)
+      this.startMemoryMonitor();
 
       log.info("GRC auto-connect completed", {
         nodeId: this.nodeId.slice(0, 12) + "...",
@@ -363,9 +393,32 @@ export class GrcConnectionManager {
             }
           });
       }
-    }, TOKEN_CHECK_INTERVAL_MS);
+    }, 60_000); // Check token every 60 seconds
     if (typeof this.tokenCheckTimer.unref === "function") {
       this.tokenCheckTimer.unref();
+    }
+  }
+
+  /**
+   * Start periodic memory usage monitor (every 10 minutes).
+   * Logs heap and RSS usage; warns when heap exceeds 500 MB.
+   */
+  private startMemoryMonitor(): void {
+    if (this.memoryMonitorTimer) return;
+
+    this.memoryMonitorTimer = setInterval(() => {
+      if (this.stopped) return;
+      const mem = process.memoryUsage();
+      const heapMB = Math.round(mem.heapUsed / 1024 / 1024);
+      const rssMB = Math.round(mem.rss / 1024 / 1024);
+      if (heapMB > 500) {
+        log.warn(`High memory usage detected: heap=${heapMB}MB rss=${rssMB}MB`);
+      } else {
+        log.info(`Memory usage: heap=${heapMB}MB rss=${rssMB}MB`);
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+    if (typeof this.memoryMonitorTimer.unref === "function") {
+      this.memoryMonitorTimer.unref();
     }
   }
 
@@ -374,41 +427,107 @@ export class GrcConnectionManager {
    * JWT tokens expire in 24h; refreshing 12h before expiry prevents
    * 401 errors during long-running sessions.
    */
-  private startTokenRefresh(): void {
-    // Clear existing interval if any
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
+  /**
+   * Decode JWT and schedule refresh at 80% of remaining lifetime.
+   */
+  private scheduleTokenRefresh(token: string): void {
+    if (this.tokenRefreshTimer) {
+      clearTimeout(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
     }
-
-    const REFRESH_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
-
-    this.refreshIntervalId = setInterval(async () => {
-      if (this.stopped) return;
-
-      try {
-        log.info("Proactive token refresh starting...");
-        const newToken = await this.client.refreshToken();
-        if (newToken) {
-          // Persist the refreshed token + updated refresh token to config
-          const cfg = loadConfig();
-          const currentRefresh = cfg.grc?.auth?.refreshToken;
-          await this.persistTokens(newToken, currentRefresh);
-          log.info("Proactive token refresh succeeded");
-        } else {
-          log.warn("Proactive refresh returned null, attempting full reconnect...");
-          await this.reconnect();
-        }
-      } catch (err) {
-        log.error(`Token refresh interval error: ${(err as Error).message}`);
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return;
+      const payload = JSON.parse(Buffer.from(parts[1]!, "base64url").toString("utf8")) as { exp?: number };
+      if (!payload.exp) return;
+      const remainingSec = payload.exp - Date.now() / 1000;
+      if (remainingSec <= 0) {
+        log.warn("Token already expired, triggering immediate refresh");
+        void this.refreshTokenNow();
+        return;
       }
-    }, REFRESH_INTERVAL);
-
-    if (typeof this.refreshIntervalId.unref === "function") {
-      this.refreshIntervalId.unref();
+      const refreshInMs = Math.max(remainingSec * 0.8 * 1000, MIN_REFRESH_MS);
+      this.tokenRefreshTimer = setTimeout(() => {
+        this.tokenRefreshTimer = null;
+        if (!this.stopped) void this.refreshTokenNow();
+      }, refreshInMs);
+      if (typeof this.tokenRefreshTimer.unref === "function") this.tokenRefreshTimer.unref();
+      log.info("Token refresh scheduled", {
+        refreshInMinutes: Math.round(refreshInMs / 60_000),
+        tokenExpiresAt: new Date(payload.exp * 1000).toISOString(),
+      });
+    } catch (err) {
+      log.warn(`Failed to decode JWT for scheduling refresh: ${(err as Error).message}`);
     }
+  }
 
-    log.info("Proactive token refresh scheduled every 12h");
+  /**
+   * Refresh JWT token, falling back to anonymous re-auth.
+   */
+  private async refreshTokenNow(): Promise<void> {
+    try {
+      const result = await this.client.refreshAuth();
+      if (result?.token) {
+        this.client.setAuthToken(result.token);
+        await this.persistTokens(result.token, result.refreshToken);
+        this.scheduleTokenRefresh(result.token);
+        log.info("GRC token refreshed successfully");
+        return;
+      }
+    } catch (err) {
+      log.warn({ err }, "Token refresh failed, falling back to anonymous re-auth");
+    }
+    try {
+      await this.registerAnonymous();
+      const cfg = loadConfig();
+      const newToken = cfg.grc?.auth?.token;
+      if (newToken) this.scheduleTokenRefresh(newToken);
+    } catch (err) {
+      log.error({ err }, "Anonymous re-auth also failed");
+    }
+  }
+
+  /**
+   * Discover local GRC server on localhost:3100.
+   */
+  private async discoverLocalGrc(): Promise<string | null> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), LOCAL_GRC_HEALTH_TIMEOUT_MS);
+      const resp = await fetch(`${LOCAL_GRC_URL}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (resp.ok) {
+        const body = await resp.text();
+        if (body.includes("grc-server")) {
+          log.info("Discovered local GRC server at " + LOCAL_GRC_URL);
+          return LOCAL_GRC_URL;
+        }
+      }
+    } catch { /* not running */ }
+    return null;
+  }
+
+  /**
+   * Schedule background retries to discover local GRC.
+   */
+  private scheduleDiscoveryRetry(): void {
+    if (this.discoveryAttempt >= DISCOVERY_MAX_RETRIES) {
+      log.warn("Local GRC discovery gave up after " + DISCOVERY_MAX_RETRIES + " attempts");
+      return;
+    }
+    this.discoveryTimer = setTimeout(async () => {
+      this.discoveryTimer = null;
+      this.discoveryAttempt++;
+      const url = await this.discoverLocalGrc();
+      if (url) {
+        log.info("Local GRC discovered on retry #" + this.discoveryAttempt);
+        this.url = url;
+        void this.autoConnect().catch((e) => log.error({ err: e }, "autoConnect after discovery failed"));
+      } else {
+        this.scheduleDiscoveryRetry();
+      }
+    }, DISCOVERY_RETRY_INTERVAL_MS);
+    if (typeof this.discoveryTimer.unref === "function") this.discoveryTimer.unref();
   }
 
   /**
@@ -605,9 +724,18 @@ export class GrcConnectionManager {
       this.retryTimer = null;
     }
 
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
+    if (this.tokenRefreshTimer) {
+      clearTimeout(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
+    }
+    if (this.discoveryTimer) {
+      clearTimeout(this.discoveryTimer);
+      this.discoveryTimer = null;
+    }
+
+    if (this.memoryMonitorTimer) {
+      clearInterval(this.memoryMonitorTimer);
+      this.memoryMonitorTimer = null;
     }
 
     if (this.replyTimer) {

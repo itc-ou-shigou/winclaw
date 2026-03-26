@@ -235,6 +235,12 @@ export class GrcClient {
   private timeout: number;
   private maxRetries: number;
 
+  // Circuit breaker state
+  private circuitBreakerFailures = 0;
+  private circuitBreakerOpenUntil = 0;
+  private static readonly CIRCUIT_BREAKER_THRESHOLD = 10; // open after 10 consecutive failures
+  private static readonly CIRCUIT_BREAKER_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown
+
   constructor(config: GrcClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
     this.authToken = config.authToken;
@@ -254,6 +260,30 @@ export class GrcClient {
 
   clearAuthToken(): void {
     this.authToken = undefined;
+  }
+
+  // -- Circuit breaker -----------------------------------------------------
+
+  private isCircuitOpen(): boolean {
+    if (this.circuitBreakerFailures < GrcClient.CIRCUIT_BREAKER_THRESHOLD) return false;
+    if (Date.now() >= this.circuitBreakerOpenUntil) {
+      // Half-open: allow one attempt
+      this.circuitBreakerFailures = GrcClient.CIRCUIT_BREAKER_THRESHOLD - 1;
+      return false;
+    }
+    return true;
+  }
+
+  private recordFailure(): void {
+    this.circuitBreakerFailures++;
+    if (this.circuitBreakerFailures >= GrcClient.CIRCUIT_BREAKER_THRESHOLD) {
+      this.circuitBreakerOpenUntil = Date.now() + GrcClient.CIRCUIT_BREAKER_COOLDOWN_MS;
+    }
+  }
+
+  private recordSuccess(): void {
+    this.circuitBreakerFailures = 0;
+    this.circuitBreakerOpenUntil = 0;
   }
 
   // -- Core request --------------------------------------------------------
@@ -298,6 +328,10 @@ export class GrcClient {
     abortSignal?: AbortSignal,
     _isRetry = false,
   ): Promise<T> {
+    if (this.isCircuitOpen()) {
+      throw new Error("GRC circuit breaker open — backing off");
+    }
+
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       "User-Agent": "WinClaw-GRC-Client/1.0",
@@ -363,7 +397,9 @@ export class GrcClient {
           throw apiErr;
         }
 
-        return (await res.json()) as T;
+        const result = (await res.json()) as T;
+        this.recordSuccess();
+        return result;
       } catch (err) {
         lastErr = err;
 
@@ -382,6 +418,7 @@ export class GrcClient {
           continue;
         }
 
+        this.recordFailure();
         throw err;
       } finally {
         clearTimeout(timeoutId);
@@ -389,6 +426,7 @@ export class GrcClient {
       }
     }
 
+    this.recordFailure();
     throw lastErr ?? new Error("GRC request failed after retries");
   }
 
@@ -1140,6 +1178,57 @@ export class GrcClient {
     return { stats: raw.data ?? raw };
   }
 
+  // -- Strategy management (CEO agent API) ---------------------------------------
+
+  /** Get current company strategy. */
+  async getStrategy(): Promise<unknown> {
+    return this.request("/a2a/strategy", {}, undefined);
+  }
+
+  /** Update company strategy (CEO role only). */
+  async updateStrategy(data: Record<string, unknown>): Promise<unknown> {
+    return this.request("/a2a/strategy", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }, undefined);
+  }
+
+  /** Deploy strategy to all agents (CEO role only). */
+  async deployStrategy(): Promise<unknown> {
+    return this.request("/a2a/strategy/deploy", { method: "POST" }, undefined);
+  }
+
+  /** Get department KPIs. */
+  async getKpis(): Promise<unknown> {
+    return this.request("/a2a/strategy/kpis", {}, undefined);
+  }
+
+  /** Update department KPIs (CEO role only). */
+  async updateKpis(departmentKpis: unknown): Promise<unknown> {
+    return this.request("/a2a/strategy/kpis", {
+      method: "PUT",
+      body: JSON.stringify({ kpis: departmentKpis }),
+    }, undefined);
+  }
+
+  /** Get department budgets. */
+  async getBudgets(): Promise<unknown> {
+    return this.request("/a2a/strategy/budgets", {}, undefined);
+  }
+
+  /** Update department budgets (CEO role only, ±20% limit unless force=true). */
+  async updateBudgets(departmentBudgets: unknown, force = false): Promise<unknown> {
+    return this.request("/a2a/strategy/budgets", {
+      method: "PUT",
+      body: JSON.stringify({ budgets: departmentBudgets, force }),
+    }, undefined);
+  }
+
+  /** Get strategy change history. */
+  async getStrategyHistory(): Promise<unknown> {
+    return this.request("/a2a/strategy/history", {}, undefined);
+  }
+
   // -- Update: external binary download & report --------------------------------
 
   /**
@@ -1595,6 +1684,34 @@ export class GrcClient {
    * Check if a JWT token is expired or about to expire (within 5 minutes).
    * Uses simple base64 decode of the payload, no signature verification.
    */
+  /**
+   * Refresh auth token, returning both access and refresh tokens.
+   * Returns null if no refresh token is available or refresh fails.
+   */
+  async refreshAuth(): Promise<{ token: string; refreshToken?: string } | null> {
+    if (!this.refreshTokenValue) {
+      log.warn("refreshAuth() called but no refresh token available");
+      return null;
+    }
+    try {
+      const result = await this.request<{ access_token: string; refresh_token?: string }>(
+        "/auth/refresh",
+        { method: "POST", body: JSON.stringify({ refresh_token: this.refreshTokenValue }) },
+        undefined,
+        /* _isRetry */ true,
+      );
+      if (result.access_token) {
+        this.authToken = result.access_token;
+        if (result.refresh_token) this.refreshTokenValue = result.refresh_token;
+        log.info("GRC token refreshed via refreshAuth()");
+        return { token: result.access_token, refreshToken: result.refresh_token };
+      }
+    } catch (err) {
+      log.warn(`refreshAuth() failed: ${(err as Error).message}`);
+    }
+    return null;
+  }
+
   static isTokenExpired(token: string, bufferSeconds = 300): boolean {
     try {
       const parts = token.split(".");

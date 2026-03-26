@@ -167,6 +167,11 @@ if [ -f "${PERSIST_DIR}/oauth.json" ]; then
   echo "[entrypoint] Restored OAuth credentials"
 fi
 
+# ── Stagger startup to prevent thundering herd on GRC ────────────────────────
+STAGGER_DELAY=$((RANDOM % 30))
+echo "[entrypoint] Staggering startup by ${STAGGER_DELAY}s to prevent thundering herd..."
+sleep "$STAGGER_DELAY"
+
 # ── Wait for GRC server to be reachable ──────────────────────────────────────
 if [ -n "${GRC_URL}" ]; then
   echo "[entrypoint] Waiting for GRC at ${GRC_URL}..."
