@@ -234,6 +234,23 @@ begin
           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     end;
 
+    // Step 4: If winclaw.json STILL does not exist, create a minimal bootstrap config
+    // This allows `winclaw gateway` to start without requiring `winclaw setup` first
+    if not FileExists(NewConfig) then
+    begin
+      ForceDirectories(NewStateDir);
+      SaveStringToFile(NewConfig,
+        '{' + #13#10 +
+        '  "gateway": {' + #13#10 +
+        '    "mode": "local",' + #13#10 +
+        '    "port": 18789,' + #13#10 +
+        '    "bind": "loopback",' + #13#10 +
+        '    "auth": { "mode": "token" }' + #13#10 +
+        '  }' + #13#10 +
+        '}' + #13#10,
+        False);
+    end;
+
     // Notify explorer of environment changes
     Exec(ExpandConstant('{sys}\cmd.exe'),
       '/c "setx WINCLAW_MIGRATED 1 >nul 2>&1"',

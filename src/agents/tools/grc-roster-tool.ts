@@ -3,7 +3,7 @@ import { loadConfig } from "../../config/config.js";
 import { GrcClient } from "../../infra/grc-client.js";
 import { type AnyAgentTool, ToolInputError, jsonResult } from "./common.js";
 
-const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "http://localhost:3100";
 
 const GrcRosterSchema = Type.Object({}, { additionalProperties: false });
 

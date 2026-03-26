@@ -39,7 +39,7 @@ import {
 import type { GatewayRequestHandlers } from "./types.js";
 import { assertValidParams } from "./validation.js";
 
-const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "http://localhost:3100";
 
 /** Lazy singleton for the skill manifest store. */
 let _manifestInstance: GrcSkillManifestStore | null = null;
@@ -842,6 +842,81 @@ export function createGrcHandlers(
       } catch (err) {
         respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Reply cycle failed: ${(err as Error).message}`));
       }
+    },
+
+    // ── Strategy management (CEO agent API) ──
+
+    "grc.strategy.get": async ({ respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.getStrategy();
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Strategy fetch failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.update": async ({ params, respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.updateStrategy(params as Record<string, unknown>);
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Strategy update failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.deploy": async ({ respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.deployStrategy();
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Strategy deploy failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.kpis.get": async ({ respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.getKpis();
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `KPI fetch failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.kpis.update": async ({ params, respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.updateKpis((params as Record<string, unknown>).kpis ?? (params as Record<string, unknown>).department_kpis);
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `KPI update failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.budgets.get": async ({ respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.getBudgets();
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Budget fetch failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.budgets.update": async ({ params, respond }) => {
+      const config = loadConfig();
+      const p = params as Record<string, unknown>;
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.updateBudgets(p.budgets ?? p.department_budgets, p.force === true);
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Budget update failed: ${(err as Error).message}`)); }
+    },
+
+    "grc.strategy.history": async ({ respond }) => {
+      const config = loadConfig();
+      try {
+        const client = new GrcClient({ baseUrl: config.grc?.url ?? GRC_DEFAULT_URL, authToken: config.grc?.auth?.token });
+        const result = await client.getStrategyHistory();
+        respond(true, result);
+      } catch (err) { respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, `Strategy history failed: ${(err as Error).message}`)); }
     },
   };
 }

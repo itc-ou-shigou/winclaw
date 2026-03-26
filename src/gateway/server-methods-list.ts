@@ -31,6 +31,14 @@ const GRC_METHODS = [
   "grc.community.stats",
   "grc.community.autoStatus",
   "grc.community.triggerReply",
+  "grc.strategy.get",
+  "grc.strategy.update",
+  "grc.strategy.deploy",
+  "grc.strategy.kpis.get",
+  "grc.strategy.kpis.update",
+  "grc.strategy.budgets.get",
+  "grc.strategy.budgets.update",
+  "grc.strategy.history",
 ];
 
 const BASE_METHODS = [

@@ -273,20 +273,46 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
   const snapshot = await readConfigFileSnapshot().catch(() => null);
   const configExists = snapshot?.exists ?? fs.existsSync(CONFIG_PATH);
   const configAuditPath = path.join(resolveStateDir(process.env), "logs", "config-audit.jsonl");
-  const mode = cfg.gateway?.mode;
+  let mode = cfg.gateway?.mode;
   if (!opts.allowUnconfigured && mode !== "local") {
+    // Auto-bootstrap: if no config exists, try to detect local GRC and create minimal config
     if (!configExists) {
-      defaultRuntime.error(
-        `Missing config. Run \`${formatCliCommand("winclaw setup")}\` or set gateway.mode=local (or pass --allow-unconfigured).`,
-      );
-    } else {
-      defaultRuntime.error(
-        `Gateway start blocked: set gateway.mode=local (current: ${mode ?? "unset"}) or pass --allow-unconfigured.`,
-      );
-      defaultRuntime.error(`Config write audit: ${configAuditPath}`);
+      try {
+        const healthRes = await fetch("http://127.0.0.1:3100/health", {
+          signal: AbortSignal.timeout(2000),
+        }).catch(() => null);
+        const healthData = healthRes ? await healthRes.json().catch(() => null) : null;
+        if (healthData?.service === "grc-server") {
+          defaultRuntime.log("Local GRC detected at http://127.0.0.1:3100 — creating auto-config...");
+          const stateDir = resolveStateDir(process.env);
+          fs.mkdirSync(stateDir, { recursive: true });
+          const autoConfig = {
+            gateway: { mode: "local" as const, port: 18789, bind: "loopback" as const, auth: { mode: "token" as const }, controlUi: { dangerouslyDisableDeviceAuth: true } },
+            grc: { url: "http://127.0.0.1:3100" },
+          };
+          fs.writeFileSync(path.join(stateDir, "winclaw.json"), JSON.stringify(autoConfig, null, 2));
+          defaultRuntime.log(`Config auto-created at ${path.join(stateDir, "winclaw.json")}`);
+          // Reload config
+          Object.assign(cfg, autoConfig);
+          mode = "local";
+        }
+      } catch { /* ignore discovery failure */ }
     }
-    defaultRuntime.exit(1);
-    return;
+
+    if (mode !== "local") {
+      if (!configExists) {
+        defaultRuntime.error(
+          `Missing config. Run \`${formatCliCommand("winclaw setup")}\` or set gateway.mode=local (or pass --allow-unconfigured).`,
+        );
+      } else {
+        defaultRuntime.error(
+          `Gateway start blocked: set gateway.mode=local (current: ${mode ?? "unset"}) or pass --allow-unconfigured.`,
+        );
+        defaultRuntime.error(`Config write audit: ${configAuditPath}`);
+      }
+      defaultRuntime.exit(1);
+      return;
+    }
   }
   const miskeys = extractGatewayMiskeys(snapshot?.parsed);
   const authOverride =

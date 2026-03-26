@@ -115,7 +115,7 @@ export type WinClawConfig = {
   grc?: {
     /** Enable GRC (Global Resource Center) integration. Default: true. */
     enabled?: boolean;
-    /** GRC server URL. Default: "https://grc.myaiportal.net". */
+    /** GRC server URL. Default: "http://localhost:3100". */
     url?: string;
     /** Employee ID sent during GRC node registration. */
     employeeId?: string;

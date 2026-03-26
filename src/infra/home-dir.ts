@@ -17,15 +17,20 @@ export function resolveEffectiveHomeDir(
 function resolveRawHomeDir(env: NodeJS.ProcessEnv, homedir: () => string): string | undefined {
   const explicitHome = normalize(env.WINCLAW_HOME);
   if (explicitHome) {
-    if (explicitHome === "~" || explicitHome.startsWith("~/") || explicitHome.startsWith("~\\")) {
+    // Reject Program Files paths — they are not user-writable (legacy installer bug)
+    const lower = explicitHome.toLowerCase().replace(/\\/g, "/");
+    if (lower.includes("/program files") || lower.includes("/program files (x86)")) {
+      // Ignore this value, fall through to user home detection
+    } else if (explicitHome === "~" || explicitHome.startsWith("~/") || explicitHome.startsWith("~\\")) {
       const fallbackHome =
         normalize(env.HOME) ?? normalize(env.USERPROFILE) ?? normalizeSafe(homedir);
       if (fallbackHome) {
         return explicitHome.replace(/^~(?=$|[\\/])/, fallbackHome);
       }
       return undefined;
+    } else {
+      return explicitHome;
     }
-    return explicitHome;
   }
 
   const envHome = normalize(env.HOME);

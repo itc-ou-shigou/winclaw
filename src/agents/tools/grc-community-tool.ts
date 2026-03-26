@@ -5,7 +5,7 @@ import { loadOrCreateDeviceIdentity } from "../../infra/device-identity.js";
 import { optionalStringEnum } from "../schema/typebox.js";
 import { type AnyAgentTool, ToolInputError, jsonResult, readStringParam } from "./common.js";
 
-const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "https://grc.myaiportal.net";
+const GRC_DEFAULT_URL = process.env.WINCLAW_GRC_URL ?? "http://localhost:3100";
 
 // ── grc_community_post ──────────────────────────────────
 
