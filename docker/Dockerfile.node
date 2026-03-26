@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Layer 2: Install winclaw + ClawTeam (single RUN, cleanup caches)
-COPY docker/winclaw-2026.4.7.tgz /tmp/winclaw.tgz
+COPY docker/winclaw-2026.4.8.tgz /tmp/winclaw.tgz
 COPY packages/clawteam /tmp/clawteam
 RUN npm install -g /tmp/winclaw.tgz \
   && pip3 install --no-cache-dir --break-system-packages /tmp/clawteam \
