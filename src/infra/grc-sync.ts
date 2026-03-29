@@ -25,6 +25,8 @@ export type GrcSyncConfig = {
   url: string;
   /** Bearer token for authenticated endpoints (publish, telemetry). */
   authToken?: string;
+  /** API Key for authenticated endpoints (alternative to JWT). */
+  apiKey?: string;
   /** Unique identifier for this WinClaw node (used in A2A protocol). */
   nodeId: string;
   /** Sync interval in seconds. Default: 14400 (4 hours). */
@@ -916,13 +918,19 @@ export class GrcSyncService implements GrcSyncServiceHandle {
     this.sseAbortController = new AbortController();
     const signal = this.sseAbortController.signal;
 
-    const url = `${this.config.url}/a2a/config/stream?node_id=${encodeURIComponent(this.config.nodeId)}`;
+    let url = `${this.config.url}/a2a/config/stream?node_id=${encodeURIComponent(this.config.nodeId)}`;
+    // Append API Key as query parameter if available (SSE doesn't support custom headers in some environments)
+    if (this.config.apiKey) {
+      url += `&api_key=${encodeURIComponent(this.config.apiKey)}`;
+    }
 
     const headers: Record<string, string> = {
       Accept: "text/event-stream",
       "Cache-Control": "no-cache",
     };
-    if (this.config.authToken) {
+    if (this.config.apiKey) {
+      headers["x-api-key"] = this.config.apiKey;
+    } else if (this.config.authToken) {
       headers["Authorization"] = `Bearer ${this.config.authToken}`;
     }
 

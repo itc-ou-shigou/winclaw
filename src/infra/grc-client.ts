@@ -232,6 +232,7 @@ export class GrcClient {
   private baseUrl: string;
   private authToken: string | undefined;
   private refreshTokenValue: string | null = null;
+  private apiKey: string | null = null;
   private timeout: number;
   private maxRetries: number;
 
@@ -260,6 +261,14 @@ export class GrcClient {
 
   clearAuthToken(): void {
     this.authToken = undefined;
+  }
+
+  setApiKey(key: string | null): void {
+    this.apiKey = key;
+  }
+
+  getApiKey(): string | null {
+    return this.apiKey;
   }
 
   // -- Circuit breaker -----------------------------------------------------
@@ -335,7 +344,9 @@ export class GrcClient {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       "User-Agent": "WinClaw-GRC-Client/1.0",
-      ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+      ...(this.apiKey
+        ? { "x-api-key": this.apiKey }
+        : this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
       ...(opts.body ? { "Content-Type": "application/json" } : {}),
     };
 
@@ -445,7 +456,9 @@ export class GrcClient {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       "User-Agent": "WinClaw-GRC-Client/1.0",
-      ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+      ...(this.apiKey
+        ? { "x-api-key": this.apiKey }
+        : this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
     };
     const effectiveTimeout = timeoutMs ?? 60_000;
 
@@ -563,7 +576,9 @@ export class GrcClient {
 
         const headers: Record<string, string> = {
           "User-Agent": "WinClaw-GRC-Client/1.0",
-          ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+          ...(this.apiKey
+            ? { "x-api-key": this.apiKey }
+            : this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
           // Do NOT set Content-Type — fetch sets the multipart boundary automatically
         };
 
@@ -934,7 +949,7 @@ export class GrcClient {
     winclawVersion: string,
     employee?: { id?: string; name?: string; email?: string; role?: string; workspacePath?: string; gatewayPort?: number; gatewayToken?: string; containerId?: string },
     abortSignal?: AbortSignal,
-  ): Promise<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }> {
+  ): Promise<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean; api_key?: string; api_key_status?: string; api_key_id?: string }> {
     return this.request<{ ok: boolean; node?: { id: string }; token?: string; refreshToken?: string; upgraded?: boolean }>(
       "/a2a/hello",
       {
@@ -1334,7 +1349,9 @@ export class GrcClient {
     const url = `${this.baseUrl}/api/v1/platform/values`;
     const headers: Record<string, string> = {
       "User-Agent": "WinClaw-GRC-Client/1.0",
-      ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+      ...(this.apiKey
+        ? { "x-api-key": this.apiKey }
+        : this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
     };
     if (cachedHash) {
       headers["If-None-Match"] = cachedHash;

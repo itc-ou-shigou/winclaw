@@ -76,6 +76,11 @@ export class GrcConnectionManager {
     if (config.grc?.auth?.refreshToken) {
       this.client.setRefreshToken(config.grc.auth.refreshToken);
     }
+    // Hydrate saved API Key — if present, use it instead of JWT
+    if ((config.grc?.auth as Record<string, unknown>)?.apiKey) {
+      this.client.setApiKey((config.grc!.auth as Record<string, unknown>).apiKey as string);
+      this.tier = "apikey";
+    }
   }
 
   /**
@@ -178,6 +183,25 @@ export class GrcConnectionManager {
           const existingRefreshToken = loadConfig().grc?.auth?.refreshToken;
           await this.persistTokens(helloResult.token, helloResult.refreshToken ?? existingRefreshToken);
           log.info("Token upgraded by GRC hello response (desktop mode)");
+        }
+
+        // Handle API Key from hello response
+        if (helloResult?.api_key) {
+          this.client.setApiKey(helloResult.api_key);
+          this.tier = "apikey";
+          // Persist API Key to config
+          const cfgNow = loadConfig();
+          await writeConfigFile({
+            ...cfgNow,
+            grc: { ...cfgNow.grc, auth: { ...cfgNow.grc?.auth, apiKey: helloResult.api_key } },
+          });
+          // Stop token refresh — API Key doesn't expire
+          if (this.tokenCheckTimer) { clearInterval(this.tokenCheckTimer); this.tokenCheckTimer = null; }
+          if (this.tokenRefreshTimer) { clearTimeout(this.tokenRefreshTimer); this.tokenRefreshTimer = null; }
+          log.info({ api_key_id: helloResult.api_key_id }, "API Key received from GRC hello and persisted");
+        } else if (helloResult?.api_key_status === "active") {
+          this.tier = "apikey";
+          log.info({ api_key_id: helloResult.api_key_id }, "API Key confirmed active by GRC");
         }
       } catch (err) {
         log.warn(`A2A hello failed (non-fatal): ${(err as Error).message}`);
@@ -284,6 +308,7 @@ export class GrcConnectionManager {
       enabled: true,
       url: this.url,
       authToken: config.grc?.auth?.token,
+      apiKey: this.client.getApiKey() ?? (config.grc?.auth as Record<string, unknown>)?.apiKey as string | undefined,
       nodeId: this.nodeId ?? "unknown",
       syncInterval: config.grc?.sync?.interval ?? 14400,
       autoUpdate: config.grc?.sync?.autoUpdate !== false,
@@ -355,9 +380,12 @@ export class GrcConnectionManager {
    */
   private startTokenChecker(): void {
     if (this.tokenCheckTimer) return;
+    // API Key active — no JWT refresh needed
+    if (this.client.getApiKey()) return;
 
     this.tokenCheckTimer = setInterval(() => {
       if (this.stopped) return;
+      if (this.client.getApiKey()) return; // API Key activated mid-session
       const config = loadConfig();
       const token = config.grc?.auth?.token;
       const refreshToken = config.grc?.auth?.refreshToken;
