@@ -61,6 +61,9 @@ echo "║  Auth Mode:     ${GW_AUTH}"
 if [ "${GW_AUTH}" = "token" ]; then
 echo "║  Token:         ${GW_TOKEN}"
 fi
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+echo "║  GitHub:        ✓ Token configured (${#GITHUB_TOKEN} chars)"
+fi
 echo "╠══════════════════════════════════════════════════════════════╣"
 if [ "${GW_AUTH}" = "token" ]; then
 echo "║  Chat UI (with token):"
