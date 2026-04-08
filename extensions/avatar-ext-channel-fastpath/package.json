@@ -1,0 +1,16 @@
+{
+  "name": "@winclaw-avatar/ext-channel-fastpath",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Additive direct channel model override fast-path. Opt-in via AVATAR_EXT_CHANNEL_FASTPATH=1. Skips plugin lookup for direct overrides; falls through to existing resolver on miss.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "test": "echo \"avatar-ext-channel-fastpath: tests run via vitest.avatar-ext-channel-fastpath.config.ts\""
+  },
+  "license": "UNLICENSED"
+}

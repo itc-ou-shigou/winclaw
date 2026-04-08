@@ -1,0 +1,53 @@
+# avatar-vibes — informational nightly catalog check
+#
+# Additive migration P7. This workflow:
+#   - is INDEPENDENT of all existing CI workflows (ci.yml etc.)
+#   - runs on a nightly schedule + manual dispatch ONLY
+#   - NEVER blocks pull requests
+#   - only validates that the qa/avatar-vibes/ catalog is well-formed
+#
+# Removal: `git rm .github/workflows/avatar-vibes.yml` is sufficient.
+
+name: avatar-vibes (informational)
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: avatar-vibes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  catalog-check:
+    name: avatar-vibes catalog sanity
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify catalog directory exists
+        run: |
+          set -euo pipefail
+          test -d qa/avatar-vibes
+          test -f qa/avatar-vibes/README.md
+
+      - name: List scenarios
+        run: |
+          set -euo pipefail
+          echo "## avatar-vibes scenarios" >> "$GITHUB_STEP_SUMMARY"
+          find qa/avatar-vibes/scenarios -name '*.md' -print | sort | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: List profiles
+        run: |
+          set -euo pipefail
+          echo "## avatar-vibes profiles" >> "$GITHUB_STEP_SUMMARY"
+          find qa/avatar-vibes/profiles -name '*.yaml' -print | sort | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Confirm additive-only
+        run: echo "avatar-vibes is additive-only — see qa/avatar-vibes/README.md"

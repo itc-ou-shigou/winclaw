@@ -1,0 +1,23 @@
+{
+  "name": "@winclaw-avatar/ext-memory-wiki",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Additive belief-layer / claim-health / digest-retrieval extension. Opt-in via AVATAR_EXT_MEMORY_WIKI=1. Strictly read-only with respect to ClawMem / memory-core.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "test": "echo \"avatar-ext-memory-wiki: tests run via vitest.avatar-ext-memory-wiki.config.ts\""
+  },
+  "keywords": [
+    "winclaw-avatar",
+    "additive",
+    "memory-wiki",
+    "belief-layer",
+    "opt-in"
+  ],
+  "license": "UNLICENSED"
+}

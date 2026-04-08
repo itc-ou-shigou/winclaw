@@ -1,0 +1,16 @@
+{
+  "name": "@winclaw-avatar/ext-media-intent",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Additive helper that preserves a caller-supplied media intent across provider fallback. Opt-in via AVATAR_EXT_MEDIA_INTENT=1. Does not modify any existing provider class.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "test": "echo \"avatar-ext-media-intent: tests run via vitest.avatar-ext-media-intent.config.ts\""
+  },
+  "license": "UNLICENSED"
+}

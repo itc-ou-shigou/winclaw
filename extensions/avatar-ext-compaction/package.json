@@ -1,0 +1,16 @@
+{
+  "name": "@winclaw-avatar/ext-compaction",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Additive pluggable compaction provider registry + prompt-cache context + gateway checkpoints. Opt-in via AVATAR_EXT_COMPACTION_REGISTRY=1. LCM remains the default and is not modified.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "test": "echo \"avatar-ext-compaction: tests run via vitest.avatar-ext-compaction.config.ts\""
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@winclaw-avatar/avatar-agent-controls",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Additive sidecar for prompt override and heartbeat controls. Opt-in via AVATAR_EXT_AGENT_CONTROLS=1.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "test": "echo \"avatar-agent-controls: tests run via vitest.avatar-agent-controls.config.ts\""
+  },
+  "license": "UNLICENSED"
+}
