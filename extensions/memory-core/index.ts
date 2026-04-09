@@ -32,6 +32,13 @@ const memoryCorePlugin = {
       },
       { commands: ["memory"] },
     );
+
+    api.registerCli(
+      ({ program }) => {
+        api.runtime.tools.registerDreamCli(program);
+      },
+      { commands: ["dream"] },
+    );
   },
 };
 

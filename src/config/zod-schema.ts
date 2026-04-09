@@ -111,11 +111,57 @@ const MemoryQmdSchema = z
   })
   .strict();
 
+const MemoryDreamSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    minHours: z.number().positive().optional(),
+    minSessions: z.number().int().nonnegative().optional(),
+    scanThrottleMinutes: z.number().positive().optional(),
+    lockStaleHours: z.number().positive().optional(),
+    agent: z.string().optional(),
+    tools: z
+      .object({
+        bashReadOnly: z.boolean().optional(),
+        fileWriteScope: z.union([z.literal("memory"), z.literal("workspace")]).optional(),
+      })
+      .strict()
+      .optional(),
+    backup: z
+      .object({
+        enabled: z.boolean().optional(),
+        keep: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
+    autoTrigger: z
+      .object({
+        enabled: z.boolean().optional(),
+        onPostTurn: z.boolean().optional(),
+        onMemoryFlush: z.boolean().optional(),
+        onShutdown: z.boolean().optional(),
+        idleMinutes: z.number().positive().nullable().optional(),
+        cron: z.string().nullable().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const MemoryEntrypointSchema = z
+  .object({
+    maxLines: z.number().int().positive().optional(),
+    maxBytes: z.number().int().positive().optional(),
+    warnOnTruncate: z.boolean().optional(),
+  })
+  .strict();
+
 const MemorySchema = z
   .object({
     backend: z.union([z.literal("builtin"), z.literal("qmd")]).optional(),
     citations: z.union([z.literal("auto"), z.literal("on"), z.literal("off")]).optional(),
     qmd: MemoryQmdSchema.optional(),
+    dream: MemoryDreamSchema.optional(),
+    entrypoint: MemoryEntrypointSchema.optional(),
   })
   .strict()
   .optional();
@@ -861,6 +907,7 @@ export const WinClawSchema = z
               .optional(),
             token: z.string().optional(),
             refreshToken: z.string().optional(),
+            apiKey: z.string().optional(),
           })
           .strict()
           .optional(),

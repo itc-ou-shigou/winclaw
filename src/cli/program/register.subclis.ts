@@ -288,6 +288,15 @@ const entries: SubCliEntry[] = [
     },
   },
   {
+    name: "dream",
+    description: "Consolidate memory files — merge, dedupe, prune",
+    hasSubcommands: true,
+    register: async (program) => {
+      const mod = await import("../dream-cli.js");
+      mod.registerDreamCli(program);
+    },
+  },
+  {
     name: "completion",
     description: "Generate shell completion script",
     hasSubcommands: false,

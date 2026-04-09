@@ -1,4 +1,5 @@
 import { createMemoryGetTool, createMemorySearchTool } from "../../agents/tools/memory-tool.js";
+import { registerDreamCli } from "../../cli/dream-cli.js";
 import { registerMemoryCli } from "../../cli/memory-cli.js";
 import type { PluginRuntime } from "./types.js";
 
@@ -7,5 +8,6 @@ export function createRuntimeTools(): PluginRuntime["tools"] {
     createMemoryGetTool,
     createMemorySearchTool,
     registerMemoryCli,
+    registerDreamCli,
   };
 }

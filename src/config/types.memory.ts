@@ -8,6 +8,41 @@ export type MemoryConfig = {
   backend?: MemoryBackend;
   citations?: MemoryCitationsMode;
   qmd?: MemoryQmdConfig;
+  dream?: MemoryDreamConfig;
+  entrypoint?: MemoryEntrypointConfig;
+};
+
+/** L2 entrypoint MEMORY.md limits (Claude Code parity) */
+export type MemoryEntrypointConfig = {
+  maxLines?: number;
+  maxBytes?: number;
+  warnOnTruncate?: boolean;
+};
+
+/** L3 dream (background memory consolidation) config */
+export type MemoryDreamConfig = {
+  enabled?: boolean;
+  minHours?: number;
+  minSessions?: number;
+  scanThrottleMinutes?: number;
+  lockStaleHours?: number;
+  agent?: string;
+  tools?: {
+    bashReadOnly?: boolean;
+    fileWriteScope?: "memory" | "workspace";
+  };
+  backup?: {
+    enabled?: boolean;
+    keep?: number;
+  };
+  autoTrigger?: {
+    enabled?: boolean;
+    onPostTurn?: boolean;
+    onMemoryFlush?: boolean;
+    onShutdown?: boolean;
+    idleMinutes?: number | null;
+    cron?: string | null;
+  };
 };
 
 export type MemoryQmdConfig = {

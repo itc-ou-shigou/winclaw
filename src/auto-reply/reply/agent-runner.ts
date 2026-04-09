@@ -38,6 +38,8 @@ import {
   signalTypingIfNeeded,
 } from "./agent-runner-helpers.js";
 import { runMemoryFlushIfNeeded } from "./agent-runner-memory.js";
+import { executeDream } from "../../memory/dream/index.js";
+import { resolveDreamConfig } from "../../memory/dream/dream-config.js";
 import { buildReplyPayloads } from "./agent-runner-payloads.js";
 import {
   appendUnscheduledReminderNote,
@@ -233,6 +235,26 @@ export async function runReplyAgent(params: {
     storePath,
     isHeartbeat,
   });
+
+  // Fire-and-forget dream auto-trigger. MUST NOT throw or block the main loop.
+  try {
+    const dreamCfg = resolveDreamConfig(cfg);
+    if (
+      dreamCfg.enabled &&
+      dreamCfg.autoTrigger.enabled &&
+      dreamCfg.autoTrigger.onMemoryFlush
+    ) {
+      void executeDream({
+        cfg,
+        force: false,
+        currentSessionId: followupRun.run.sessionId,
+      }).catch(() => {
+        /* swallow — fire-and-forget */
+      });
+    }
+  } catch {
+    /* wiring must never break the main loop */
+  }
 
   const runFollowupTurn = createFollowupRunner({
     opts,
