@@ -100,6 +100,22 @@ export class GrcConnectionManager {
       return;
     }
 
+    // If no GRC section is configured at all (no url, no employeeId, no auth token),
+    // skip all GRC connection attempts to avoid crash from repeated failed connections.
+    // This is the standard behavior for standalone WinClaw installations without GRC.
+    const grc = config.grc;
+    const hasAnyGrcConfig =
+      grc?.url ||
+      grc?.employeeId ||
+      grc?.employeeName ||
+      grc?.auth?.token ||
+      (grc?.auth as Record<string, unknown> | undefined)?.apiKey ||
+      grc?.enabled === true;
+    if (!hasAnyGrcConfig) {
+      log.info("No GRC configuration found in winclaw.json; skipping GRC integration. To enable, add grc.url or grc.enabled=true to your config.");
+      return;
+    }
+
     try {
       // 0. Auto-discover local GRC if no token and URL is default/empty
       const cfg = loadConfig();
