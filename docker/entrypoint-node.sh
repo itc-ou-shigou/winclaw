@@ -33,11 +33,16 @@ WINCLAW_DIR="/home/winclaw/.winclaw"
 CONFIG_FILE="${WINCLAW_DIR}/winclaw.json"
 
 # Fix permissions on mounted volumes so winclaw user can read/write
-# chown may not work on some Docker volume drivers, so use chmod as fallback
-chown -R winclaw:winclaw "${WINCLAW_DIR}/workspace" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}/workspace" 2>/dev/null || true
-chown -R winclaw:winclaw "${WINCLAW_DIR}/identity" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}/identity" 2>/dev/null || true
-# Ensure .winclaw dir itself is writable for config file
-chown -R winclaw:winclaw "${WINCLAW_DIR}" 2>/dev/null || chmod -R 777 "${WINCLAW_DIR}" 2>/dev/null || true
+# chown may not work on some Docker volume drivers, so use chmod as fallback.
+# IMPORTANT: Use non-recursive chown on the parent .winclaw/ to avoid
+# recursing into workspace/identity (which can be huge — game dev files,
+# legacy code repos, etc., causing 5+ minute startup hangs on Windows mounts).
+# Mount-point chown for workspace/identity is best-effort (Docker Desktop
+# Windows often ignores chown on bind mounts; we rely on UID match instead).
+chown winclaw:winclaw "${WINCLAW_DIR}/workspace" 2>/dev/null || chmod 777 "${WINCLAW_DIR}/workspace" 2>/dev/null || true
+chown winclaw:winclaw "${WINCLAW_DIR}/identity" 2>/dev/null || chmod 777 "${WINCLAW_DIR}/identity" 2>/dev/null || true
+# .winclaw dir itself: shallow chown only (config files created later by gosu)
+chown winclaw:winclaw "${WINCLAW_DIR}" 2>/dev/null || chmod 777 "${WINCLAW_DIR}" 2>/dev/null || true
 
 # Auto-generate token if auth=token and no token provided
 if [ "${GW_AUTH}" = "token" ] && [ -z "${GW_TOKEN}" ]; then
@@ -169,6 +174,28 @@ if [ -f "${PERSIST_DIR}/oauth.json" ]; then
   chown -R winclaw:winclaw /home/winclaw/.winclaw/credentials 2>/dev/null || true
   echo "[entrypoint] Restored OAuth credentials"
 fi
+
+# Restore MetaCoder workspace (graph cache, conversation history, project state)
+METACODER_PERSIST="${PERSIST_DIR}/metacoder"
+if [ -d "${METACODER_PERSIST}" ]; then
+  mkdir -p /home/winclaw/.metacoder
+  cp -r "${METACODER_PERSIST}"/. /home/winclaw/.metacoder/ 2>/dev/null || true
+  chown -R winclaw:winclaw /home/winclaw/.metacoder 2>/dev/null || true
+  echo "[entrypoint] Restored MetaCoder state (graph cache + history)"
+else
+  mkdir -p /home/winclaw/.metacoder
+  chown winclaw:winclaw /home/winclaw/.metacoder 2>/dev/null || true
+fi
+
+# Trap to backup MetaCoder state on shutdown
+backup_metacoder_state() {
+  if [ -d /home/winclaw/.metacoder ] && [ -d "${PERSIST_DIR}" ]; then
+    mkdir -p "${METACODER_PERSIST}"
+    cp -r /home/winclaw/.metacoder/. "${METACODER_PERSIST}/" 2>/dev/null || true
+    echo "[entrypoint] MetaCoder state backed up to persist volume"
+  fi
+}
+trap backup_metacoder_state EXIT TERM
 
 # ── Stagger startup to prevent thundering herd on GRC ────────────────────────
 STAGGER_DELAY=$((RANDOM % 30))

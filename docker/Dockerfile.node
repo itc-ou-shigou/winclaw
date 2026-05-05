@@ -1,10 +1,10 @@
 # =============================================================================
-# WinClaw Node Image — Lightweight gateway-only container
+# WinClaw Node Image — Lightweight gateway + MetaCoder
 # =============================================================================
 FROM node:22-bookworm-slim
 
 LABEL org.opencontainers.image.title="WinClaw Node" \
-  org.opencontainers.image.description="Lightweight winclaw gateway node" \
+  org.opencontainers.image.description="WinClaw gateway with embedded MetaCoder for large-scale development" \
   org.opencontainers.image.vendor="ITC CloudSoft"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,16 +16,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Layer 2: Install winclaw + ClawTeam (single RUN, cleanup caches)
-COPY docker/winclaw-2026.4.18.tgz /tmp/winclaw.tgz
+COPY docker/winclaw-2026.5.5.tgz /tmp/winclaw.tgz
 COPY packages/clawteam /tmp/clawteam
 RUN npm install -g /tmp/winclaw.tgz \
   && pip3 install --no-cache-dir --break-system-packages /tmp/clawteam \
   && rm -rf /tmp/winclaw.tgz /tmp/clawteam \
   && npm cache clean --force && rm -rf /root/.npm /root/.cache
 
+# Layer 2.5: Install MetaCoder (43MB Linux standalone binary - no Bun runtime needed)
+COPY docker/metacoder-1.0.5-linux-x64.tar.gz /tmp/metacoder.tar.gz
+RUN tar -xzf /tmp/metacoder.tar.gz -C /tmp \
+  && (mv /tmp/metacoder-1.0.5-linux-x64/metacoder /usr/local/bin/metacoder 2>/dev/null \
+      || mv /tmp/metacoder /usr/local/bin/metacoder) \
+  && chmod 755 /usr/local/bin/metacoder \
+  && rm -rf /tmp/metacoder*
+
+# Layer 2.6: MetaCoder wrapper script (extracts API keys from winclaw.json)
+COPY docker/metacoder-wrapper.sh /usr/local/bin/metacoder-wrapper.sh
+RUN sed -i "s/\r$//" /usr/local/bin/metacoder-wrapper.sh && chmod +x /usr/local/bin/metacoder-wrapper.sh
+
 # Layer 3: Non-root user
 RUN useradd -m -s /bin/bash winclaw \
-  && mkdir -p /home/winclaw/.winclaw \
+  && mkdir -p /home/winclaw/.winclaw /home/winclaw/.metacoder \
   && chown -R winclaw:winclaw /home/winclaw
 
 # Layer 4: Entrypoint
@@ -39,7 +51,9 @@ ENV WINCLAW_GRC_URL="https://grc.myaiportal.net" \
     WINCLAW_WORKSPACE_HOST_PATH="" \
     WINCLAW_GATEWAY_PORT="18789" \
     WINCLAW_GATEWAY_BIND="lan" \
-    WINCLAW_GATEWAY_AUTH="token"
+    WINCLAW_GATEWAY_AUTH="token" \
+    METACODER_SUPPRESS_TERMINAL_WARNING="1" \
+    META_CODER_SKIP_SANDBOX_CHECK="1"
 
 WORKDIR /home/winclaw
 EXPOSE 18789

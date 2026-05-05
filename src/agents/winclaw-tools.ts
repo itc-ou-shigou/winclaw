@@ -21,6 +21,7 @@ import { createGrcRosterTool } from "./tools/grc-roster-tool.js";
 import { createGrcPublishTool } from "./tools/grc-publish-tool.js";
 import { createGrcFetchAssetTool } from "./tools/grc-fetch-asset-tool.js";
 import { createGrcCommunityPostTool, createGrcCommunityFeedTool, createGrcCommunityReplyTool, createGrcCommunityVoteTool } from "./tools/grc-community-tool.js";
+import { createMetaCoderTool } from "./tools/metacoder-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -200,6 +201,7 @@ export function createWinClawTools(options?: {
     createGrcCommunityFeedTool({ config: options?.config }),
     createGrcCommunityReplyTool({ config: options?.config }),
     createGrcCommunityVoteTool({ config: options?.config }),
+    createMetaCoderTool(),
   ];
 
   const pluginTools = resolvePluginTools({
